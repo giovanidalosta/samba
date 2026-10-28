@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Bateria Breques Studio - Criador de Arranjos e Convenções</title>
+  
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#0e1320">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SambaBreque">
+  <meta name="application-name" content="Samba Breque Studio">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="beatbox_studio.css">
+  <style>
+    :root {
+      --bg-dark: #0c0f17;
+      --bg-card: #141926;
+      --bg-card-subtle: #1c2336;
+      --bg-header: #0e1320;
+      --border-color: #27334d;
+      --border-accent: #3b82f6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      /* Cores de Naipes / Instrumentos */
+      --color-surdo1: #ef4444;
+      --color-surdo2: #f97316;
+      --color-surdo3: #eab308;
+      --color-caixa: #06b6d4;
+      --color-repique: #3b82f6;
+      --color-tamborim: #8b5cf6;
+      --color-agogo: #ec4899;
+      --color-ganza: #10b981;
+      
+      --playhead-color: rgba(255, 255, 255, 0.28);
+      --measure-border: #334155;
+      --beat-border: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: radial-gradient(circle at top right, #172033 0%, var(--bg-dark) 55%);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(14, 19, 32, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    }
+
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand span.badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Controls Bar */
+    .controls-panel {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--bg-card-subtle);
+      border-color: #3b82f6;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border-color: #3b82f6;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+    }
+
+    .btn-success {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #6ee7b7;
+    }
+
+    .btn-success:hover {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: #10b981;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 4px 12px;
+      font-size: 13px;
+    }
+
+    .control-group label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    select, input[type="number"], input[type="text"] {
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--border-accent);
+    }
+
+    .bpm-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bpm-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #60a5fa;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      accent-color: #3b82f6;
+      height: 5px;
+      cursor: pointer;
+    }
+
+    /* Sub-header info / quick actions */
+    .top-subbar {
+      padding: 12px 28px;
+      background: rgba(20, 25, 38, 0.5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .preset-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Main Studio Container */
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-x: auto;
+    }
+
+    .grid-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      padding: 16px;
+      display: inline-block;
+      min-width: 100%;
+      position: relative;
+    }
+
+    /* Timeline Ruler (Top of the grid) */
+    .ruler-row {
+      display: flex;
+      margin-left: 240px;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .measure-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-left: 3px solid #3b82f6;
+      padding-left: 2px;
+      box-sizing: border-box;
+    }
+
+    .measure-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #93c5fd;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 4px;
+      height: 22px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+
+    .beats-subruler {
+      display: flex;
+      height: 20px;
+    }
+
+    .beat-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      user-select: none;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text-muted);
+      border-radius: 3px;
+      margin: 0 1px;
+      box-sizing: border-box;
+    }
+
+    .beat-badge.beat-surdo2 {
+      color: #fed7aa;
+      border-bottom: 2px solid #f97316;
+    }
+
+    .beat-badge.beat-surdo1 {
+      color: #fca5a5;
+      border-bottom: 2px solid #ef4444;
+    }
+
+    /* Track Row */
+    .track-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      transition: background 0.15s;
+      border-radius: 8px;
+    }
+
+    .track-row:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .track-header {
+      width: 240px;
+      min-width: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px 0 0 8px;
+      border-left: 4px solid var(--instrument-color, #3b82f6);
+      user-select: none;
+    }
+
+    .track-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .track-name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .track-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .track-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-icon-mini {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .btn-icon-mini:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    .btn-icon-mini.active-mute {
+      background: rgba(239, 68, 68, 0.25);
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+
+    .btn-icon-mini.active-solo {
+      background: rgba(234, 179, 8, 0.25);
+      color: #eab308;
+      border-color: #eab308;
+    }
+
+    /* Steps Grid */
+    .steps-container {
+      display: flex;
+      flex: 1;
+      position: relative;
+    }
+
+    .step-cell {
+      height: 48px;
+      background: #111624;
+      border-top: 1px solid #1e293b;
+      border-bottom: 1px solid #1e293b;
+      border-right: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s ease;
+      position: relative;
+    }
+
+    .step-cell:first-child {
+      border-left: 1px solid #1e293b;
+    }
+
+    /* Divisões de tempos e compassos */
+    .step-cell.beat-first {
+      background: #161d30;
+      border-left: 2px solid #475569 !important;
+    }
+
+    .step-cell.beat-surdo2-head {
+      border-left: 2px solid #f97316 !important;
+      background: rgba(249, 115, 22, 0.06);
+    }
+
+    .step-cell.beat-surdo1-head {
+      border-left: 2px solid #ef4444 !important;
+      background: rgba(239, 68, 68, 0.06);
+    }
+
+    .step-cell.measure-first {
+      background: #182138;
+      border-left: 3px solid #3b82f6 !important;
+    }
+
+    .step-cell:hover {
+      filter: brightness(1.25);
+      border-color: #475569;
+    }
+
+    .step-node {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .step-cell.active-step-cursor {
+      background: rgba(255, 255, 255, 0.15) !important;
+      outline: 2px solid #60a5fa;
+      outline-offset: -2px;
+      z-index: 5;
+    }
+
+    /* Articulações & Cores Específicas */
+    .note-aberto {
+      background: var(--instrument-color, #ef4444);
+      box-shadow: 0 0 12px var(--instrument-color, #ef4444);
+    }
+    .note-abafado {
+      background: transparent;
+      border: 2px dashed var(--instrument-color, #ef4444);
+      color: var(--instrument-color, #ef4444);
+    }
+    .note-corte {
+      background: #ffffff;
+      color: #0c0f17;
+      box-shadow: 0 0 14px #ffffff;
+    }
+
+    /* Caixa */
+    .note-forte {
+      background: var(--instrument-color, #06b6d4);
+      box-shadow: 0 0 12px var(--instrument-color, #06b6d4);
+      font-weight: 800;
+    }
+    .note-fraco {
+      background: transparent;
+      border: 2px dotted var(--instrument-color, #06b6d4);
+      color: var(--instrument-color, #06b6d4);
+      opacity: 0.9;
+    }
+    .note-ringshot {
+      background: transparent;
+      border: 2px solid #ffffff;
+      color: #ffffff;
+      font-weight: 800;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Repique */
+    .note-meio {
+      background: var(--instrument-color, #3b82f6);
+      box-shadow: 0 0 10px var(--instrument-color, #3b82f6);
+    }
+    .note-intermedio {
+      background: rgba(59, 130, 246, 0.45);
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
+    }
+    .note-open {
+      background: #38bdf8;
+      color: #0c0f17;
+      box-shadow: 0 0 10px #38bdf8;
+      font-weight: 700;
+    }
+    .note-slap {
+      background: #f43f5e;
+      color: #ffffff;
+      box-shadow: 0 0 12px #f43f5e;
+      font-weight: 800;
+    }
+
+    /* Agogô (4 bocas) */
+    .note-boca1 {
+      background: #be185d;
+      box-shadow: 0 0 8px #be185d;
+      color: #fff;
+    }
+    .note-boca2 {
+      background: #db2777;
+      box-shadow: 0 0 10px #db2777;
+      color: #fff;
+    }
+    .note-boca3 {
+      background: #ec4899;
+      box-shadow: 0 0 10px #ec4899;
+      color: #fff;
+    }
+    .note-boca4 {
+      background: #f472b6;
+      color: #0c0f17;
+      box-shadow: 0 0 12px #f472b6;
+      font-weight: 800;
+    }
+
+    /* Ganzá / Chocalho */
+    .note-frente {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      font-weight: 700;
+    }
+    .note-tras {
+      background: transparent;
+      border: 2px solid #10b981;
+      color: #10b981;
+    }
+
+    /* Impressão */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header, .top-subbar, .controls-panel, .track-actions, .btn, footer {
+        display: none !important;
+      }
+      .grid-container {
+        box-shadow: none !important;
+        border: 2px solid #000 !important;
+        background: #fff !important;
+        padding: 0 !important;
+      }
+      .step-cell {
+        background: #fff !important;
+        border-color: #cbd5e1 !important;
+      }
+      .track-header {
+        background: #f1f5f9 !important;
+        color: #000 !important;
+        border-color: #cbd5e1 !important;
+      }
+      .track-name {
+        color: #000 !important;
+      }
+      .step-node {
+        border: 1px solid #000 !important;
+      }
+      .print-title-area {
+        display: block !important;
+        margin-bottom: 20px;
+      }
+    }
+
+    .print-title-area {
+      display: none;
+    }
+
+    footer {
+      padding: 16px 28px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-header);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🥁</div>
+      <div>
+        <h1>Samba Breque Studio <span class="badge">v2.0 Pro</span></h1>
+      </div>
+    </div>
+
+    <!-- Navegação de Abas -->
+    <div class="app-tabs-nav">
+      <button class="tab-btn active" id="tabBtnBeatbox" data-target="tab-beatbox">
+        <span>🎥</span> Studio Vídeo & Beatbox <span class="tab-badge">NOVO</span>
+      </button>
+      <button class="tab-btn" id="tabBtnSequencer" data-target="tab-sequencer">
+        <span>🥁</span> Sequenciador de Breques
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner de Orientação para Celular (Modo Retrato -> Paisagem) -->
+  <div id="mobileOrientHint" class="mobile-orient-banner" style="display: none;">
+    <div class="orient-content">
+      <span class="orient-icon">🔄</span>
+      <span class="orient-text"><strong>Dica:</strong> Vire o celular na <strong>horizontal (deitado)</strong> para visão ampla de todos os compassos e da timeline!</span>
+    </div>
+    <button id="btnDismissOrient" class="btn-orient-close" title="Fechar dica">&times;</button>
+  </div>
+
+  <!-- Aviso de Fones de Ouvido ao Gravar -->
+  <div id="mobileHeadphonesToast" class="mobile-headphones-toast" style="display: none;">
+    <div class="hp-content">
+      <span class="hp-icon">🎧</span>
+      <span class="hp-text"><strong>Recomendação de Áudio:</strong> Use fones de ouvido para evitar que o microfone capture o metrônomo ou as outras faixas.</span>
+    </div>
+    <button id="btnDismissHp" class="hp-close" title="Fechar">&times;</button>
+  </div>
+
+  <!-- =========================================================================
+       ABA 1: STUDIO VÍDEO & BEATBOX MOSAIC (NOVO MÓDULO)
+       ========================================================================= -->
+  <div id="tab-beatbox" class="app-tab-content active">
+    <!-- Toolbar de Gravação e Mosaico -->
+    <div class="studio-toolbar">
+      <div class="studio-toolbar-group">
+        <!-- Play / Stop Master -->
+        <button id="btnStudioPlay" class="btn studio-btn-primary">
+          <span>▶</span> Reproduzir Mosaico
+        </button>
+        <button id="btnStudioStop" class="btn">
+          <span>⏹</span> Parar
+        </button>
+
+        <!-- Metrônomo com LEDs Visuais -->
+        <div class="metronome-box">
+          <button id="btnStudioMetronome" class="btn" style="padding: 4px 8px; font-size: 12px;" title="Ligar/Desligar clique sonoro do metrônomo">
+            ⏱️ Metrônomo
+          </button>
+          <div class="metronome-leds" title="Batida do metrônomo (Tempo 1 e 2)">
+            <div class="metro-led" id="metroLed1"></div>
+            <div class="metro-led" id="metroLed2"></div>
+          </div>
+        </div>
+
+        <!-- BPM Andamento -->
+        <div class="control-group">
+          <label for="studioBpm">BPM:</label>
+          <button id="btnBpmMinus" class="btn" style="padding: 3px 8px; font-size: 12px;">-</button>
+          <input type="range" id="studioBpm" min="60" max="200" value="120" step="1" style="width: 100px;">
+          <button id="btnBpmPlus" class="btn" style="padding: 3px 8px; font-size: 12px;">+</button>
+          <span id="studioBpmVal" class="bpm-value">120</span>
+        </div>
+
+        <!-- Botão de Alternar Loop vs Tocar até o Fim -->
+        <button id="btnToggleLoop" class="btn" title="Alternar entre Tocar até o fim da gravação ou Repetir continuamente em Loop">
+          <span id="loopIcon">🔁</span> <span id="loopText">Loop: Off</span>
+        </button>
+
+        <!-- Compasso -->
+        <div class="control-group">
+          <label for="studioMeter">Fórmula:</label>
+          <select id="studioMeter">
+            <option value="2/4" selected>2/4 (Samba)</option>
+            <option value="4/4">4/4 (Quatro Tempos)</option>
+          </select>
+        </div>
+
+        <!-- Modo de Duração / Gravação -->
+        <div class="control-group">
+          <label for="studioMode">Extensão:</label>
+          <select id="studioMode">
+            <option value="free" selected>📏 Tamanho da Gravação (Livre)</option>
+            <option value="fixed">⏱️ Compassos Fixos</option>
+          </select>
+        </div>
+
+        <!-- Compassos (visível apenas se o usuário escolher compassos fixos) -->
+        <div class="control-group" id="measuresGroup" style="display: none;">
+          <label for="studioMeasures">Compassos:</label>
+          <select id="studioMeasures">
+            <option value="2">2 Compassos</option>
+            <option value="4" selected>4 Compassos</option>
+            <option value="8">8 Compassos</option>
+            <option value="16">16 Compassos</option>
+            <option value="32">32 Compassos</option>
+          </select>
+        </div>
+      </div>
+
+        <!-- Seletor de Modo de Exibição: Faixas Estilo REAPER vs Mosaico de Vídeos -->
+        <div class="studio-view-switch" title="Alternar entre visualização em faixas multitrack (Reaper) e mosaico de vídeos">
+          <button id="btnViewTimeline" class="view-switch-btn active" data-view="timeline" title="Modo Faixas / Timeline estilo DAW REAPER">
+            <span>🎛️</span> Faixas (REAPER)
+          </button>
+          <button id="btnViewMosaic" class="view-switch-btn" data-view="mosaic" title="Modo Mosaico de Câmeras e Vídeos">
+            <span>🔲</span> Mosaico
+          </button>
+        </div>
+
+        <button id="btnAddTrack" class="btn" title="Adicionar nova faixa ao projeto">
+          <span>➕</span> Nova Faixa
+        </button>
+
+        <button id="btnExportVideo" class="btn btn-primary" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);" title="Renderizar vídeo composto de todas as câmeras com áudio mixado">
+          <span>🎬</span> Exportar Vídeo
+        </button>
+
+        <button id="btnExportAudio" class="btn" title="Baixar áudio master mixado">
+          <span>🎵</span> Exportar Áudio
+        </button>
+
+        <button id="btnSaveProject" class="btn" title="Salvar projeto no computador">
+          <span>💾</span> Salvar
+        </button>
+
+        <button id="btnLoadProject" class="btn" title="Carregar projeto">
+          <span>📂</span> Abrir
+        </button>
+        <input type="file" id="projectFileInput" accept=".json" style="display: none;">
+      </div>
+    </div>
+
+    <!-- Sub-barra informativa -->
+    <div class="studio-subbar">
+      <div class="studio-tip-banner">
+        <span>🎧</span>
+        <span><strong>Dica Pro:</strong> Grave com a boca usando <strong>fones de ouvido</strong>. Use <strong>[Barra de Espaço]</strong> para Play/Pause rápido.</span>
+      </div>
+      <div class="studio-quick-stats" id="studioQuickStats">
+        <span class="stat-tag" id="statTrackCount">4 Faixas</span>
+        <span class="stat-tag" id="statLoopDuration">4.0s de Loop</span>
+        <span class="stat-tag" id="statViewMode">Modo: Faixas (DAW Reaper)</span>
+      </div>
+    </div>
+
+    <!-- VISUALIZAÇÃO 1: FAIXAS / TIMELINE MULTITRACK ESTILO REAPER -->
+    <div class="timeline-workspace" id="timelineWorkspace">
+      <!-- Painel Superior de Transporte LCD e Ferramentas DAW -->
+      <div class="reaper-transport-panel">
+        <div class="reaper-lcd-rack">
+          <div class="reaper-lcd-cell">
+            <span class="lcd-cell-label">COMPASSO . TEMPO</span>
+            <span class="lcd-cell-value" id="reaperTimeBars">001.01.00</span>
+          </div>
+          <div class="reaper-lcd-cell">
+            <span class="lcd-cell-label">TEMPO DECORRIDO</span>
+            <span class="lcd-cell-value" id="reaperTimeSeconds">00:00.000</span>
+          </div>
+          <div class="reaper-lcd-cell">
+            <span class="lcd-cell-label">DURAÇÃO / REPRODUÇÃO</span>
+            <span class="lcd-cell-value" id="reaperLoopInfo">Até o fim (Sem loop)</span>
+          </div>
+        </div>
+
+        <div class="reaper-tools-rack">
+          <button id="btnTimelineLoop" class="btn btn-sm" title="Alternar entre Tocar até o fim da gravação ou Repetir continuamente em Loop (🔁)">
+            <span>🔁</span> Loop: Off
+          </button>
+          <div class="timeline-zoom-box">
+            <span class="zoom-label">Zoom:</span>
+            <button id="btnZoomMinus" class="btn btn-sm" title="Diminuir Zoom">−</button>
+            <span id="zoomLevelVal" class="zoom-val-text">100%</span>
+            <button id="btnZoomPlus" class="btn btn-sm" title="Aumentar Zoom">+</button>
+          </div>
+          <button id="btnSnapToggle" class="btn btn-sm active" title="Alinhar ao compasso e batidas (Snap to Grid)">
+            <span>🧲</span> Snap Grid
+          </button>
+          <button id="btnTimelineAddTrack" class="btn btn-sm" title="Adicionar nova faixa / instrumento">
+            <span>➕</span> Inserir Pista
+          </button>
+        </div>
+      </div>
+
+      <!-- Container DAW com Régua e Pistas Multitrack -->
+      <div class="reaper-daw-scroll" id="reaperDawScroll">
+        <div class="reaper-daw-main" id="reaperDawMain">
+          <!-- Régua Superior da Linha de Tempo -->
+          <div class="reaper-ruler-header">
+            <div class="reaper-tcp-corner">
+              <span class="corner-label">PAINEL DE FAIXAS (TCP)</span>
+            </div>
+            <div class="reaper-ruler-track" id="reaperRulerTrack">
+              <div class="reaper-ruler-bars" id="reaperRulerBars">
+                <!-- Compassos gerados dinamicamente via JS -->
+              </div>
+              <!-- Playhead / Cursor de Reprodução Vertical -->
+              <div class="reaper-playhead" id="reaperPlayhead">
+                <div class="playhead-pointer"></div>
+                <div class="playhead-line"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista de Faixas Multitrack Empilhadas -->
+          <div class="reaper-tracks-stack" id="reaperTracksStack">
+            <!-- Pistas geradas dinamicamente via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISUALIZAÇÃO 2: ÁREA DO MOSAICO DE VÍDEOS -->
+    <div class="mosaic-workspace" id="mosaicWorkspace" style="display: none;">
+      <div class="mosaic-grid layout-auto" id="mosaicGrid" data-count="4">
+        <!-- Cards de faixas gerados dinamicamente via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       ABA 2: SEQUENCIADOR DE BREQUES (MÓDULO CLÁSSICO)
+       ========================================================================= -->
+  <div id="tab-sequencer" class="app-tab-content">
+    <div class="studio-toolbar" style="background: rgba(14, 19, 32, 0.9);">
+      <div class="controls-panel">
+        <!-- Playback Controls -->
+        <button id="btnPlay" class="btn btn-primary">
+          <span id="playIcon">▶</span> <span id="playText">Reproduzir Breque</span>
+        </button>
+
+        <button id="btnStop" class="btn">
+          <span>⏹</span> Parar
+        </button>
+
+        <!-- BPM Slider -->
+        <div class="control-group">
+          <label for="bpmSlider">Andamento:</label>
+          <div class="bpm-wrapper">
+            <input type="range" id="bpmSlider" min="80" max="170" value="142" step="1">
+            <span id="bpmDisplay" class="bpm-value">142</span>
+            <span style="font-size: 11px; color: var(--text-muted)">BPM</span>
+          </div>
+        </div>
+
+        <!-- Compasso -->
+        <div class="control-group">
+          <label for="meterSelect">Compasso:</label>
+          <select id="meterSelect">
+            <option value="2/4" selected>2/4 (Samba Binário)</option>
+            <option value="4/4">4/4 (Quatro Tempos)</option>
+          </select>
+        </div>
+
+        <!-- Subdivisão -->
+        <div class="control-group">
+          <label for="subdivSelect">Grade (Resolução):</label>
+          <select id="subdivSelect">
+            <option value="semicolcheia" selected>8 divisões / compasso (Semicolcheia - 2/4 Padrão)</option>
+            <option value="fusa">16 divisões / compasso (Resolução Dobrada - Toques Rápidos)</option>
+          </select>
+        </div>
+
+        <!-- Compassos / Medidas -->
+        <div class="control-group">
+          <button id="btnRemoveMeasure" class="btn" style="padding: 4px 8px; font-size: 12px;" title="Remover compasso">-</button>
+          <span id="measureCountDisplay" style="font-weight: 600; font-size: 13px;">2 Compassos</span>
+          <button id="btnAddMeasure" class="btn" style="padding: 4px 8px; font-size: 12px;" title="Adicionar compasso">+</button>
+        </div>
+
+        <!-- Metrônomo -->
+        <button id="btnMetronome" class="btn" title="Ligar/Desligar Metrônomo">
+          <span id="metronomeIcon">⏱️</span> Metrônomo
+        </button>
+
+        <!-- Limpar Grid -->
+        <button id="btnClear" class="btn btn-danger" title="Limpar todas as notas">
+          <span>🗑️</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Top Action Sub-bar -->
+    <div class="top-subbar">
+      <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">
+        Sequenciador Rítmico de Bateria de Escola de Samba
+      </div>
+
+      <!-- Export & Import -->
+      <div style="display: flex; gap: 8px;">
+        <button id="btnExportJSON" class="btn btn-success" style="padding: 6px 12px; font-size: 12.5px;">
+          <span>💾</span> Salvar Arquivo (.json)
+        </button>
+        <button id="btnImportJSON" class="btn" style="padding: 6px 12px; font-size: 12.5px;">
+          <span>📂</span> Abrir Arquivo
+        </button>
+        <input type="file" id="fileInput" accept=".json" style="display: none;">
+        <button id="btnPrint" class="btn" style="padding: 6px 12px; font-size: 12.5px;">
+          <span>🖨️</span> Imprimir Partitura
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Canvas/Sequencer -->
+    <main>
+      <div class="print-title-area">
+        <h2 id="printTitle" style="font-size: 24px; font-weight: bold; margin-bottom: 4px;">Arranjo de Bateria de Escola de Samba</h2>
+        <p id="printDetails" style="font-size: 14px; color: #475569;">BPM: 142 | Fórmula: 2/4 | Mapa de Execução dos Breques</p>
+      </div>
+
+      <div class="grid-container" id="gridContainer">
+        <!-- Ruler bar -->
+        <div class="ruler-row" id="rulerRow"></div>
+
+        <!-- Tracks will be dynamically injected here -->
+        <div id="tracksWrapper"></div>
+      </div>
+    </main>
+
+    <!-- Legend & Instructions -->
+    <div style="padding: 0 28px 20px 28px; display: flex; flex-direction: column; gap: 10px;">
+      <div class="legend" style="flex-wrap: wrap;">
+        <span style="font-weight: 600; color: #fff;">Dica de Uso:</span>
+        <span>Clique com o botão esquerdo para ligar e alternar entre toques (Aberto, Abafado, Aro, etc.).</span>
+        <span>Clique com o botão direito para desligar a nota imediatamente.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL DE GRAVAÇÃO (WEBCAM + MICROFONE + OVERDUB)
+       ========================================================================= -->
+  <div class="modal-overlay" id="recordModal">
+    <div class="record-modal-box">
+      <div class="record-modal-header">
+        <h3 id="recordModalTitle">Gravar Instrumento</h3>
+
+        <!-- Seletor de Modo: Câmera & Mic vs Apenas Microfone -->
+        <div class="rec-mode-selector">
+          <button class="rec-mode-pill active" id="recModeVideoBtn" data-mode="video">
+            <span>📹</span> Câmera & Mic
+          </button>
+          <button class="rec-mode-pill" id="recModeAudioBtn" data-mode="audio">
+            <span>🎙️</span> Só Microfone
+          </button>
+        </div>
+
+        <div class="record-headphone-tip">
+          <span>🎧</span> Use fones de ouvido
+        </div>
+        <button class="track-delete-btn" id="recordCloseBtn" style="font-size: 18px;">✕</button>
+      </div>
+
+      <div class="viewfinder-wrapper">
+        <video id="viewfinderVideo" class="viewfinder-video" autoplay playsinline></video>
+
+        <!-- Viewfinder Especial quando no Modo Só Microfone -->
+        <div class="audio-only-viewfinder" id="audioOnlyViewfinder" style="display: none;">
+          <div class="audio-pulsing-circle" id="audioPulsingCircle">
+            <div class="audio-pulsing-ring ring-1"></div>
+            <div class="audio-pulsing-ring ring-2"></div>
+            <div class="audio-icon-mic">🎙️</div>
+          </div>
+          <div class="audio-viewfinder-instrument" id="audioViewfinderInstrument">Surdo 1ª (Tum)</div>
+          <div class="audio-viewfinder-sub">Modo Somente Microfone Ativo (Voz & Beatbox)</div>
+        </div>
+
+        <!-- Indicador de Gravando AO VIVO -->
+        <div class="rec-live-indicator" id="recLiveIndicator">
+          <div class="rec-pulse-dot"></div>
+          <span>GRAVANDO</span>
+        </div>
+
+        <!-- VU Meter do Microfone -->
+        <div class="mic-meter-bar-wrapper">
+          <span style="font-size: 11px;">🎙️</span>
+          <div class="mic-meter-fill">
+            <div class="mic-meter-level" id="micMeterLevel"></div>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso do Take -->
+        <div class="rec-progress-container">
+          <div class="rec-progress-bar" id="recProgressBar"></div>
+        </div>
+
+        <!-- Contagem Regressiva Pré-Roll (1 Compasso) -->
+        <div class="countdown-overlay" id="countdownOverlay">
+          <div class="countdown-number" id="countdownNumber">4</div>
+          <div class="countdown-subtext" id="countdownSubtext">Prepare a batida da boca...</div>
+        </div>
+      </div>
+
+      <div class="record-modal-footer">
+        <div style="font-size: 12px; color: var(--text-muted);" id="recordTipText">
+          Ao clicar em iniciar, haverá 1 compasso de contagem no fone e as faixas já gravadas tocarão juntas.
+        </div>
+
+        <button id="btnStartRecord" class="record-btn-main">
+          <span>🔴</span> Iniciar Gravação
+        </button>
+
+        <div class="review-actions-group" id="reviewActions">
+          <button id="btnDiscardTake" class="btn" style="border-color: #ef4444; color: #ef4444;">
+            <span>🔄</span> Descartar e Regravar
+          </button>
+          <button id="btnKeepTake" class="btn btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <span>✅</span> Usar este Take no Mosaico
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL DE EXPORTAÇÃO DE VÍDEO / ÁUDIO
+       ========================================================================= -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="export-modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 id="exportTitle" style="font-size: 18px; font-weight: 700;">Exportando...</h3>
+        <button class="track-delete-btn" id="exportCloseBtn" style="font-size: 18px;">✕</button>
+      </div>
+
+      <p id="exportStatus" style="font-size: 13.5px; color: var(--text-muted);">Processando...</p>
+
+      <div class="export-progress-track">
+        <div class="export-progress-bar" id="exportProgressBar"></div>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+        O vídeo mosaico está sendo renderizado frame a frame com áudio master mixado diretamente pelo seu navegador.
+      </p>
+    </div>
+  </div>
+
+  <!-- Canvas invisível para renderização do vídeo mosaico -->
+  <canvas id="exportRenderCanvas"></canvas>
+
+  <footer>
+    <div>Samba Breque Studio — Gravador Beatbox Vocal, Mosaico de Vídeo e Sequenciador de Bateria.</div>
+    <div>Feito para Mestres, Ritmistas e Músicos | Web Audio & MediaRecorder 100% Nativo</div>
+  </footer>
+
+  <!-- Barra de Ações & Navegação Inferior Móvel (Bottom Action Bar) -->
+  <nav class="mobile-bottom-bar" id="mobileBottomBar">
+    <button class="mob-bar-btn active" id="mobNavBeatbox" data-target="tab-beatbox" title="Studio Vídeo & Beatbox">
+      <span class="mob-icon">🎥</span>
+      <span class="mob-label">Studio</span>
+    </button>
+    <button class="mob-bar-btn" id="mobNavSequencer" data-target="tab-sequencer" title="Sequenciador de Breques">
+      <span class="mob-icon">🥁</span>
+      <span class="mob-label">Breques</span>
+    </button>
+    <button class="mob-bar-play" id="mobGlobalPlay" title="Tocar / Parar">
+      <span id="mobGlobalPlayIcon">▶</span>
+    </button>
+    <button class="mob-bar-btn" id="mobGlobalRecord" title="Gravar Faixa de Áudio/Vídeo">
+      <span class="mob-icon rec-icon">⏺</span>
+      <span class="mob-label">Gravar</span>
+    </button>
+    <button class="mob-bar-btn" id="mobInstallBtn" style="display: none;" title="Instalar Aplicativo no Celular">
+      <span class="mob-icon">📲</span>
+      <span class="mob-label">Instalar</span>
+    </button>
+  </nav>
+
+  <script>
+    /* =========================================================================
+       1. DEFINIÇÃO DE INSTRUMENTOS, ARTICULAÇÕES E CORES
+       ========================================================================= */
+    const INSTRUMENTS = [
+      {
+        id: 'surdo1',
+        name: 'Surdo de 1ª',
+        category: 'Surdos',
+        sub: 'Marcação Grave (22" / 24")',
+        color: '#ef4444',
+        articulations: [
+          { id: 'aberto', name: 'Toque Aberto', label: 'AB', css: 'note-aberto' },
+          { id: 'abafado', name: 'Toque Abafado', label: 'AF', css: 'note-abafado' }
+        ]
+      },
+      {
+        id: 'surdo2',
+        name: 'Surdo de 2ª',
+        category: 'Surdos',
+        sub: 'Resposta Médio (20" / 22")',
+        color: '#f97316',
+        articulations: [
+          { id: 'aberto', name: 'Toque Aberto', label: 'AB', css: 'note-aberto' },
+          { id: 'abafado', name: 'Toque Abafado', label: 'AF', css: 'note-abafado' }
+        ]
+      },
+      {
+        id: 'surdo3',
+        name: 'Surdo de 3ª',
+        category: 'Surdos',
+        sub: 'Centrador / Corte (16" / 18")',
+        color: '#eab308',
+        articulations: [
+          { id: 'aberto', name: 'Toque Aberto', label: 'AB', css: 'note-aberto' },
+          { id: 'corte', name: 'Corte Seco', label: 'CT', css: 'note-corte' },
+          { id: 'abafado', name: 'Toque Abafado', label: 'AF', css: 'note-abafado' }
+        ]
+      },
+      {
+        id: 'caixa',
+        name: 'Caixa de Guerra',
+        category: 'Caixas',
+        sub: 'Com Esteira (14")',
+        color: '#06b6d4',
+        articulations: [
+          { id: 'forte', name: 'Toque Forte', label: 'FT', css: 'note-forte' },
+          { id: 'fraco', name: 'Toque Fraco', label: 'FR', css: 'note-fraco' },
+          { id: 'ringshot', name: 'Ringshot (Aro + Pele)', label: 'RS', css: 'note-ringshot' }
+        ]
+      },
+      {
+        id: 'repique',
+        name: 'Repique / Repinique',
+        category: 'Repiques',
+        sub: 'Baqueta e Mão (10" / 12")',
+        color: '#3b82f6',
+        articulations: [
+          { id: 'meio', name: 'Toque no Meio (Baqueta)', label: 'ME', css: 'note-meio' },
+          { id: 'intermedio', name: 'Intermédio (Suave)', label: 'IN', css: 'note-intermedio' },
+          { id: 'ringshot', name: 'Ringshot (Estalo de Aro)', label: 'RS', css: 'note-ringshot' },
+          { id: 'open', name: 'Open (Toque Grave com a Mão)', label: 'OP', css: 'note-open' },
+          { id: 'slap', name: 'Slap (Toque Forte com a Mão)', label: 'SL', css: 'note-slap' }
+        ]
+      },
+      {
+        id: 'tamborim',
+        name: 'Tamborim',
+        category: 'Agudos',
+        sub: 'Vara / Baqueta de Nylon (6")',
+        color: '#8b5cf6',
+        articulations: [
+          { id: 'forte', name: 'Toque Forte', label: 'FT', css: 'note-forte' },
+          { id: 'fraco', name: 'Toque Fraco', label: 'FR', css: 'note-fraco' }
+        ]
+      },
+      {
+        id: 'agogo',
+        name: 'Agogô',
+        category: 'Agudos',
+        sub: '4 Bocas (Grave ao Agudo)',
+        color: '#ec4899',
+        articulations: [
+          { id: 'boca1', name: 'Boca 1 (Mais Grave)', label: 'B1', css: 'note-boca1' },
+          { id: 'boca2', name: 'Boca 2 (Médio-Grave)', label: 'B2', css: 'note-boca2' },
+          { id: 'boca3', name: 'Boca 3 (Médio-Aguda)', label: 'B3', css: 'note-boca3' },
+          { id: 'boca4', name: 'Boca 4 (Mais Aguda)', label: 'B4', css: 'note-boca4' }
+        ]
+      },
+      {
+        id: 'ganza',
+        name: 'Ganzá / Chocalho',
+        category: 'Agudos',
+        sub: 'Pratinhos / Chocalho de Alumínio',
+        color: '#10b981',
+        articulations: [
+          { id: 'frente', name: 'Toque Frente (Acento)', label: 'FR', css: 'note-frente' },
+          { id: 'tras', name: 'Toque Trás', label: 'TR', css: 'note-tras' }
+        ]
+      }
+    ];
+
+    /* =========================================================================
+       2. MOTOR HÍBRIDO DE ÁUDIO WEB AUDIO API (SAMPLES REAIS + SÍNTESE ACÚSTICA)
+       ========================================================================= */
+    class SambaAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.isInitialized = false;
+        this.sampleBuffers = {};
+        this.loadingPromises = {};
+
+        // Mapeamento de cada instrumento e articulação para os samples reais com volume e afinação
+        this.sampleConfig = {
+          // Surdos
+          'surdo1:aberto': { url: 'assets/audio/ls_58.mp3', vol: 1.0, rate: 1.0 },
+          'surdo1:abafado': { url: 'assets/audio/ls_73.mp3', vol: 0.9, rate: 1.0 },
+          'surdo2:aberto': { url: 'assets/audio/ms_58.mp3', vol: 1.0, rate: 1.0 },
+          'surdo2:abafado': { url: 'assets/audio/ms_73.mp3', vol: 0.9, rate: 1.0 },
+          'surdo3:aberto': { url: 'assets/audio/hs_58.mp3', vol: 1.0, rate: 1.0 },
+          'surdo3:corte': { url: 'assets/audio/hs_74.mp3', vol: 1.0, rate: 1.0 },
+          'surdo3:abafado': { url: 'assets/audio/hs_73.mp3', vol: 0.9, rate: 1.0 },
+
+          // Caixa: forte, fraco, ringshot
+          'caixa:forte': { url: 'assets/audio/sn_58.mp3', vol: 1.0, rate: 1.0 },
+          'caixa:fraco': { url: 'assets/audio/sn_2e.mp3', vol: 0.65, rate: 1.0 },
+          'caixa:ringshot': { url: 'assets/audio/sn_72.mp3', vol: 1.1, rate: 1.0 },
+
+          // Repique: meio, intermédio, ringshot, open, slap
+          'repique:meio': { url: 'assets/audio/re_58.mp3', vol: 1.0, rate: 1.0 },
+          'repique:intermedio': { url: 'assets/audio/re_2e.mp3', vol: 0.6, rate: 1.0 },
+          'repique:ringshot': { url: 'assets/audio/re_72.mp3', vol: 1.15, rate: 1.0 },
+          'repique:open': { url: 'assets/audio/re_68.mp3', vol: 0.95, rate: 0.88 }, // Grave e encorpado com a mão solta
+          // Slap: estalo cortante tipo ringshot com a mão, com ressonância natural completa sem corte abrupto
+          'repique:slap': { url: 'assets/audio/re_72.mp3', vol: 1.15, rate: 0.94 },
+
+          // Tamborim: forte e fraco
+          'tamborim:forte': { url: 'assets/audio/ta_58.mp3', vol: 1.0, rate: 1.0 },
+          'tamborim:fraco': { url: 'assets/audio/ta_72.mp3', vol: 0.6, rate: 0.96 },
+
+          // Agogô: boca 1 (mais grave) até boca 4 (mais aguda)
+          'agogo:boca1': { url: 'assets/audio/ag_6f.mp3', vol: 1.0, rate: 0.89 }, // Boca 1 (grave profundo)
+          'agogo:boca2': { url: 'assets/audio/ag_6f.mp3', vol: 1.0, rate: 1.05 }, // Boca 2 (médio-grave)
+          'agogo:boca3': { url: 'assets/audio/ag_61.mp3', vol: 1.0, rate: 0.95 }, // Boca 3 (médio-aguda)
+          'agogo:boca4': { url: 'assets/audio/ag_61.mp3', vol: 1.0, rate: 1.18 }, // Boca 4 (aguda cortante)
+
+          // Ganzá: frente e trás
+          'ganza:frente': { url: 'assets/audio/sh_58.mp3', vol: 0.95, rate: 1.0 },
+          'ganza:tras': { url: 'assets/audio/sh_2e.mp3', vol: 0.65, rate: 1.0 }
+        };
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.isInitialized = true;
+          this.preloadSamples();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      preloadSamples() {
+        Object.values(this.sampleConfig).forEach(cfg => {
+          this.loadSample(cfg.url);
+        });
+      }
+
+      async loadSample(url) {
+        if (this.sampleBuffers[url]) return this.sampleBuffers[url];
+        if (this.loadingPromises[url]) return this.loadingPromises[url];
+
+        this.loadingPromises[url] = fetch(url)
+          .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status} para ${url}`);
+            return res.arrayBuffer();
+          })
+          .then(data => this.ctx.decodeAudioData(data))
+          .then(decoded => {
+            this.sampleBuffers[url] = decoded;
+            return decoded;
+          })
+          .catch(err => {
+            console.warn(`Fallback para síntese em ${url}:`, err.message);
+            return null;
+          });
+
+        return this.loadingPromises[url];
+      }
+
+      playSample(cfg) {
+        if (!this.ctx) return false;
+        const url = typeof cfg === 'string' ? cfg : cfg.url;
+        const volume = cfg.vol ?? 1.0;
+        const playbackRate = cfg.rate ?? 1.0;
+
+        const buffer = this.sampleBuffers[url];
+        if (!buffer) {
+          this.loadSample(url);
+          return false;
+        }
+
+        const t = this.ctx.currentTime;
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
+
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(volume, t);
+        if (cfg.decay) {
+          gainNode.gain.setValueAtTime(volume, t + cfg.decay * 0.4);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, t + cfg.decay);
+        }
+
+        if (cfg.filter) {
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = cfg.filter.type;
+          filter.frequency.value = cfg.filter.freq;
+          source.connect(filter);
+          filter.connect(gainNode);
+        } else {
+          source.connect(gainNode);
+        }
+
+        gainNode.connect(this.ctx.destination);
+        source.start(t);
+        return true;
+      }
+
+      createNoiseBuffer() {
+        if (this.noiseBuffer) return this.noiseBuffer;
+        const bufferSize = this.ctx.sampleRate * 1.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        this.noiseBuffer = buffer;
+        return buffer;
+      }
+
+      /* Síntese procedural de backup caso o browser bloqueie download */
+      playFallbackSurdo(pitch, isMuted, isCut) {
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(pitch * 1.4, t);
+        osc.frequency.exponentialRampToValueAtTime(pitch, t + 0.04);
+        const duration = isCut ? 0.08 : (isMuted ? 0.14 : 0.65);
+        gain.gain.setValueAtTime(1.0, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + duration);
+      }
+
+      playMetronome(isDownbeat) {
+        this.init();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(isDownbeat ? 1200 : 800, t);
+        gain.gain.setValueAtTime(0.35, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.05);
+      }
+
+      triggerInstrument(instrumentId, articulationId) {
+        this.init();
+        const key = `${instrumentId}:${articulationId}`;
+        const cfg = this.sampleConfig[key];
+
+        // Tenta tocar o sample real gravado com volume, afinação e envelope calculados
+        if (cfg && this.playSample(cfg)) {
+          return;
+        }
+
+        // Se ainda estiver carregando no primeiro toque, dispara o fallback imediato
+        switch (instrumentId) {
+          case 'surdo1':
+            this.playFallbackSurdo(58, articulationId === 'abafado', false);
+            break;
+          case 'surdo2':
+            this.playFallbackSurdo(82, articulationId === 'abafado', false);
+            break;
+          case 'surdo3':
+            this.playFallbackSurdo(115, articulationId === 'abafado', articulationId === 'corte');
+            break;
+        }
+      }
+    }
+
+    /* =========================================================================
+       3. ESTADO DA APLICAÇÃO E SEQUENCIADOR
+       ========================================================================= */
+    const audio = new SambaAudioEngine();
+
+    const state = {
+      bpm: 142,
+      meter: '2/4',
+      subdivision: 'semicolcheia',
+      measures: 2,
+      metronomeEnabled: false,
+      isPlaying: false,
+      currentStep: 0,
+      timerId: null,
+      mutes: {},
+      solos: {},
+      gridData: {}
+    };
+
+    function getStepsPerMeasure() {
+      const beats = state.meter === '2/4' ? 2 : 4;
+      // Em 2/4 de samba: 2 tempos
+      // Semicolcheia = 4 subdivisões por tempo -> 8 por compasso
+      // Fusa = 8 subdivisões por tempo -> 16 por compasso (resolução dobrada)
+      if (state.subdivision === 'fusa') return beats * 8;
+      return beats * 4;
+    }
+
+    function getTotalSteps() {
+      return state.measures * getStepsPerMeasure();
+    }
+
+    function initGridData() {
+      const totalSteps = getTotalSteps();
+      INSTRUMENTS.forEach(inst => {
+        if (!state.gridData[inst.id]) {
+          state.gridData[inst.id] = new Array(totalSteps).fill(null);
+        } else {
+          const current = state.gridData[inst.id];
+          if (current.length < totalSteps) {
+            state.gridData[inst.id] = current.concat(new Array(totalSteps - current.length).fill(null));
+          } else if (current.length > totalSteps) {
+            state.gridData[inst.id] = current.slice(0, totalSteps);
+          }
+        }
+      });
+    }
+
+    /* =========================================================================
+       4. RENDERIZAÇÃO DA GRADE (DOM)
+       ========================================================================= */
+    const rulerRow = document.getElementById('rulerRow');
+    const tracksWrapper = document.getElementById('tracksWrapper');
+
+    function renderStudio() {
+      initGridData();
+      const totalSteps = getTotalSteps();
+      const stepsPerMeasure = getStepsPerMeasure();
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+      const stepsPerBeat = stepsPerMeasure / beatsPerMeasure;
+
+      // 1. Régua Superior Dupla (Compasso + Guias dos Tempos 1 e 2)
+      rulerRow.innerHTML = '';
+      for (let m = 0; m < state.measures; m++) {
+        const measureGroup = document.createElement('div');
+        measureGroup.className = 'measure-group';
+        measureGroup.style.width = `${stepsPerMeasure * 36}px`;
+
+        const measureBadge = document.createElement('div');
+        measureBadge.className = 'measure-badge';
+        measureBadge.textContent = `Compasso ${m + 1} (2/4)`;
+        measureGroup.appendChild(measureBadge);
+
+        const beatsSubruler = document.createElement('div');
+        beatsSubruler.className = 'beats-subruler';
+
+        for (let b = 0; b < beatsPerMeasure; b++) {
+          const beatBadge = document.createElement('div');
+          beatBadge.style.width = `${stepsPerBeat * 36}px`;
+          beatBadge.className = `beat-badge ${b === 0 ? 'beat-surdo2' : (b === 1 ? 'beat-surdo1' : '')}`;
+          const surdoLabel = b === 0 ? 'Tempo 1 (2ª)' : (b === 1 ? 'Tempo 2 (1ª)' : `T${b + 1}`);
+          beatBadge.innerHTML = `<span>${surdoLabel}</span>`;
+          beatsSubruler.appendChild(beatBadge);
+        }
+
+        measureGroup.appendChild(beatsSubruler);
+        rulerRow.appendChild(measureGroup);
+      }
+
+      // 2. Faixas
+      tracksWrapper.innerHTML = '';
+
+      INSTRUMENTS.forEach(inst => {
+        const row = document.createElement('div');
+        row.className = 'track-row';
+        row.style.setProperty('--instrument-color', inst.color);
+
+        const header = document.createElement('div');
+        header.className = 'track-header';
+
+        const info = document.createElement('div');
+        info.className = 'track-info';
+        info.innerHTML = `
+          <span class="track-name">${inst.name}</span>
+          <span class="track-sub">${inst.sub}</span>
+        `;
+
+        const actions = document.createElement('div');
+        actions.className = 'track-actions';
+
+        const btnMute = document.createElement('button');
+        btnMute.className = `btn-icon-mini ${state.mutes[inst.id] ? 'active-mute' : ''}`;
+        btnMute.textContent = 'M';
+        btnMute.title = 'Mudo (Mute)';
+        btnMute.onclick = (e) => {
+          e.stopPropagation();
+          state.mutes[inst.id] = !state.mutes[inst.id];
+          renderStudio();
+        };
+
+        const btnSolo = document.createElement('button');
+        btnSolo.className = `btn-icon-mini ${state.solos[inst.id] ? 'active-solo' : ''}`;
+        btnSolo.textContent = 'S';
+        btnSolo.title = 'Solo';
+        btnSolo.onclick = (e) => {
+          e.stopPropagation();
+          state.solos[inst.id] = !state.solos[inst.id];
+          renderStudio();
+        };
+
+        const btnAudition = document.createElement('button');
+        btnAudition.className = 'btn-icon-mini';
+        btnAudition.innerHTML = '🔊';
+        btnAudition.title = 'Testar Som';
+        btnAudition.onclick = (e) => {
+          e.stopPropagation();
+          audio.triggerInstrument(inst.id, inst.articulations[0].id);
+        };
+
+        actions.appendChild(btnMute);
+        actions.appendChild(btnSolo);
+        actions.appendChild(btnAudition);
+        header.appendChild(info);
+        header.appendChild(actions);
+
+        const stepsContainer = document.createElement('div');
+        stepsContainer.className = 'steps-container';
+
+        for (let s = 0; s < totalSteps; s++) {
+          const cell = document.createElement('div');
+          cell.className = 'step-cell';
+          cell.style.width = '36px';
+          cell.dataset.instrument = inst.id;
+          cell.dataset.step = s;
+
+          const stepInMeasure = s % stepsPerMeasure;
+          const isMeasureFirst = stepInMeasure === 0;
+          const isBeatFirst = stepInMeasure % stepsPerBeat === 0;
+          const beatIndex = Math.floor(stepInMeasure / stepsPerBeat);
+
+          if (isMeasureFirst) {
+            cell.classList.add('measure-first');
+          } else if (isBeatFirst) {
+            cell.classList.add('beat-first');
+            if (beatIndex === 0) cell.classList.add('beat-surdo2-head');
+            else if (beatIndex === 1) cell.classList.add('beat-surdo1-head');
+          }
+
+          const activeArtId = state.gridData[inst.id][s];
+          if (activeArtId) {
+            const artObj = inst.articulations.find(a => a.id === activeArtId);
+            if (artObj) {
+              const node = document.createElement('div');
+              node.className = `step-node ${artObj.css}`;
+              node.textContent = artObj.label;
+              cell.appendChild(node);
+            }
+          }
+
+          cell.onclick = (e) => {
+            e.preventDefault();
+            cycleArticulation(inst, s);
+          };
+
+          cell.oncontextmenu = (e) => {
+            e.preventDefault();
+            state.gridData[inst.id][s] = null;
+            renderStudio();
+          };
+
+          stepsContainer.appendChild(cell);
+        }
+
+        row.appendChild(header);
+        row.appendChild(stepsContainer);
+        tracksWrapper.appendChild(row);
+      });
+
+      updatePrintDetails();
+    }
+
+    function cycleArticulation(inst, stepIndex) {
+      const current = state.gridData[inst.id][stepIndex];
+      const arts = inst.articulations;
+      
+      let nextArt = null;
+      if (!current) {
+        nextArt = arts[0].id;
+      } else {
+        const idx = arts.findIndex(a => a.id === current);
+        if (idx !== -1 && idx < arts.length - 1) {
+          nextArt = arts[idx + 1].id;
+        } else {
+          nextArt = null;
+        }
+      }
+
+      state.gridData[inst.id][stepIndex] = nextArt;
+      if (nextArt) {
+        audio.triggerInstrument(inst.id, nextArt);
+      }
+      renderStudio();
+    }
+
+    /* =========================================================================
+       5. REPRODUÇÃO & SEQUENCIADOR
+       ========================================================================= */
+    function startPlayback() {
+      audio.init();
+      state.isPlaying = true;
+      document.getElementById('playIcon').textContent = '⏸';
+      document.getElementById('playText').textContent = 'Pausar Breque';
+      document.getElementById('btnPlay').classList.add('btn-primary');
+
+      const totalSteps = getTotalSteps();
+      const stepsPerMeasure = getStepsPerMeasure();
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+      const stepsPerBeat = stepsPerMeasure / beatsPerMeasure;
+      const stepDurationMs = ((60 / state.bpm) / stepsPerBeat) * 1000;
+
+      state.timerId = setInterval(() => {
+        playStep(state.currentStep);
+        updateCursor(state.currentStep);
+        state.currentStep = (state.currentStep + 1) % totalSteps;
+      }, stepDurationMs);
+    }
+
+    function stopPlayback() {
+      state.isPlaying = false;
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      state.currentStep = 0;
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playText').textContent = 'Reproduzir Breque';
+      clearCursor();
+    }
+
+    function playStep(stepIndex) {
+      const stepsPerMeasure = getStepsPerMeasure();
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+      const stepsPerBeat = stepsPerMeasure / beatsPerMeasure;
+
+      if (state.metronomeEnabled && stepIndex % stepsPerBeat === 0) {
+        const isDownbeat = stepIndex % stepsPerMeasure === 0;
+        audio.playMetronome(isDownbeat);
+      }
+
+      const hasAnySolo = Object.values(state.solos).some(v => v === true);
+
+      INSTRUMENTS.forEach(inst => {
+        if (state.mutes[inst.id]) return;
+        if (hasAnySolo && !state.solos[inst.id]) return;
+
+        const note = state.gridData[inst.id]?.[stepIndex];
+        if (note) {
+          audio.triggerInstrument(inst.id, note);
+        }
+      });
+    }
+
+    function updateCursor(stepIndex) {
+      clearCursor();
+      const cells = document.querySelectorAll(`.step-cell[data-step="${stepIndex}"]`);
+      cells.forEach(cell => cell.classList.add('active-step-cursor'));
+    }
+
+    function clearCursor() {
+      document.querySelectorAll('.active-step-cursor').forEach(el => el.classList.remove('active-step-cursor'));
+    }
+
+
+
+    /* =========================================================================
+       7. IMPORTAÇÃO E EXPORTAÇÃO JSON / IMPRESSÃO
+       ========================================================================= */
+    function exportToJSON() {
+      const exportObject = {
+        app: 'BateriaBrequesStudio',
+        version: '1.0',
+        createdAt: new Date().toISOString(),
+        settings: {
+          bpm: state.bpm,
+          meter: state.meter,
+          subdivision: state.subdivision,
+          measures: state.measures
+        },
+        gridData: state.gridData
+      };
+
+      const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `breque_bateria_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importFromJSON(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.gridData || !data.settings) {
+            alert('Arquivo JSON inválido para o Bateria Breques Studio.');
+            return;
+          }
+
+          stopPlayback();
+          state.bpm = data.settings.bpm || 142;
+          state.meter = data.settings.meter || '2/4';
+          state.subdivision = data.settings.subdivision || 'semicolcheia';
+          state.measures = data.settings.measures || 2;
+          state.gridData = data.gridData;
+
+          document.getElementById('bpmSlider').value = state.bpm;
+          document.getElementById('bpmDisplay').textContent = state.bpm;
+          document.getElementById('meterSelect').value = state.meter;
+          document.getElementById('subdivSelect').value = state.subdivision;
+          document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
+
+          renderStudio();
+        } catch (err) {
+          alert('Erro ao processar o arquivo: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function updatePrintDetails() {
+      const printDetails = document.getElementById('printDetails');
+      if (printDetails) {
+        printDetails.textContent = `BPM: ${state.bpm} | Fórmula: ${state.meter} | Subdivisão: ${state.subdivision} | Total: ${state.measures} compasso(s)`;
+      }
+    }
+
+    /* =========================================================================
+       8. EVENT LISTENERS E INICIALIZAÇÃO
+       ========================================================================= */
+    document.getElementById('btnPlay').onclick = () => {
+      if (state.isPlaying) {
+        stopPlayback();
+      } else {
+        startPlayback();
+      }
+    };
+
+    document.getElementById('btnStop').onclick = stopPlayback;
+
+    document.getElementById('bpmSlider').oninput = (e) => {
+      state.bpm = parseInt(e.target.value);
+      document.getElementById('bpmDisplay').textContent = state.bpm;
+      if (state.isPlaying) {
+        clearInterval(state.timerId);
+        startPlayback();
+      }
+      updatePrintDetails();
+    };
+
+    document.getElementById('meterSelect').onchange = (e) => {
+      state.meter = e.target.value;
+      stopPlayback();
+      renderStudio();
+    };
+
+    document.getElementById('subdivSelect').onchange = (e) => {
+      state.subdivision = e.target.value;
+      stopPlayback();
+      renderStudio();
+    };
+
+    document.getElementById('btnAddMeasure').onclick = () => {
+      state.measures++;
+      document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
+      stopPlayback();
+      renderStudio();
+    };
+
+    document.getElementById('btnRemoveMeasure').onclick = () => {
+      if (state.measures > 1) {
+        state.measures--;
+        document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
+        stopPlayback();
+        renderStudio();
+      }
+    };
+
+    document.getElementById('btnMetronome').onclick = () => {
+      state.metronomeEnabled = !state.metronomeEnabled;
+      document.getElementById('btnMetronome').style.borderColor = state.metronomeEnabled ? '#3b82f6' : 'var(--border-color)';
+      document.getElementById('btnMetronome').style.background = state.metronomeEnabled ? 'rgba(59, 130, 246, 0.2)' : 'var(--bg-card)';
+    };
+
+    document.getElementById('btnClear').onclick = () => {
+      if (confirm('Deseja limpar todas as notas marcadas na grade?')) {
+        state.gridData = {};
+        stopPlayback();
+        renderStudio();
+      }
+    };
+
+    document.getElementById('btnExportJSON').onclick = exportToJSON;
+    
+    document.getElementById('btnImportJSON').onclick = () => {
+      document.getElementById('fileInput').click();
+    };
+
+    document.getElementById('fileInput').onchange = (e) => {
+      if (e.target.files.length > 0) {
+        importFromJSON(e.target.files[0]);
+      }
+    };
+
+    document.getElementById('btnPrint').onclick = () => {
+      window.print();
+    };
+
+    // Gerenciador de Abas (Tabs) - Desktop & Mobile
+    const tabBtnBeatbox = document.getElementById('tabBtnBeatbox');
+    const tabBtnSequencer = document.getElementById('tabBtnSequencer');
+    const tabBeatbox = document.getElementById('tab-beatbox');
+    const tabSequencer = document.getElementById('tab-sequencer');
+
+    const mobNavBeatbox = document.getElementById('mobNavBeatbox');
+    const mobNavSequencer = document.getElementById('mobNavSequencer');
+    const mobGlobalPlay = document.getElementById('mobGlobalPlay');
+    const mobGlobalPlayIcon = document.getElementById('mobGlobalPlayIcon');
+    const mobGlobalRecord = document.getElementById('mobGlobalRecord');
+    const mobInstallBtn = document.getElementById('mobInstallBtn');
+
+    const mobileOrientHint = document.getElementById('mobileOrientHint');
+    const btnDismissOrient = document.getElementById('btnDismissOrient');
+    const mobileHeadphonesToast = document.getElementById('mobileHeadphonesToast');
+    const btnDismissHp = document.getElementById('btnDismissHp');
+
+    let currentActiveTab = 'tab-beatbox';
+
+    function switchTab(target) {
+      currentActiveTab = target;
+      if (target === 'tab-beatbox') {
+        tabBtnBeatbox.classList.add('active');
+        tabBtnSequencer.classList.remove('active');
+        if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
+        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
+        tabBeatbox.classList.add('active');
+        tabSequencer.classList.remove('active');
+        stopPlayback(); // Para o sequenciador se estiver tocando
+      } else {
+        tabBtnSequencer.classList.add('active');
+        tabBtnBeatbox.classList.remove('active');
+        if (mobNavSequencer) mobNavSequencer.classList.add('active');
+        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
+        tabSequencer.classList.add('active');
+        tabBeatbox.classList.remove('active');
+        if (window.BeatboxStudio) {
+          window.BeatboxStudio.stopStudioPlayback(); // Para o beatbox se estiver tocando
+        }
+      }
+      syncGlobalPlayButton();
+    }
+
+    tabBtnBeatbox.onclick = () => switchTab('tab-beatbox');
+    tabBtnSequencer.onclick = () => switchTab('tab-sequencer');
+    if (mobNavBeatbox) mobNavBeatbox.onclick = () => switchTab('tab-beatbox');
+    if (mobNavSequencer) mobNavSequencer.onclick = () => switchTab('tab-sequencer');
+
+    // Botão Play Global da Barra Móvel
+    function syncGlobalPlayButton() {
+      if (!mobGlobalPlayIcon) return;
+      if (currentActiveTab === 'tab-beatbox') {
+        const studioBtnPlay = document.getElementById('btnStudioPlay');
+        const isStudioPlaying = studioBtnPlay && studioBtnPlay.classList.contains('playing');
+        mobGlobalPlayIcon.textContent = isStudioPlaying ? '⏹' : '▶';
+        if (mobGlobalPlay) {
+          mobGlobalPlay.style.background = isStudioPlaying ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #2563eb, #1d4ed8)';
+        }
+      } else {
+        mobGlobalPlayIcon.textContent = state.isPlaying ? '⏹' : '▶';
+        if (mobGlobalPlay) {
+          mobGlobalPlay.style.background = state.isPlaying ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #2563eb, #1d4ed8)';
+        }
+      }
+    }
+
+    if (mobGlobalPlay) {
+      mobGlobalPlay.onclick = () => {
+        // Desbloqueia Web Audio no toque
+        if (soundEngine && !soundEngine.isInitialized) soundEngine.init();
+
+        if (currentActiveTab === 'tab-beatbox') {
+          const btnStudioPlay = document.getElementById('btnStudioPlay');
+          if (btnStudioPlay) btnStudioPlay.click();
+        } else {
+          const btnPlay = document.getElementById('btnPlay');
+          if (btnPlay) btnPlay.click();
+        }
+        setTimeout(syncGlobalPlayButton, 50);
+      };
+    }
+
+    // Botão Gravar Global da Barra Móvel
+    if (mobGlobalRecord) {
+      mobGlobalRecord.onclick = () => {
+        if (currentActiveTab !== 'tab-beatbox') {
+          switchTab('tab-beatbox');
+        }
+        showHeadphonesToast();
+        // Dispara modal de gravação na primeira faixa disponível
+        const firstRecordBtn = document.querySelector('.btn-lane-record, .track-card-rec-btn, .btn-record-main');
+        if (firstRecordBtn) {
+          firstRecordBtn.click();
+        } else {
+          const btnAddTrack = document.getElementById('btnAddTrack') || document.getElementById('btnTimelineAddTrack');
+          if (btnAddTrack) btnAddTrack.click();
+        }
+      };
+    }
+
+    // Notificação de Fones de Ouvido ao Gravar
+    function showHeadphonesToast() {
+      if (!mobileHeadphonesToast) return;
+      mobileHeadphonesToast.style.display = 'flex';
+      setTimeout(() => {
+        if (mobileHeadphonesToast) mobileHeadphonesToast.style.display = 'none';
+      }, 7000);
+    }
+    if (btnDismissHp) {
+      btnDismissHp.onclick = () => {
+        if (mobileHeadphonesToast) mobileHeadphonesToast.style.display = 'none';
+      };
+    }
+
+    // Banner de Orientação de Tela (Dica Retrato -> Paisagem)
+    function checkOrientation() {
+      if (!mobileOrientHint) return;
+      const isMobile = window.innerWidth <= 768;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const dismissed = sessionStorage.getItem('orient_hint_dismissed');
+
+      if (isMobile && isPortrait && !dismissed) {
+        mobileOrientHint.style.display = 'flex';
+      } else {
+        mobileOrientHint.style.display = 'none';
+      }
+    }
+
+    if (btnDismissOrient) {
+      btnDismissOrient.onclick = () => {
+        if (mobileOrientHint) mobileOrientHint.style.display = 'none';
+        sessionStorage.setItem('orient_hint_dismissed', 'true');
+      };
+    }
+
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    // Desbloqueio Antecipado de Áudio no Primeiro Toque (iOS / Android)
+    function unlockAudioOnFirstTouch() {
+      if (soundEngine) soundEngine.init();
+      document.removeEventListener('touchstart', unlockAudioOnFirstTouch);
+      document.removeEventListener('pointerdown', unlockAudioOnFirstTouch);
+    }
+    document.addEventListener('touchstart', unlockAudioOnFirstTouch, { passive: true });
+    document.addEventListener('pointerdown', unlockAudioOnFirstTouch, { passive: true });
+
+    // Registro do Service Worker e Instalação PWA
+    let deferredPrompt = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('Service Worker registrado com sucesso.'))
+        .catch(err => console.log('Erro ao registrar Service Worker:', err));
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (mobInstallBtn) {
+        mobInstallBtn.style.display = 'flex';
+      }
+    });
+
+    if (mobInstallBtn) {
+      mobInstallBtn.onclick = async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log('Resultado da instalação PWA:', outcome);
+          deferredPrompt = null;
+          mobInstallBtn.style.display = 'none';
+        } else {
+          alert('Para instalar no celular: toque no menu de 3 pontinhos do navegador e selecione "Adicionar à tela de início" ou "Instalar aplicativo".');
+        }
+      };
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      state.gridData = {};
+      initGridData();
+      renderStudio();
+      checkOrientation();
+      if (window.BeatboxStudio) {
+        window.BeatboxStudio.init();
+      }
+    });
+  </script>
+  <script src="beatbox_studio.js"></script>
+</body>
+</html>
