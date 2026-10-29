@@ -1011,6 +1011,29 @@
         <button class="track-delete-btn" id="recordCloseBtn" style="font-size: 18px;">✕</button>
       </div>
 
+      <!-- Barra de Dispositivos e Qualidade de Áudio -->
+      <div class="record-device-bar" id="recordDeviceBar">
+        <div class="rec-device-group">
+          <label for="recAudioDevice">🎙️ Microfone:</label>
+          <select id="recAudioDevice" class="rec-device-select" title="Selecione o microfone exato para gravação">
+            <option value="">Detectando microfones...</option>
+          </select>
+        </div>
+        <div class="rec-device-group" id="recVideoDeviceGroup">
+          <label for="recVideoDevice">📹 Câmera:</label>
+          <select id="recVideoDevice" class="rec-device-select" title="Selecione a câmera para gravação">
+            <option value="">Detectando câmeras...</option>
+          </select>
+        </div>
+        <div class="rec-device-group">
+          <label for="recAudioProfile">🎛️ Perfil Áudio:</label>
+          <select id="recAudioProfile" class="rec-device-select" title="Tratamento acústico da gravação">
+            <option value="raw" selected>Studio / Beatbox Puro (Sem cortes)</option>
+            <option value="filtered">Redução de Ruído & Eco</option>
+          </select>
+        </div>
+      </div>
+
       <div class="viewfinder-wrapper">
         <video id="viewfinderVideo" class="viewfinder-video" autoplay playsinline></video>
 

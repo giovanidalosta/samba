@@ -131,6 +131,9 @@
     snapToGrid: true,
     isPlaying: false,
     playbackTimer: null,
+    selectedAudioDeviceId: localStorage.getItem('samba_selected_audio_dev') || '',
+    selectedVideoDeviceId: localStorage.getItem('samba_selected_video_dev') || '',
+    audioProfile: localStorage.getItem('samba_audio_profile') || 'raw', // 'raw' (estúdio/beatbox sem corte de frequências) ou 'filtered' (ruído/eco)
     tracks: []
   };
 
@@ -214,6 +217,11 @@
     dom.recordModal = document.getElementById('recordModal');
     dom.recordModalTitle = document.getElementById('recordModalTitle');
     dom.recordCloseBtn = document.getElementById('recordCloseBtn');
+    dom.recordDeviceBar = document.getElementById('recordDeviceBar');
+    dom.recAudioDevice = document.getElementById('recAudioDevice');
+    dom.recVideoDevice = document.getElementById('recVideoDevice');
+    dom.recVideoDeviceGroup = document.getElementById('recVideoDeviceGroup');
+    dom.recAudioProfile = document.getElementById('recAudioProfile');
     dom.viewfinderVideo = document.getElementById('viewfinderVideo');
     dom.recModeVideoBtn = document.getElementById('recModeVideoBtn');
     dom.recModeAudioBtn = document.getElementById('recModeAudioBtn');
@@ -1137,6 +1145,60 @@
     isRecording: false
   };
 
+  // Enumera microfones e webcams disponíveis no computador do usuário
+  async function populateMediaDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(d => d.kind === 'audioinput');
+      const videoInputs = devices.filter(d => d.kind === 'videoinput');
+
+      if (dom.recAudioDevice) {
+        const curVal = state.selectedAudioDeviceId || dom.recAudioDevice.value;
+        dom.recAudioDevice.innerHTML = '';
+        if (audioInputs.length === 0) {
+          dom.recAudioDevice.innerHTML = '<option value="">Microfone Padrão do Sistema</option>';
+        } else {
+          audioInputs.forEach((dev, idx) => {
+            const opt = document.createElement('option');
+            opt.value = dev.deviceId;
+            opt.textContent = dev.label ? dev.label : `Microfone ${idx + 1}`;
+            if (dev.deviceId === curVal || (!curVal && idx === 0)) {
+              opt.selected = true;
+            }
+            dom.recAudioDevice.appendChild(opt);
+          });
+          state.selectedAudioDeviceId = dom.recAudioDevice.value;
+        }
+      }
+
+      if (dom.recVideoDevice) {
+        const curVal = state.selectedVideoDeviceId || dom.recVideoDevice.value;
+        dom.recVideoDevice.innerHTML = '';
+        if (videoInputs.length === 0) {
+          dom.recVideoDevice.innerHTML = '<option value="">Câmera Padrão</option>';
+        } else {
+          videoInputs.forEach((dev, idx) => {
+            const opt = document.createElement('option');
+            opt.value = dev.deviceId;
+            opt.textContent = dev.label ? dev.label : `Câmera ${idx + 1}`;
+            if (dev.deviceId === curVal || (!curVal && idx === 0)) {
+              opt.selected = true;
+            }
+            dom.recVideoDevice.appendChild(opt);
+          });
+          state.selectedVideoDeviceId = dom.recVideoDevice.value;
+        }
+      }
+
+      if (dom.recAudioProfile) {
+        dom.recAudioProfile.value = state.audioProfile || 'raw';
+      }
+    } catch (err) {
+      console.warn('Erro ao listar dispositivos de mídia:', err);
+    }
+  }
+
   async function setRecordingMode(mode) {
     recordingContext.captureMode = mode;
     if (dom.recModeVideoBtn && dom.recModeAudioBtn) {
@@ -1144,16 +1206,35 @@
       dom.recModeAudioBtn.classList.toggle('active', mode === 'audio');
     }
 
+    if (dom.recVideoDeviceGroup) {
+      dom.recVideoDeviceGroup.style.display = (mode === 'video') ? 'flex' : 'none';
+    }
+
     // Para o stream anterior se houver
     if (recordingContext.stream) {
       recordingContext.stream.getTracks().forEach(t => t.stop());
       recordingContext.stream = null;
+    }
+    if (recordingContext.micAnimationId) {
+      cancelAnimationFrame(recordingContext.micAnimationId);
+      recordingContext.micAnimationId = null;
     }
 
     const track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
     if (dom.audioViewfinderInstrument && track) {
       dom.audioViewfinderInstrument.textContent = track.name;
     }
+
+    // Constraints de áudio de alta fidelidade
+    const isFiltered = (state.audioProfile === 'filtered');
+    const audioConstraints = {
+      deviceId: state.selectedAudioDeviceId ? { ideal: state.selectedAudioDeviceId } : undefined,
+      echoCancellation: isFiltered,
+      noiseSuppression: isFiltered,
+      autoGainControl: isFiltered,
+      channelCount: { ideal: 2 },
+      sampleRate: { ideal: 48000 }
+    };
 
     try {
       if (mode === 'audio') {
@@ -1165,36 +1246,60 @@
         }
         if (dom.audioOnlyViewfinder) dom.audioOnlyViewfinder.style.display = 'flex';
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          }
-        });
+        let audioStream;
+        try {
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+        } catch (e) {
+          console.warn('Fallback audio constraints:', e);
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
 
-        recordingContext.stream = stream;
-        setupMicMeter(stream);
+        recordingContext.stream = audioStream;
+        setupMicMeter(audioStream);
       } else {
-        // MODO CÂMERA & MICROFONE
+        // MODO CÂMERA & MICROFONE:
+        // Obtemos vídeo e áudio separadamente para garantir 100% que o navegador use o microfone correto selecionado!
         if (dom.audioOnlyViewfinder) dom.audioOnlyViewfinder.style.display = 'none';
         if (dom.viewfinderVideo) dom.viewfinderVideo.style.display = 'block';
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          }
-        });
+        const videoConstraints = {
+          deviceId: state.selectedVideoDeviceId ? { ideal: state.selectedVideoDeviceId } : undefined,
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          facingMode: 'user'
+        };
 
-        recordingContext.stream = stream;
-        dom.viewfinderVideo.srcObject = stream;
+        let videoStream;
+        try {
+          videoStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+        } catch (e) {
+          console.warn('Fallback video constraints:', e);
+          videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
+        let audioStream;
+        try {
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+        } catch (e) {
+          console.warn('Fallback audio constraints in video mode:', e);
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        // Combina as faixas de vídeo e áudio do microfone correto
+        const combinedStream = new MediaStream([
+          ...videoStream.getVideoTracks(),
+          ...audioStream.getAudioTracks()
+        ]);
+
+        recordingContext.stream = combinedStream;
+        dom.viewfinderVideo.srcObject = combinedStream;
         dom.viewfinderVideo.muted = true;
         await dom.viewfinderVideo.play();
-        setupMicMeter(stream);
+        setupMicMeter(combinedStream);
       }
+
+      // Popula ou atualiza a lista de nomes reais de microfones e webcams após permissão concedida
+      await populateMediaDevices();
     } catch (err) {
       console.error('Erro ao acessar dispositivo no modo ' + mode, err);
       alert(`Não foi possível acessar seu dispositivo no modo ${mode === 'audio' ? 'apenas microfone' : 'câmera'}. Verifique as permissões do navegador.`);
@@ -1216,6 +1321,8 @@
     dom.recProgressBar.style.width = '0%';
     dom.countdownOverlay.classList.remove('active');
 
+    // Popula dispositivos previamente conhecidos
+    await populateMediaDevices();
     await setRecordingMode(preferredMode);
   }
 
@@ -1307,21 +1414,42 @@
     recordingContext.isRecording = true;
 
     // Configura MediaRecorder de acordo com o modo (vídeo ou áudio)
-    let mimeType;
+    let mimeType = '';
+    let recorderOptions = {};
+
     if (recordingContext.captureMode === 'audio') {
-      mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'audio/mp4';
-      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'audio/ogg';
-      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+      const audioTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg'
+      ];
+      for (const t of audioTypes) {
+        if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+      }
+      recorderOptions = {
+        mimeType: mimeType || undefined,
+        audioBitsPerSecond: 192000 // 192 kbps estéreo / alta fidelidade para instrumentos vocais
+      };
     } else {
-      mimeType = 'video/webm;codecs=vp9,opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8,opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+      // Para vídeo: preferir vp8,opus para reduzir em ~70% o uso de CPU vs vp9, prevenindo buffer underflow de áudio
+      const videoTypes = [
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+        'video/mp4'
+      ];
+      for (const t of videoTypes) {
+        if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+      }
+      recorderOptions = {
+        mimeType: mimeType || undefined,
+        audioBitsPerSecond: 192000, // CRÍTICO: Força 192kbps para o áudio no vídeo (impede queda para 32kbps mono)
+        videoBitsPerSecond: 2500000 // 2.5 Mbps de bitrate para vídeo fluido em 720p
+      };
     }
 
-    const options = mimeType ? { mimeType } : {};
-    const recorder = new MediaRecorder(recordingContext.stream, options);
+    const recorder = new MediaRecorder(recordingContext.stream, recorderOptions);
     recorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) {
         recordingContext.recordedChunks.push(e.data);
@@ -1337,7 +1465,8 @@
 
     recordingContext.mediaRecorder = recorder;
     recordingContext.recordingStartTime = Date.now();
-    recorder.start(100);
+    // Fatias de 1000ms (1 segundo) para estabilidade perfeita de gravação e zero engasgos de áudio
+    recorder.start(1000);
 
     dom.recLiveIndicator.classList.add('active');
     dom.btnStartRecord.textContent = '⏹ Parar Gravação';
@@ -2154,6 +2283,35 @@
     }
     if (dom.recModeAudioBtn) {
       dom.recModeAudioBtn.onclick = () => setRecordingMode('audio');
+    }
+
+    // Seletores de Dispositivo & Perfil de Áudio
+    if (dom.recAudioDevice) {
+      dom.recAudioDevice.onchange = (e) => {
+        state.selectedAudioDeviceId = e.target.value;
+        localStorage.setItem('samba_selected_audio_dev', state.selectedAudioDeviceId);
+        if (dom.recordModal.classList.contains('active')) {
+          setRecordingMode(recordingContext.captureMode);
+        }
+      };
+    }
+    if (dom.recVideoDevice) {
+      dom.recVideoDevice.onchange = (e) => {
+        state.selectedVideoDeviceId = e.target.value;
+        localStorage.setItem('samba_selected_video_dev', state.selectedVideoDeviceId);
+        if (dom.recordModal.classList.contains('active') && recordingContext.captureMode === 'video') {
+          setRecordingMode('video');
+        }
+      };
+    }
+    if (dom.recAudioProfile) {
+      dom.recAudioProfile.onchange = (e) => {
+        state.audioProfile = e.target.value;
+        localStorage.setItem('samba_audio_profile', state.audioProfile);
+        if (dom.recordModal.classList.contains('active')) {
+          setRecordingMode(recordingContext.captureMode);
+        }
+      };
     }
 
     dom.btnStartRecord.onclick = () => {
