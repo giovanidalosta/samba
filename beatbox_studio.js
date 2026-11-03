@@ -152,6 +152,8 @@
       trimStart: 0,
       trimEnd: 0,
       duration: 0, // Duração real da gravação em segundos
+      waveformPeaks: null, // Cache dos picos reais decodificados via Web Audio API
+      _offsetTimer: null,
       videoElement: null,
       audioNode: null,
       gainNode: null
@@ -532,11 +534,16 @@
         const id = btn.dataset.id;
         const track = state.tracks.find(t => t.id === id);
         if (track && confirm(`Limpar gravação de "${track.name}"?`)) {
+          if (track._offsetTimer) {
+            clearTimeout(track._offsetTimer);
+            track._offsetTimer = null;
+          }
           if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
           track.mediaUrl = null;
           track.mediaBlob = null;
           track.duration = 0;
-          renderMosaic();
+          track.waveformPeaks = null;
+          renderStudioViews();
           saveCurrentSession();
         }
       };
@@ -801,7 +808,61 @@
     bindReaperEvents();
   }
 
-  // --- Desenho da Onda Sonora (Audio Waveform) Realista ---
+  // --- Desenho da Onda Sonora (Audio Waveform) Real Decodificada ---
+  async function extractWaveformPeaks(track, numBuckets = 240) {
+    if (track.waveformPeaks && track.waveformPeaks.length === numBuckets) {
+      return track.waveformPeaks;
+    }
+    if (!track.mediaBlob || typeof track.mediaBlob.arrayBuffer !== 'function') {
+      return null;
+    }
+    if (track._decodingPromise) {
+      return track._decodingPromise;
+    }
+
+    track._decodingPromise = (async () => {
+      try {
+        const arrayBuf = await track.mediaBlob.arrayBuffer();
+        const audioContext = getAudioContext();
+        const audioBuf = await audioContext.decodeAudioData(arrayBuf.slice(0));
+
+        // Atualiza duração real decodificada pelo motor de áudio (corrige Infinity do WebM)
+        if (audioBuf.duration && isFinite(audioBuf.duration) && audioBuf.duration > 0) {
+          const prevDur = track.duration || 0;
+          track.duration = audioBuf.duration;
+          if (Math.abs(prevDur - audioBuf.duration) > 0.15) {
+            updateQuickStats();
+          }
+        }
+
+        const rawData = audioBuf.getChannelData(0);
+        const samplesPerBucket = Math.max(1, Math.floor(rawData.length / numBuckets));
+        const peaks = new Float32Array(numBuckets);
+
+        for (let i = 0; i < numBuckets; i++) {
+          const start = i * samplesPerBucket;
+          const end = Math.min(rawData.length, start + samplesPerBucket);
+          let max = 0;
+          for (let j = start; j < end; j++) {
+            const val = Math.abs(rawData[j]);
+            if (val > max) max = val;
+          }
+          peaks[i] = max;
+        }
+
+        track.waveformPeaks = Array.from(peaks);
+        return track.waveformPeaks;
+      } catch (err) {
+        console.warn('Falha ao decodificar waveform real da faixa:', err);
+        return null;
+      } finally {
+        track._decodingPromise = null;
+      }
+    })();
+
+    return track._decodingPromise;
+  }
+
   function drawWaveform(canvas, track, trackColor) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -810,31 +871,68 @@
 
     ctx.clearRect(0, 0, width, height);
 
-    // Gradiente bonito estilo Reaper
     const grad = ctx.createLinearGradient(0, 0, 0, height);
     grad.addColorStop(0, trackColor || '#60a5fa');
     grad.addColorStop(0.5, '#38bdf8');
     grad.addColorStop(1, trackColor || '#2563eb');
 
-    ctx.fillStyle = grad;
-
-    // Gerador de picos rítmicos de percussão/breque de alta definição
-    const barsCount = Math.floor(width / 3.5);
     const midY = height / 2;
-    const seed = hashString(track.id + (track.duration || 1));
 
-    for (let i = 0; i < barsCount; i++) {
-      const x = i * 3.5;
-      const rhythmPulse = (Math.sin(i * 0.18) * 0.5 + 0.5);
-      const noise = pseudoRandom(seed + i);
-      const beatAccent = (i % 16 === 0 || i % 16 === 6 || i % 16 === 10) ? 1.5 : 0.8;
-      let amp = (noise * 0.65 + rhythmPulse * 0.5) * beatAccent;
-      amp = Math.min(1.0, Math.max(0.12, amp));
+    // Linha central de referência (0 dBFS / silêncio)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(0, midY - 0.5, width, 1);
 
-      const barHeight = amp * (height * 0.82);
-      const y = midY - (barHeight / 2);
+    const renderPeaksOnCanvas = (peaks) => {
+      if (!canvas.isConnected) return;
+      const w = canvas.width = canvas.parentElement?.clientWidth || width;
+      const h = canvas.height = canvas.parentElement?.clientHeight || height;
+      const center = h / 2;
 
-      ctx.fillRect(x, y, 2, barHeight);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fillRect(0, center - 0.5, w, 1);
+
+      const barGap = 3.5;
+      const barsCount = Math.max(1, Math.floor(w / barGap));
+      ctx.fillStyle = grad;
+
+      if (peaks && peaks.length > 0) {
+        // Normalização suave mantendo proporção caso o sinal seja muito baixo ou mudo
+        let maxPeak = 0;
+        for (let i = 0; i < peaks.length; i++) {
+          if (peaks[i] > maxPeak) maxPeak = peaks[i];
+        }
+        const normFactor = maxPeak > 0.02 ? (1 / Math.max(0.25, maxPeak)) : 1;
+
+        for (let i = 0; i < barsCount; i++) {
+          const x = i * barGap;
+          const peakIdx = Math.min(peaks.length - 1, Math.floor((i / barsCount) * peaks.length));
+          const rawAmp = peaks[peakIdx] || 0;
+          const scaledAmp = Math.min(1.0, rawAmp * normFactor);
+          const barHeight = Math.max(2, scaledAmp * (h * 0.86));
+          const y = center - (barHeight / 2);
+          ctx.fillRect(x, y, 2, barHeight);
+        }
+      } else {
+        // Fallback caso o container não suporte decodeAudioData
+        const seed = hashString(track.id + (track.duration || 1));
+        for (let i = 0; i < barsCount; i++) {
+          const x = i * barGap;
+          const noise = pseudoRandom(seed + i);
+          const amp = Math.min(1.0, Math.max(0.08, noise * 0.6));
+          const barHeight = amp * (h * 0.75);
+          const y = center - (barHeight / 2);
+          ctx.fillRect(x, y, 2, barHeight);
+        }
+      }
+    };
+
+    if (track.waveformPeaks) {
+      renderPeaksOnCanvas(track.waveformPeaks);
+    } else if (track.mediaBlob) {
+      extractWaveformPeaks(track).then(peaks => {
+        renderPeaksOnCanvas(peaks);
+      });
     }
   }
 
@@ -968,10 +1066,15 @@
         const id = btn.dataset.id;
         const track = state.tracks.find(t => t.id === id);
         if (track && confirm(`Limpar gravação de "${track.name}"?`)) {
+          if (track._offsetTimer) {
+            clearTimeout(track._offsetTimer);
+            track._offsetTimer = null;
+          }
           if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
           track.mediaUrl = null;
           track.mediaBlob = null;
           track.duration = 0;
+          track.waveformPeaks = null;
           renderStudioViews();
           saveCurrentSession();
         }
@@ -1108,10 +1211,15 @@
     const track = state.tracks.find(t => t.id === trackId);
     if (!track) return;
 
+    if (track._offsetTimer) {
+      clearTimeout(track._offsetTimer);
+      track._offsetTimer = null;
+    }
     if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
     track.mediaBlob = file;
     track.mediaUrl = URL.createObjectURL(file);
     track.mediaType = file.type.startsWith('video') ? 'video' : 'audio';
+    track.waveformPeaks = null;
 
     // Determina a duração exata do arquivo para a faixa
     const tempMedia = document.createElement(track.mediaType === 'video' ? 'video' : 'audio');
@@ -1125,6 +1233,11 @@
       }
     };
 
+    extractWaveformPeaks(track).then(() => {
+      renderStudioViews();
+      saveCurrentSession();
+    });
+
     renderStudioViews();
     saveCurrentSession();
   }
@@ -1137,13 +1250,45 @@
     mediaRecorder: null,
     recordedChunks: [],
     lastRecordedBlob: null,
-    micAudioCtx: null,
+    reviewUrl: null,
+    micSourceNode: null,
     micAnalyser: null,
     micAnimationId: null,
     countdownTimer: null,
     recordingTimer: null,
-    isRecording: false
+    isCountingDown: false,
+    isRecording: false,
+    aborted: false
   };
+
+  function disconnectMicMeter() {
+    if (recordingContext.micAnimationId) {
+      cancelAnimationFrame(recordingContext.micAnimationId);
+      recordingContext.micAnimationId = null;
+    }
+    if (recordingContext.micSourceNode) {
+      try { recordingContext.micSourceNode.disconnect(); } catch (e) {}
+      recordingContext.micSourceNode = null;
+    }
+    if (recordingContext.micAnalyser) {
+      try { recordingContext.micAnalyser.disconnect(); } catch (e) {}
+      recordingContext.micAnalyser = null;
+    }
+    if (dom.micMeterLevel) dom.micMeterLevel.style.width = '0%';
+  }
+
+  function cleanupReviewMedia() {
+    if (dom.viewfinderVideo) {
+      try { dom.viewfinderVideo.pause(); } catch (e) {}
+      dom.viewfinderVideo.removeAttribute('src');
+      dom.viewfinderVideo.loop = false;
+      dom.viewfinderVideo.muted = true;
+    }
+    if (recordingContext.reviewUrl) {
+      URL.revokeObjectURL(recordingContext.reviewUrl);
+      recordingContext.reviewUrl = null;
+    }
+  }
 
   // Enumera microfones e webcams disponíveis no computador do usuário
   async function populateMediaDevices() {
@@ -1210,14 +1355,13 @@
       dom.recVideoDeviceGroup.style.display = (mode === 'video') ? 'flex' : 'none';
     }
 
+    cleanupReviewMedia();
+    disconnectMicMeter();
+
     // Para o stream anterior se houver
     if (recordingContext.stream) {
       recordingContext.stream.getTracks().forEach(t => t.stop());
       recordingContext.stream = null;
-    }
-    if (recordingContext.micAnimationId) {
-      cancelAnimationFrame(recordingContext.micAnimationId);
-      recordingContext.micAnimationId = null;
     }
 
     const track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
@@ -1242,23 +1386,22 @@
         if (dom.viewfinderVideo) {
           dom.viewfinderVideo.style.display = 'none';
           dom.viewfinderVideo.srcObject = null;
-          dom.viewfinderVideo.src = '';
         }
         if (dom.audioOnlyViewfinder) dom.audioOnlyViewfinder.style.display = 'flex';
 
         let audioStream;
         try {
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
         } catch (e) {
           console.warn('Fallback audio constraints:', e);
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         }
 
         recordingContext.stream = audioStream;
         setupMicMeter(audioStream);
       } else {
         // MODO CÂMERA & MICROFONE:
-        // Obtemos vídeo e áudio separadamente para garantir 100% que o navegador use o microfone correto selecionado!
+        // Requisita vídeo e áudio em uma única chamada getUserMedia para evitar conflito de hardware em mobile/drivers exclusivos
         if (dom.audioOnlyViewfinder) dom.audioOnlyViewfinder.style.display = 'none';
         if (dom.viewfinderVideo) dom.viewfinderVideo.style.display = 'block';
 
@@ -1269,32 +1412,31 @@
           facingMode: 'user'
         };
 
-        let videoStream;
+        let combinedStream;
         try {
-          videoStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+          combinedStream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: audioConstraints
+          });
         } catch (e) {
-          console.warn('Fallback video constraints:', e);
-          videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          console.warn('Fallback combined video+audio constraints:', e);
+          try {
+            combinedStream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: audioConstraints
+            });
+          } catch (e2) {
+            combinedStream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: true
+            });
+          }
         }
-
-        let audioStream;
-        try {
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-        } catch (e) {
-          console.warn('Fallback audio constraints in video mode:', e);
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        }
-
-        // Combina as faixas de vídeo e áudio do microfone correto
-        const combinedStream = new MediaStream([
-          ...videoStream.getVideoTracks(),
-          ...audioStream.getAudioTracks()
-        ]);
 
         recordingContext.stream = combinedStream;
         dom.viewfinderVideo.srcObject = combinedStream;
         dom.viewfinderVideo.muted = true;
-        await dom.viewfinderVideo.play();
+        await dom.viewfinderVideo.play().catch(() => {});
         setupMicMeter(combinedStream);
       }
 
@@ -1310,7 +1452,14 @@
     const track = state.tracks.find(t => t.id === trackId);
     if (!track) return;
 
+    stopStudioPlayback();
+
     recordingContext.activeTrackId = trackId;
+    recordingContext.aborted = false;
+    recordingContext.isCountingDown = false;
+    recordingContext.isRecording = false;
+    recordingContext.lastRecordedBlob = null;
+
     dom.recordModalTitle.textContent = `Gravar: ${track.name}`;
     dom.recordModal.classList.add('active');
     dom.reviewActions.classList.remove('active');
@@ -1321,23 +1470,38 @@
     dom.recProgressBar.style.width = '0%';
     dom.countdownOverlay.classList.remove('active');
 
+    renderReaperTimeline();
+
     // Popula dispositivos previamente conhecidos
     await populateMediaDevices();
     await setRecordingMode(preferredMode);
   }
 
+  function openQuickRecord() {
+    // Seleciona a primeira faixa vazia ou a primeira faixa disponível
+    const targetTrack = state.tracks.find(t => !t.mediaUrl) || state.tracks[0];
+    if (targetTrack) {
+      openRecordingModal(targetTrack.id, 'audio');
+    }
+  }
+
   function setupMicMeter(stream) {
+    disconnectMicMeter();
     try {
+      if (!stream || stream.getAudioTracks().length === 0) return;
       const ctx = getAudioContext();
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
 
+      recordingContext.micSourceNode = source;
+      recordingContext.micAnalyser = analyser;
+
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
       function updateMeter() {
-        if (!recordingContext.stream) return;
+        if (!recordingContext.stream || !recordingContext.micAnalyser) return;
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < dataArray.length; i++) {
@@ -1363,34 +1527,50 @@
 
   function closeRecordingModal() {
     stopCurrentRecording(false);
+    cleanupReviewMedia();
+    disconnectMicMeter();
 
     if (recordingContext.stream) {
       recordingContext.stream.getTracks().forEach(t => t.stop());
       recordingContext.stream = null;
     }
-    if (recordingContext.micAnimationId) {
-      cancelAnimationFrame(recordingContext.micAnimationId);
-      recordingContext.micAnimationId = null;
-    }
     if (dom.viewfinderVideo) {
       dom.viewfinderVideo.srcObject = null;
-      dom.viewfinderVideo.src = '';
     }
 
+    recordingContext.activeTrackId = null;
     dom.recordModal.classList.remove('active');
     stopStudioPlayback();
+    renderReaperTimeline();
   }
 
   // Contagem regressiva antes da gravação (1 compasso de pré-roll)
   function startPreRollCountdown() {
+    if (recordingContext.isCountingDown || recordingContext.isRecording) return;
+    if (!recordingContext.stream) {
+      alert('Microfone não detectado ou sem permissão ativa.');
+      return;
+    }
+
+    getAudioContext();
+    recordingContext.isCountingDown = true;
+    recordingContext.aborted = false;
+
     const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
     const beatIntervalMs = (60 / state.bpm) * 1000;
     let count = beatsPerMeasure;
+
+    dom.btnStartRecord.textContent = '⏹ Cancelar Contagem';
+    dom.btnStartRecord.classList.add('is-recording');
 
     dom.countdownOverlay.classList.add('active');
     dom.countdownNumber.textContent = count;
     dom.countdownSubtext.textContent = 'Prepare o instrumento da boca...';
     playMetronomeClick(true);
+
+    if (recordingContext.countdownTimer) {
+      clearInterval(recordingContext.countdownTimer);
+    }
 
     recordingContext.countdownTimer = setInterval(() => {
       count--;
@@ -1400,6 +1580,7 @@
       } else {
         clearInterval(recordingContext.countdownTimer);
         recordingContext.countdownTimer = null;
+        recordingContext.isCountingDown = false;
         dom.countdownOverlay.classList.remove('active');
         startActualRecording();
       }
@@ -1408,9 +1589,10 @@
 
   // Início oficial da gravação com overdub nos fones
   function startActualRecording() {
-    if (!recordingContext.stream) return;
+    if (!recordingContext.stream || recordingContext.aborted) return;
 
     recordingContext.recordedChunks = [];
+    recordingContext.isCountingDown = false;
     recordingContext.isRecording = true;
 
     // Configura MediaRecorder de acordo com o modo (vídeo ou áudio)
@@ -1425,7 +1607,7 @@
         'audio/ogg'
       ];
       for (const t of audioTypes) {
-        if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
       }
       recorderOptions = {
         mimeType: mimeType || undefined,
@@ -1440,7 +1622,7 @@
         'video/mp4'
       ];
       for (const t of videoTypes) {
-        if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
       }
       recorderOptions = {
         mimeType: mimeType || undefined,
@@ -1449,7 +1631,13 @@
       };
     }
 
-    const recorder = new MediaRecorder(recordingContext.stream, recorderOptions);
+    let recorder;
+    try {
+      recorder = new MediaRecorder(recordingContext.stream, recorderOptions);
+    } catch (e) {
+      recorder = new MediaRecorder(recordingContext.stream);
+    }
+
     recorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) {
         recordingContext.recordedChunks.push(e.data);
@@ -1457,16 +1645,27 @@
     };
 
     recorder.onstop = () => {
-      const finalMime = mimeType || (recordingContext.captureMode === 'audio' ? 'audio/webm' : 'video/webm');
+      // Se a gravação foi cancelada ou o modal foi fechado, ignora o review
+      if (recordingContext.aborted || !dom.recordModal.classList.contains('active')) {
+        recordingContext.recordedChunks = [];
+        return;
+      }
+
+      const finalMime = recorder.mimeType || mimeType || (recordingContext.captureMode === 'audio' ? 'audio/webm' : 'video/webm');
       const blob = new Blob(recordingContext.recordedChunks, { type: finalMime });
+      if (!blob || blob.size === 0) {
+        alert('Nenhum dado de áudio foi capturado pelo navegador. Verifique se o microfone selecionado está ativo.');
+        discardAndRetry();
+        return;
+      }
       recordingContext.lastRecordedBlob = blob;
       showRecordingReview(blob);
     };
 
     recordingContext.mediaRecorder = recorder;
     recordingContext.recordingStartTime = Date.now();
-    // Fatias de 1000ms (1 segundo) para estabilidade perfeita de gravação e zero engasgos de áudio
-    recorder.start(1000);
+    // Fatias de 250ms para garantir flush imediato mesmo em breques curtos
+    recorder.start(250);
 
     dom.recLiveIndicator.classList.add('active');
     dom.btnStartRecord.textContent = '⏹ Parar Gravação';
@@ -1493,7 +1692,7 @@
           recordingContext.recordingTimer = null;
           stopCurrentRecording(true);
         }
-      }, 50);
+      }, 40);
     } else {
       // Modo Livre: atualiza o cronômetro da gravação em tempo real
       const startTime = Date.now();
@@ -1504,24 +1703,62 @@
     }
   }
 
+  // Dispara reprodução de uma faixa respeitando seu offsetMs (adiantamento negativo ou atraso positivo)
+  function triggerTrackAtTimelineOffset(track, timelinePosSec = 0) {
+    if (!track || !track.videoElement) return;
+    if (track._offsetTimer) {
+      clearTimeout(track._offsetTimer);
+      track._offsetTimer = null;
+    }
+
+    const offsetSec = (track.offsetMs || 0) / 1000;
+    const mediaTime = timelinePosSec - offsetSec;
+
+    if (mediaTime >= 0) {
+      try {
+        track.videoElement.currentTime = mediaTime;
+      } catch (e) {}
+      track.videoElement.play().catch(e => console.warn('Play error:', e));
+    } else {
+      // Atraso positivo (offsetMs > 0): aguarda antes de iniciar o elemento de mídia em currentTime = 0
+      track.videoElement.pause();
+      try {
+        track.videoElement.currentTime = 0;
+      } catch (e) {}
+      const delayMs = Math.round(-mediaTime * 1000);
+      track._offsetTimer = setTimeout(() => {
+        track._offsetTimer = null;
+        if (track.videoElement) {
+          try { track.videoElement.currentTime = 0; } catch (e) {}
+          track.videoElement.play().catch(e => console.warn('Delayed play error:', e));
+        }
+      }, delayMs);
+    }
+  }
+
   // Reprodução simultânea das outras faixas durante a gravação para o fone do usuário
   function startOverdubMonitoring() {
     const activeTrackId = recordingContext.activeTrackId;
+    const otherTracks = state.tracks.filter(t => t.id !== activeTrackId);
+    const hasSoloOnOthers = otherTracks.some(t => t.solo);
 
-    state.tracks.forEach(track => {
-      if (track.id !== activeTrackId && track.videoElement && !track.muted) {
-        track.videoElement.currentTime = 0;
-        track.videoElement.play().catch(e => console.warn('Overdub play:', e));
-      }
+    updateAudioMixRouting();
+
+    otherTracks.forEach(track => {
+      if (!track.videoElement || track.muted) return;
+      if (hasSoloOnOthers && !track.solo) return;
+      triggerTrackAtTimelineOffset(track, 0);
     });
 
-    // Metrônomo durante a gravação
+    // Metrônomo durante a gravação (com batida 1 imediata em t = 0)
     if (state.metronomeEnabled) {
       startMetronomeClock();
     }
   }
 
   function stopCurrentRecording(hasSuccess) {
+    recordingContext.aborted = !hasSuccess;
+
     if (recordingContext.countdownTimer) {
       clearInterval(recordingContext.countdownTimer);
       recordingContext.countdownTimer = null;
@@ -1531,35 +1768,55 @@
       recordingContext.recordingTimer = null;
     }
 
-    if (recordingContext.mediaRecorder && recordingContext.mediaRecorder.state !== 'inactive') {
-      recordingContext.mediaRecorder.stop();
-    }
-
-    // Calcula o tamanho exato da gravação em segundos
-    const now = Date.now();
-    const start = recordingContext.recordingStartTime || now;
-    recordingContext.recordedDurationSec = Math.max(0.5, (now - start) / 1000);
-
+    const wasRecording = recordingContext.isRecording;
+    recordingContext.isCountingDown = false;
     recordingContext.isRecording = false;
+
+    dom.countdownOverlay.classList.remove('active');
     dom.recLiveIndicator.classList.remove('active');
     dom.btnStartRecord.classList.remove('is-recording');
 
+    if (!hasSuccess) {
+      dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
+    }
+
+    if (wasRecording) {
+      // Calcula o tamanho exato da gravação em segundos
+      const now = Date.now();
+      const start = recordingContext.recordingStartTime || now;
+      recordingContext.recordedDurationSec = Math.max(0.25, (now - start) / 1000);
+    }
+
+    if (recordingContext.mediaRecorder && recordingContext.mediaRecorder.state !== 'inactive') {
+      try {
+        recordingContext.mediaRecorder.stop();
+      } catch (e) {}
+    }
+
     // Para o playback das faixas de apoio e o metrônomo
     state.tracks.forEach(t => {
+      if (t._offsetTimer) {
+        clearTimeout(t._offsetTimer);
+        t._offsetTimer = null;
+      }
       if (t.videoElement) {
         t.videoElement.pause();
-        t.videoElement.currentTime = 0;
+        try { t.videoElement.currentTime = 0; } catch (e) {}
       }
     });
     stopMetronomeClock();
   }
 
   function showRecordingReview(blob) {
+    cleanupReviewMedia();
+
     dom.btnStartRecord.style.display = 'none';
     dom.reviewActions.classList.add('active');
 
     // Reproduz a mídia gravada para o usuário escutar e avaliar
     const mediaUrl = URL.createObjectURL(blob);
+    recordingContext.reviewUrl = mediaUrl;
+
     if (recordingContext.captureMode === 'audio') {
       if (dom.audioOnlyViewfinder) dom.audioOnlyViewfinder.style.display = 'flex';
       dom.viewfinderVideo.style.display = 'none';
@@ -1567,7 +1824,7 @@
       dom.viewfinderVideo.src = mediaUrl;
       dom.viewfinderVideo.muted = false;
       dom.viewfinderVideo.loop = true;
-      dom.viewfinderVideo.play();
+      dom.viewfinderVideo.play().catch(e => console.warn('Review play error:', e));
     } else {
       if (dom.audioOnlyViewfinder) dom.audioOnlyViewfinder.style.display = 'none';
       dom.viewfinderVideo.style.display = 'block';
@@ -1575,7 +1832,7 @@
       dom.viewfinderVideo.src = mediaUrl;
       dom.viewfinderVideo.muted = false;
       dom.viewfinderVideo.loop = true;
-      dom.viewfinderVideo.play();
+      dom.viewfinderVideo.play().catch(e => console.warn('Review play error:', e));
     }
   }
 
@@ -1583,12 +1840,22 @@
     if (!recordingContext.lastRecordedBlob) return;
     const track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
     if (track) {
+      if (track._offsetTimer) {
+        clearTimeout(track._offsetTimer);
+        track._offsetTimer = null;
+      }
       if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
       track.mediaBlob = recordingContext.lastRecordedBlob;
       track.mediaUrl = URL.createObjectURL(recordingContext.lastRecordedBlob);
       track.mediaType = recordingContext.captureMode; // 'audio' ou 'video'
-      // Define a duração exata da faixa com base na gravação!
       track.duration = recordingContext.recordedDurationSec || 0;
+      track.waveformPeaks = null;
+
+      // Decodifica picos reais e duração precisa em background
+      extractWaveformPeaks(track).then(() => {
+        renderStudioViews();
+        saveCurrentSession();
+      });
     }
     closeRecordingModal();
     renderStudioViews();
@@ -1596,6 +1863,9 @@
   }
 
   function discardAndRetry() {
+    cleanupReviewMedia();
+    recordingContext.lastRecordedBlob = null;
+    recordingContext.recordedChunks = [];
     dom.reviewActions.classList.remove('active');
     dom.btnStartRecord.style.display = 'inline-flex';
     dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
@@ -1609,34 +1879,41 @@
     beatCount: 0
   };
 
+  function triggerMetronomeBeat(beatsPerMeasure) {
+    const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
+    const isAccent = beatInMeasure === 1;
+
+    if (state.metronomeEnabled) {
+      playMetronomeClick(isAccent);
+    }
+
+    // Pisca os LEDs no cabeçalho
+    if (dom.led1 && dom.led2) {
+      if (isAccent) {
+        dom.led1.classList.add('beat-1');
+        dom.led2.classList.remove('beat-sub');
+        setTimeout(() => { if (dom.led1) dom.led1.classList.remove('beat-1'); }, 120);
+      } else {
+        dom.led2.classList.add('beat-sub');
+        dom.led1.classList.remove('beat-1');
+        setTimeout(() => { if (dom.led2) dom.led2.classList.remove('beat-sub'); }, 120);
+      }
+    }
+
+    metroClock.beatCount++;
+  }
+
   function startMetronomeClock() {
     stopMetronomeClock();
     metroClock.beatCount = 0;
     const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
     const beatIntervalMs = (60 / state.bpm) * 1000;
 
+    // Toca o Tempo 1 IMEDIATAMENTE em t = 0 para sincronismo perfeito com gravação e playback
+    triggerMetronomeBeat(beatsPerMeasure);
+
     metroClock.timer = setInterval(() => {
-      const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
-      const isAccent = beatInMeasure === 1;
-
-      if (state.metronomeEnabled) {
-        playMetronomeClick(isAccent);
-      }
-
-      // Pisca os LEDs no cabeçalho
-      if (dom.led1 && dom.led2) {
-        if (isAccent) {
-          dom.led1.classList.add('beat-1');
-          dom.led2.classList.remove('beat-sub');
-          setTimeout(() => dom.led1.classList.remove('beat-1'), 120);
-        } else {
-          dom.led2.classList.add('beat-sub');
-          dom.led1.classList.remove('beat-1');
-          setTimeout(() => dom.led2.classList.remove('beat-sub'), 120);
-        }
-      }
-
-      metroClock.beatCount++;
+      triggerMetronomeBeat(beatsPerMeasure);
     }, beatIntervalMs);
   }
 
@@ -1662,16 +1939,16 @@
     dom.btnMasterPlay.classList.add('playing');
     dom.btnMasterPlay.innerHTML = `<span>⏸</span> Pausar Breque`;
 
+    updateAudioMixRouting();
+
     // Duração total calculada com base na gravação real
     const totalDurationSec = getTimelineDurationSec();
     const totalDurationMs = totalDurationSec * 1000;
 
-    // Inicia todos os vídeos sincronizados
+    // Inicia todos os vídeos/áudios sincronizados respeitando offsetMs
     state.tracks.forEach(track => {
       if (track.videoElement) {
-        const offsetSec = (track.offsetMs || 0) / 1000;
-        track.videoElement.currentTime = Math.max(0, offsetSec);
-        track.videoElement.play().catch(e => console.warn('Play error:', e));
+        triggerTrackAtTimelineOffset(track, 0);
 
         const card = document.getElementById(`card_${track.id}`);
         if (card) card.classList.add('active-playing');
@@ -1685,6 +1962,7 @@
 
     // Timer de Reprodução (Tocar até o fim ou Repetir em Loop)
     const startTime = Date.now();
+    let lastCycleIndex = 0;
 
     clearInterval(state.playbackTimer);
     state.playbackTimer = setInterval(() => {
@@ -1697,6 +1975,7 @@
       }
 
       const cycleProgress = (elapsed % totalDurationMs) / totalDurationMs;
+      const currentCycleIndex = Math.floor(elapsed / totalDurationMs);
 
       // 1. Atualiza barrinhas de progresso dos vídeos no Mosaico
       state.tracks.forEach(track => {
@@ -1713,11 +1992,11 @@
       updateReaperLcdDisplay(elapsed, totalDurationMs);
 
       // SE LOOP ESTIVER LIGADO: reseta e reinicia tudo perfeitamente sincronizado a cada ciclo
-      if (state.looping && elapsed > 0 && Math.floor(elapsed / totalDurationMs) !== Math.floor((elapsed - 40) / totalDurationMs)) {
+      if (state.looping && currentCycleIndex > lastCycleIndex) {
+        lastCycleIndex = currentCycleIndex;
         state.tracks.forEach(track => {
           if (track.videoElement) {
-            const offsetSec = (track.offsetMs || 0) / 1000;
-            track.videoElement.currentTime = Math.max(0, offsetSec);
+            triggerTrackAtTimelineOffset(track, 0);
           }
         });
       }
@@ -1742,9 +2021,13 @@
     updateReaperLcdDisplay(0, 1000);
 
     state.tracks.forEach(track => {
+      if (track._offsetTimer) {
+        clearTimeout(track._offsetTimer);
+        track._offsetTimer = null;
+      }
       if (track.videoElement) {
         track.videoElement.pause();
-        track.videoElement.currentTime = 0;
+        try { track.videoElement.currentTime = 0; } catch (e) {}
       }
       const card = document.getElementById(`card_${track.id}`);
       if (card) card.classList.remove('active-playing');
@@ -1757,22 +2040,53 @@
     });
   }
 
-  // --- Roteamento e Mixagem de Áudio ---
+  // --- Roteamento e Mixagem de Áudio (Web Audio Graph + HTMLMediaElement) ---
+  function getEffectiveTrackVolume(track, hasSolo) {
+    if (track.muted) return 0;
+    if (hasSolo && !track.solo) return 0;
+    return track.volume;
+  }
+
+  function ensureMediaElementAudioGraph(mediaEl) {
+    if (!mediaEl) return null;
+    if (mediaEl._webAudioGraph) return mediaEl._webAudioGraph;
+
+    try {
+      const ctx = getAudioContext();
+      const sourceNode = ctx.createMediaElementSource(mediaEl);
+      const gainNode = ctx.createGain();
+      sourceNode.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      mediaEl.volume = 1.0;
+      mediaEl._webAudioGraph = { sourceNode, gainNode };
+      return mediaEl._webAudioGraph;
+    } catch (e) {
+      console.warn('Erro ao vincular grafo Web Audio na mídia:', e);
+      return null;
+    }
+  }
+
   function updateAudioMixRouting() {
     const hasSolo = state.tracks.some(t => t.solo);
 
     state.tracks.forEach(track => {
-      if (!track.videoElement) return;
+      const el = track.videoElement;
+      if (!el) return;
 
-      let effectiveVol = track.volume;
-      if (track.muted) {
-        effectiveVol = 0;
-      } else if (hasSolo && !track.solo) {
-        effectiveVol = 0;
+      const effectiveVol = getEffectiveTrackVolume(track, hasSolo);
+
+      // Se o elemento já possui nó Web Audio (ou se o volume excede 100% e AudioContext já existe), usa GainNode (suporta 0% a 150%)
+      if (el._webAudioGraph || (audioCtx && effectiveVol > 1.0)) {
+        const graph = ensureMediaElementAudioGraph(el);
+        if (graph && graph.gainNode) {
+          el.volume = 1.0;
+          graph.gainNode.gain.value = effectiveVol;
+          return;
+        }
       }
 
-      // Aplica volume direto no elemento de vídeo (simples, direto, nativo)
-      track.videoElement.volume = Math.min(1.0, effectiveVol);
+      // Caso contrário, aplica direto no elemento nativo
+      el.volume = Math.min(1.0, Math.max(0, effectiveVol));
     });
   }
 
@@ -1783,6 +2097,8 @@
       alert('Grave ou importe ao menos uma faixa para poder exportar o vídeo mosaico!');
       return;
     }
+
+    stopStudioPlayback();
 
     dom.exportModal.classList.add('active');
     dom.exportTitle.textContent = '🎬 Exportando Vídeo Mosaico Full HD...';
@@ -1810,24 +2126,18 @@
       const cellW = canvas.width / cols;
       const cellH = canvas.height / rows;
 
-      // Prepara áudio mixado
+      // Prepara áudio mixado mantendo saída normal para o destination
       const audioContext = getAudioContext();
       const dest = audioContext.createMediaStreamDestination();
+      const hasSolo = state.tracks.some(t => t.solo);
+      const connectedGainNodes = [];
 
       recordedTracks.forEach(track => {
-        if (!track.audioSourceNode) {
-          try {
-            track.audioSourceNode = audioContext.createMediaElementSource(track.videoElement);
-            track.audioGainNode = audioContext.createGain();
-            track.audioSourceNode.connect(track.audioGainNode);
-            track.audioGainNode.connect(dest);
-            track.audioGainNode.connect(audioContext.destination);
-          } catch (e) {
-            // Se já foi criado, apenas ajusta
-          }
-        }
-        if (track.audioGainNode) {
-          track.audioGainNode.gain.value = track.muted ? 0 : track.volume;
+        const graph = ensureMediaElementAudioGraph(track.videoElement);
+        if (graph && graph.gainNode) {
+          graph.gainNode.gain.value = getEffectiveTrackVolume(track, hasSolo);
+          graph.gainNode.connect(dest);
+          connectedGainNodes.push(graph.gainNode);
         }
       });
 
@@ -1838,31 +2148,28 @@
         ...dest.stream.getAudioTracks()
       ]);
 
-      let mimeType = 'video/webm;codecs=vp9,opus';
+      let mimeType = 'video/webm;codecs=vp8,opus';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm;codecs=vp8,opus';
+        mimeType = 'video/webm;codecs=vp9,opus';
         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
       }
 
-      const recorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: 3500000 });
+      const recorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond: 3500000, audioBitsPerSecond: 192000 });
       const chunks = [];
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
 
-      // Duração de 1 ciclo completo
-      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
-      const totalBeats = state.measures * beatsPerMeasure;
-      const durationSec = (totalBeats * 60) / state.bpm;
+      // Duração real da timeline (respeita modo Livre e Fixo)
+      const durationSec = getTimelineDurationSec();
       const durationMs = durationSec * 1000;
 
-      recorder.start();
+      recorder.start(250);
 
-      // Inicia todos os vídeos
+      // Inicia todos os vídeos respeitando offsetMs
       recordedTracks.forEach(t => {
-        t.videoElement.currentTime = 0;
-        t.videoElement.play();
+        triggerTrackAtTimelineOffset(t, 0);
       });
 
       const startTime = Date.now();
@@ -1923,9 +2230,18 @@
         } else {
           cancelAnimationFrame(animFrame);
           recorder.stop();
-          recordedTracks.forEach(t => t.videoElement.pause());
+          recordedTracks.forEach(t => {
+            if (t._offsetTimer) {
+              clearTimeout(t._offsetTimer);
+              t._offsetTimer = null;
+            }
+            if (t.videoElement) t.videoElement.pause();
+          });
 
           recorder.onstop = () => {
+            connectedGainNodes.forEach(gn => {
+              try { gn.disconnect(dest); } catch (e) {}
+            });
             const finalBlob = new Blob(chunks, { type: mimeType });
             downloadBlob(finalBlob, `samba_breque_mosaico_${state.bpm}bpm.webm`);
             dom.exportStatus.textContent = '✅ Exportação concluída com sucesso!';
@@ -1943,13 +2259,15 @@
     }
   }
 
-  // --- Exportação de Áudio Mixado (WAV) ---
+  // --- Exportação de Áudio Mixado ---
   function exportMixedAudio() {
     const recordedTracks = state.tracks.filter(t => t.videoElement);
     if (recordedTracks.length === 0) {
       alert('Nenhuma gravação encontrada para exportar o áudio!');
       return;
     }
+
+    stopStudioPlayback();
 
     dom.exportModal.classList.add('active');
     dom.exportTitle.textContent = '🎵 Exportando Áudio Mixado...';
@@ -1959,43 +2277,53 @@
     try {
       const audioContext = getAudioContext();
       const dest = audioContext.createMediaStreamDestination();
+      const hasSolo = state.tracks.some(t => t.solo);
+      const connectedGainNodes = [];
 
       recordedTracks.forEach(track => {
-        if (!track.audioSourceNode) {
-          try {
-            track.audioSourceNode = audioContext.createMediaElementSource(track.videoElement);
-            track.audioGainNode = audioContext.createGain();
-            track.audioSourceNode.connect(track.audioGainNode);
-            track.audioGainNode.connect(dest);
-          } catch (e) {}
-        }
-        if (track.audioGainNode) {
-          track.audioGainNode.gain.value = track.muted ? 0 : track.volume;
+        const graph = ensureMediaElementAudioGraph(track.videoElement);
+        if (graph && graph.gainNode) {
+          graph.gainNode.gain.value = getEffectiveTrackVolume(track, hasSolo);
+          graph.gainNode.connect(dest);
+          connectedGainNodes.push(graph.gainNode);
         }
       });
 
-      const recorder = new MediaRecorder(dest.stream);
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+      }
+
+      const recorder = new MediaRecorder(dest.stream, mimeType ? { mimeType, audioBitsPerSecond: 192000 } : { audioBitsPerSecond: 192000 });
       const chunks = [];
 
       recorder.ondataavailable = e => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
 
-      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
-      const totalBeats = state.measures * beatsPerMeasure;
-      const durationMs = ((totalBeats * 60) / state.bpm) * 1000;
+      const durationSec = getTimelineDurationSec();
+      const durationMs = durationSec * 1000;
 
-      recorder.start();
+      recorder.start(250);
       recordedTracks.forEach(t => {
-        t.videoElement.currentTime = 0;
-        t.videoElement.play();
+        triggerTrackAtTimelineOffset(t, 0);
       });
 
       setTimeout(() => {
         recorder.stop();
-        recordedTracks.forEach(t => t.videoElement.pause());
+        recordedTracks.forEach(t => {
+          if (t._offsetTimer) {
+            clearTimeout(t._offsetTimer);
+            t._offsetTimer = null;
+          }
+          if (t.videoElement) t.videoElement.pause();
+        });
         recorder.onstop = () => {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+          connectedGainNodes.forEach(gn => {
+            try { gn.disconnect(dest); } catch (e) {}
+          });
+          const audioBlob = new Blob(chunks, { type: mimeType || 'audio/webm' });
           downloadBlob(audioBlob, `samba_breque_mix_${state.bpm}bpm.webm`);
           dom.exportProgressBar.style.width = '100%';
           dom.exportStatus.textContent = '✅ Áudio exportado com sucesso!';
@@ -2020,6 +2348,27 @@
     }, 1000);
   }
 
+  function blobToDataURL(blob) {
+    return new Promise((resolve) => {
+      if (!blob) return resolve(null);
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result || null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function dataURLToBlob(dataUrl) {
+    if (!dataUrl || typeof dataUrl !== 'string') return null;
+    try {
+      const res = await fetch(dataUrl);
+      return await res.blob();
+    } catch (e) {
+      console.warn('Erro ao converter DataURL para Blob:', e);
+      return null;
+    }
+  }
+
   // --- Persistência de Sessão (IndexedDB & JSON) ---
   async function saveCurrentSession() {
     const serializable = {
@@ -2034,11 +2383,13 @@
       tracks: state.tracks.map(t => ({
         id: t.id,
         name: t.name,
+        mediaType: t.mediaType || 'video',
         volume: t.volume,
         muted: t.muted,
         solo: t.solo,
         offsetMs: t.offsetMs,
         duration: t.duration || 0,
+        waveformPeaks: t.waveformPeaks || null,
         mediaBlob: t.mediaBlob
       }))
     };
@@ -2065,9 +2416,13 @@
         tr.solo = !!st.solo;
         tr.offsetMs = st.offsetMs || 0;
         tr.duration = st.duration || 0;
+        tr.waveformPeaks = st.waveformPeaks || null;
         if (st.mediaBlob) {
           tr.mediaBlob = st.mediaBlob;
           tr.mediaUrl = URL.createObjectURL(st.mediaBlob);
+          tr.mediaType = st.mediaType || (st.mediaBlob.type && st.mediaBlob.type.startsWith('audio') ? 'audio' : 'video');
+        } else {
+          tr.mediaType = st.mediaType || 'video';
         }
         return tr;
       });
@@ -2175,19 +2530,19 @@
         const clickX = e.clientX - rect.left;
         const percent = Math.max(0, Math.min(1, clickX / rect.width));
 
-        const beats = state.measures * (state.meter === '2/4' ? 2 : 4);
-        const loopDurationSec = (beats * 60) / state.bpm;
+        const loopDurationSec = getTimelineDurationSec();
         const targetTimeSec = percent * loopDurationSec;
 
         if (dom.reaperPlayhead) {
           dom.reaperPlayhead.style.left = (percent * 100) + '%';
         }
 
-        // Ajusta currentTime dos vídeos
+        // Ajusta currentTime dos vídeos respeitando offsetMs
         state.tracks.forEach(track => {
           if (track.videoElement) {
             const offsetSec = (track.offsetMs || 0) / 1000;
-            track.videoElement.currentTime = Math.max(0, targetTimeSec + offsetSec);
+            const mediaTime = Math.max(0, targetTimeSec - offsetSec);
+            try { track.videoElement.currentTime = mediaTime; } catch (err) {}
           }
         });
 
@@ -2317,6 +2672,8 @@
     dom.btnStartRecord.onclick = () => {
       if (recordingContext.isRecording) {
         stopCurrentRecording(true);
+      } else if (recordingContext.isCountingDown) {
+        stopCurrentRecording(false);
       } else {
         startPreRollCountdown();
       }
@@ -2324,51 +2681,90 @@
     dom.btnKeepTake.onclick = keepCurrentTake;
     dom.btnDiscardTake.onclick = discardAndRetry;
 
-    // Salvar Projeto em Arquivo JSON
+    // Salvar Projeto em Arquivo JSON (incluindo gravações codificadas em Base64/DataURL)
     dom.btnSaveProject.onclick = async () => {
+      const serializedTracks = await Promise.all(
+        state.tracks.map(async (t) => ({
+          id: t.id,
+          name: t.name,
+          mediaType: t.mediaType || 'video',
+          volume: t.volume,
+          muted: t.muted,
+          solo: t.solo,
+          offsetMs: t.offsetMs,
+          duration: t.duration || 0,
+          waveformPeaks: t.waveformPeaks || null,
+          mediaDataUrl: t.mediaBlob ? await blobToDataURL(t.mediaBlob) : null
+        }))
+      );
+
       const exportData = {
         bpm: state.bpm,
         meter: state.meter,
         mode: state.mode,
         measures: state.measures,
+        looping: state.looping,
+        metronomeEnabled: state.metronomeEnabled,
         viewMode: state.viewMode,
-        tracks: state.tracks.map(t => ({
-          name: t.name,
-          volume: t.volume,
-          muted: t.muted,
-          solo: t.solo,
-          offsetMs: t.offsetMs
-        }))
+        zoomLevel: state.zoomLevel,
+        tracks: serializedTracks
       };
       const jsonStr = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       downloadBlob(blob, `samba_breque_projeto_${Date.now()}.json`);
     };
 
-    // Carregar Projeto
+    // Carregar Projeto (restaurando gravações Base64/DataURL para Blobs)
     dom.btnLoadProject.onclick = () => dom.projectFileInput.click();
     dom.projectFileInput.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (evt) => {
+        reader.onload = async (evt) => {
           try {
             const data = JSON.parse(evt.target.result);
             if (data && data.tracks) {
+              stopStudioPlayback();
               state.bpm = data.bpm || 120;
               state.meter = data.meter || '2/4';
-              state.mode = data.mode || 'fixed';
+              state.mode = data.mode || 'free';
               state.measures = data.measures || 4;
+              state.looping = !!data.looping;
+              state.metronomeEnabled = data.metronomeEnabled !== undefined ? data.metronomeEnabled : true;
               state.viewMode = data.viewMode || 'timeline';
-              state.tracks = data.tracks.map((t, idx) => {
-                const tr = createTrack(t.name, idx);
-                tr.volume = t.volume !== undefined ? t.volume : 1.0;
-                tr.muted = !!t.muted;
-                tr.solo = !!t.solo;
-                tr.offsetMs = t.offsetMs || 0;
-                return tr;
+              state.zoomLevel = data.zoomLevel || 100;
+
+              state.tracks.forEach(oldTrack => {
+                if (oldTrack.mediaUrl) URL.revokeObjectURL(oldTrack.mediaUrl);
               });
+
+              state.tracks = await Promise.all(
+                data.tracks.map(async (t, idx) => {
+                  const tr = createTrack(t.name, idx);
+                  tr.id = t.id || tr.id;
+                  tr.volume = t.volume !== undefined ? t.volume : 1.0;
+                  tr.muted = !!t.muted;
+                  tr.solo = !!t.solo;
+                  tr.offsetMs = t.offsetMs || 0;
+                  tr.duration = t.duration || 0;
+                  tr.waveformPeaks = t.waveformPeaks || null;
+
+                  if (t.mediaDataUrl) {
+                    const blob = await dataURLToBlob(t.mediaDataUrl);
+                    if (blob) {
+                      tr.mediaBlob = blob;
+                      tr.mediaUrl = URL.createObjectURL(blob);
+                      tr.mediaType = t.mediaType || (blob.type && blob.type.startsWith('audio') ? 'audio' : 'video');
+                    }
+                  } else {
+                    tr.mediaType = t.mediaType || 'video';
+                  }
+                  return tr;
+                })
+              );
+
               syncToolbarControls();
+              updateLoopUi();
               switchViewMode(state.viewMode);
               renderStudioViews();
               saveCurrentSession();
@@ -2376,6 +2772,8 @@
             }
           } catch (err) {
             alert('Arquivo de projeto inválido: ' + err.message);
+          } finally {
+            dom.projectFileInput.value = '';
           }
         };
         reader.readAsText(file);
@@ -2389,7 +2787,8 @@
   // Exporta init para ser chamado pelo orquestrador
   window.BeatboxStudio = {
     init,
-    stopStudioPlayback
+    stopStudioPlayback,
+    openQuickRecord
   };
 
 })();

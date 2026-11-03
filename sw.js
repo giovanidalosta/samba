@@ -1,5 +1,5 @@
 // Samba Breque Studio - Service Worker
-const CACHE_NAME = 'samba-breque-v2';
+const CACHE_NAME = 'samba-breque-v3';
 const CORE_ASSETS = [
   './',
   'index.html',

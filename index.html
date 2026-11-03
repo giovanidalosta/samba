@@ -1959,7 +1959,7 @@
     if (mobGlobalPlay) {
       mobGlobalPlay.onclick = () => {
         // Desbloqueia Web Audio no toque
-        if (soundEngine && !soundEngine.isInitialized) soundEngine.init();
+        if (typeof audio !== 'undefined' && audio && !audio.isInitialized) audio.init();
 
         if (currentActiveTab === 'tab-beatbox') {
           const btnStudioPlay = document.getElementById('btnStudioPlay');
@@ -1979,13 +1979,14 @@
           switchTab('tab-beatbox');
         }
         showHeadphonesToast();
-        // Dispara modal de gravação na primeira faixa disponível
-        const firstRecordBtn = document.querySelector('.btn-lane-record, .track-card-rec-btn, .btn-record-main');
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.openQuickRecord === 'function') {
+          window.BeatboxStudio.openQuickRecord();
+          return;
+        }
+        // Fallback: Dispara modal de gravação na primeira faixa vazia ou disponível
+        const firstRecordBtn = document.querySelector('.btn-empty-action, .btn-record-slot, .btn-rec-arm, .btn-tcp-rec');
         if (firstRecordBtn) {
           firstRecordBtn.click();
-        } else {
-          const btnAddTrack = document.getElementById('btnAddTrack') || document.getElementById('btnTimelineAddTrack');
-          if (btnAddTrack) btnAddTrack.click();
         }
       };
     }
@@ -2030,7 +2031,7 @@
 
     // Desbloqueio Antecipado de Áudio no Primeiro Toque (iOS / Android)
     function unlockAudioOnFirstTouch() {
-      if (soundEngine) soundEngine.init();
+      if (typeof audio !== 'undefined' && audio) audio.init();
       document.removeEventListener('touchstart', unlockAudioOnFirstTouch);
       document.removeEventListener('pointerdown', unlockAudioOnFirstTouch);
     }
