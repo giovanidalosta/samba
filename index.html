@@ -566,6 +566,33 @@
       color: var(--text-main);
     }
 
+    .btn-save-groove {
+      background: #14131A;
+      border: 1px solid rgba(232, 195, 27, 0.4);
+      color: var(--naum-gold);
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .btn-save-groove:hover {
+      background: var(--naum-gold);
+      color: #0A090C;
+      border-color: var(--naum-gold);
+    }
+
+    .btn-save-groove.saved-flash {
+      background: #4A9E75;
+      border-color: #4A9E75;
+      color: #FFFFFF;
+    }
+
     .inst-vol-box {
       display: flex;
       align-items: center;
@@ -2118,32 +2145,169 @@
       });
     }
 
-    /* Converte um padrão escrito em semicolcheia (8 steps por 2/4) para a resolução ativa da grade */
-    function expandPatternToGrid(pattern8, targetTotalSteps, stepsPerMeasure) {
-      const result = new Array(targetTotalSteps).fill(null);
-      const isFusa = state.subdivision === 'fusa';
-      const stepStride = isFusa ? 2 : 1; // Em fusa, cada semicolcheia ocupa 2 subdivisões
-      const baseLen = pattern8.length;
+    const CUSTOM_GROOVES_STORAGE_KEY = 'naumteria_custom_grooves_v1';
 
+    function loadCustomGroovesFromStorage() {
+      try {
+        const raw = localStorage.getItem(CUSTOM_GROOVES_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveCustomGroovesToStorage(customGroovesObj) {
+      try {
+        localStorage.setItem(CUSTOM_GROOVES_STORAGE_KEY, JSON.stringify(customGroovesObj));
+      } catch (e) {
+        console.warn('Erro ao salvar levadas personalizadas no localStorage:', e);
+      }
+    }
+
+    const customGrooves = loadCustomGroovesFromStorage();
+
+    function getInstrumentGrooves(instId) {
+      const userList = Array.isArray(customGrooves[instId]) ? customGrooves[instId] : [];
+      const baseList = INSTRUMENT_GROOVES[instId] || [];
+      return [...userList, ...baseList];
+    }
+
+    /* Converte um padrão salvo (em semicolcheia ou fusa) para a resolução ativa da grade */
+    function expandPatternToGrid(pattern, targetTotalSteps, stepsPerMeasure, savedSubdivision = 'semicolcheia') {
+      const result = new Array(targetTotalSteps).fill(null);
+      if (!pattern || pattern.length === 0) return result;
+
+      const currentIsFusa = state.subdivision === 'fusa';
+      const savedWasFusa = savedSubdivision === 'fusa';
+
+      if (currentIsFusa === savedWasFusa) {
+        for (let s = 0; s < targetTotalSteps; s++) {
+          result[s] = pattern[s % pattern.length] || null;
+        }
+        return result;
+      }
+
+      if (currentIsFusa && !savedWasFusa) {
+        // Padrão salvo em semicolcheia -> expandir para fusa (dobro de subdivisões)
+        for (let s = 0; s < targetTotalSteps; s++) {
+          if (s % 2 !== 0) continue;
+          const idx = Math.floor(s / 2) % pattern.length;
+          result[s] = pattern[idx] || null;
+        }
+        return result;
+      }
+
+      // Padrão salvo em fusa -> reduzir para semicolcheia
       for (let s = 0; s < targetTotalSteps; s++) {
-        if (isFusa && s % 2 !== 0) continue;
-        const idx8 = Math.floor(s / stepStride) % baseLen;
-        result[s] = pattern8[idx8] || null;
+        const idx = (s * 2) % pattern.length;
+        result[s] = pattern[idx] || null;
       }
       return result;
     }
 
+    function saveCurrentTrackAsGroove(inst, asMainBase = true, flashBtn = null) {
+      const trackData = state.gridData[inst.id] || [];
+      const hasAnyNote = trackData.some(n => n !== null);
+      if (!hasAnyNote) {
+        alert(`Desenhe os toques de ${inst.name} na grade antes de salvar a levada.`);
+        return;
+      }
+
+      const stepsPerMeasure = getStepsPerMeasure();
+      let lastActiveMeasure = 0;
+      for (let m = 0; m < state.measures; m++) {
+        const slice = trackData.slice(m * stepsPerMeasure, (m + 1) * stepsPerMeasure);
+        if (slice.some(n => n !== null)) {
+          lastActiveMeasure = m;
+        }
+      }
+
+      const patternLength = (lastActiveMeasure + 1) * stepsPerMeasure;
+      const extractedPattern = trackData.slice(0, patternLength);
+
+      if (!Array.isArray(customGrooves[inst.id])) {
+        customGrooves[inst.id] = [];
+      }
+
+      let grooveId = 'levada_base_custom';
+      let grooveName = `⭐ Levada Base (${inst.name})`;
+
+      if (!asMainBase) {
+        const typed = prompt(`Digite um nome para salvar esta levada de ${inst.name}:`, `Minha Levada (${inst.name})`);
+        if (!typed || !typed.trim()) return;
+        grooveId = 'custom_' + Date.now();
+        grooveName = `⭐ ${typed.trim()}`;
+        customGrooves[inst.id].push({
+          id: grooveId,
+          name: grooveName,
+          pattern: extractedPattern,
+          savedSubdivision: state.subdivision,
+          isCustom: true
+        });
+      } else {
+        const existingIdx = customGrooves[inst.id].findIndex(g => g.id === 'levada_base_custom');
+        const newObj = {
+          id: 'levada_base_custom',
+          name: '⭐ Levada Base (Salva)',
+          pattern: extractedPattern,
+          savedSubdivision: state.subdivision,
+          isCustom: true
+        };
+        if (existingIdx !== -1) {
+          customGrooves[inst.id][existingIdx] = newObj;
+        } else {
+          customGrooves[inst.id].unshift(newObj);
+        }
+      }
+
+      saveCustomGroovesToStorage(customGrooves);
+
+      // Aplica a levada recém-salva em todos os compassos ativos da grade
+      applyInstrumentGroove(inst.id, grooveId);
+
+      if (flashBtn) {
+        const prevText = flashBtn.textContent;
+        flashBtn.classList.add('saved-flash');
+        flashBtn.textContent = '✓ Salva!';
+        setTimeout(() => {
+          flashBtn.classList.remove('saved-flash');
+          flashBtn.textContent = prevText;
+        }, 1400);
+      }
+    }
+
     function applyInstrumentGroove(instId, grooveId) {
-      const grooves = INSTRUMENT_GROOVES[instId] || [];
+      if (grooveId === '__save_named__') {
+        const inst = INSTRUMENTS.find(i => i.id === instId);
+        if (inst) saveCurrentTrackAsGroove(inst, false, null);
+        else renderStudio();
+        return;
+      }
+      if (grooveId === '__clear_custom__') {
+        if (confirm('Deseja remover as levadas personalizadas deste instrumento e restaurar apenas as de fábrica?')) {
+          delete customGrooves[instId];
+          saveCustomGroovesToStorage(customGrooves);
+          state.selectedGroove[instId] = '';
+        }
+        renderStudio();
+        return;
+      }
+
+      const grooves = getInstrumentGrooves(instId);
       const found = grooves.find(g => g.id === grooveId);
       if (!found) return;
 
       audio.init();
       const totalSteps = getTotalSteps();
       const stepsPerMeasure = getStepsPerMeasure();
-      state.gridData[instId] = expandPatternToGrid(found.pattern, totalSteps, stepsPerMeasure);
+      state.gridData[instId] = expandPatternToGrid(
+        found.pattern,
+        totalSteps,
+        stepsPerMeasure,
+        found.savedSubdivision || 'semicolcheia'
+      );
       state.stepMeta[instId] = found.stepsMeta
-        ? expandPatternToGrid(found.stepsMeta, totalSteps, stepsPerMeasure)
+        ? expandPatternToGrid(found.stepsMeta, totalSteps, stepsPerMeasure, 'semicolcheia')
         : new Array(totalSteps).fill(null);
       state.selectedGroove[instId] = grooveId;
 
@@ -2169,6 +2333,23 @@
       const stepsPerMeasure = getStepsPerMeasure();
 
       INSTRUMENTS.forEach(inst => {
+        // Se for a Batucada Completa (Levada Base) e o usuário tiver salvo sua própria Levada Base para este instrumento, prioriza a do usuário!
+        const userBase = (presetId === 'batucada_completa' && Array.isArray(customGrooves[inst.id]))
+          ? customGrooves[inst.id].find(g => g.id === 'levada_base_custom')
+          : null;
+
+        if (userBase) {
+          state.gridData[inst.id] = expandPatternToGrid(
+            userBase.pattern,
+            totalSteps,
+            stepsPerMeasure,
+            userBase.savedSubdivision || 'semicolcheia'
+          );
+          state.stepMeta[inst.id] = new Array(totalSteps).fill(null);
+          state.selectedGroove[inst.id] = 'levada_base_custom';
+          return;
+        }
+
         const trackPattern = preset.tracks[inst.id];
         if (trackPattern) {
           state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure);
@@ -2426,7 +2607,7 @@
         };
         artPalette.appendChild(erasePill);
 
-        // Base do Header: Seletor de Levada Característica + Slider de Volume
+        // Base do Header: Seletor de Levada Característica + Botão Salvar Base + Slider de Volume
         const headerBottom = document.createElement('div');
         headerBottom.className = 'track-header-bottom';
 
@@ -2442,7 +2623,7 @@
         defaultOpt.textContent = '⚡ Preencher levada...';
         grooveSelect.appendChild(defaultOpt);
 
-        const instGrooves = INSTRUMENT_GROOVES[inst.id] || [];
+        const instGrooves = getInstrumentGrooves(inst.id);
         instGrooves.forEach(g => {
           const opt = document.createElement('option');
           opt.value = g.id;
@@ -2453,11 +2634,32 @@
           grooveSelect.appendChild(opt);
         });
 
+        const saveNamedOpt = document.createElement('option');
+        saveNamedOpt.value = '__save_named__';
+        saveNamedOpt.textContent = '➕ Salvar desenho atual com nome...';
+        grooveSelect.appendChild(saveNamedOpt);
+
+        if (Array.isArray(customGrooves[inst.id]) && customGrooves[inst.id].length > 0) {
+          const clearCustomOpt = document.createElement('option');
+          clearCustomOpt.value = '__clear_custom__';
+          clearCustomOpt.textContent = '🗑 Restaurar levadas padrão';
+          grooveSelect.appendChild(clearCustomOpt);
+        }
+
         grooveSelect.onchange = (e) => {
           e.stopPropagation();
           if (e.target.value) {
             applyInstrumentGroove(inst.id, e.target.value);
           }
+        };
+
+        const btnSaveBase = document.createElement('button');
+        btnSaveBase.className = 'btn-save-groove';
+        btnSaveBase.textContent = '💾 Base';
+        btnSaveBase.title = `Salvar o que está desenhado na linha de ${inst.name} como a Levada Base deste instrumento`;
+        btnSaveBase.onclick = (e) => {
+          e.stopPropagation();
+          saveCurrentTrackAsGroove(inst, true, btnSaveBase);
         };
 
         const volBox = document.createElement('div');
@@ -2480,6 +2682,7 @@
 
         volBox.appendChild(volSlider);
         headerBottom.appendChild(grooveSelect);
+        headerBottom.appendChild(btnSaveBase);
         headerBottom.appendChild(volBox);
 
         header.appendChild(headerTop);
@@ -2712,7 +2915,7 @@
     function exportToJSON() {
       const exportObject = {
         app: 'BateriaBrequesStudio',
-        version: '2.0',
+        version: '2.1',
         createdAt: new Date().toISOString(),
         settings: {
           bpm: state.bpm,
@@ -2721,6 +2924,7 @@
           measures: state.measures,
           volumes: state.volumes
         },
+        customGrooves,
         gridData: state.gridData
       };
 
@@ -2750,6 +2954,10 @@
           state.measures = data.settings.measures || 2;
           if (data.settings.volumes) {
             state.volumes = { ...state.volumes, ...data.settings.volumes };
+          }
+          if (data.customGrooves && typeof data.customGrooves === 'object') {
+            Object.assign(customGrooves, data.customGrooves);
+            saveCustomGroovesToStorage(customGrooves);
           }
           state.gridData = data.gridData;
 

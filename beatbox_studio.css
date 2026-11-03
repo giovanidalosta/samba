@@ -2241,8 +2241,13 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     padding: 2px 4px !important;
   }
 
+  .btn-save-groove {
+    font-size: 9px !important;
+    padding: 2px 5px !important;
+  }
+
   .inst-vol-box {
-    width: 48px !important;
+    width: 42px !important;
   }
 
   .ruler-row {
