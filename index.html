@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Naumteria Studio — Bateria UNESP Bauru</title>
-  
+
   <!-- PWA & Mobile Web App Meta Tags -->
   <meta name="theme-color" content="#0A090C">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +20,8 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="beatbox_studio.css">
   <style>
     /* =========================================================================
@@ -65,12 +68,12 @@
       --border-color: #222128;
       --border-subtle: #19181F;
       --border-accent: #E8C31B;
-      
+
       --naum-gold: #E8C31B;
       --naum-gold-hover: #F2D03B;
       --naum-gold-dim: #927D33;
       --naum-gold-muted: rgba(232, 195, 27, 0.14);
-      
+
       --naum-blue: #145D91;
       --naum-blue-light: #247BB8;
       --naum-blue-dark: #0D4D73;
@@ -79,7 +82,7 @@
       --text-main: #FFFFFF;
       --text-silver: #D1D2D4;
       --text-muted: #939598;
-      
+
       /* Tipografia Oficial */
       --font-display: 'Diamante', 'Myriad Pro', sans-serif;
       --font-sans: 'Arboria', 'Myriad Pro', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -95,7 +98,7 @@
       --color-tamborim: #4A9E75;
       --color-agogo: #8868B8;
       --color-ganza: #B85D88;
-      
+
       --playhead-color: rgba(232, 195, 27, 0.35);
       --measure-border: #2C2B35;
       --beat-border: #1A1921;
@@ -268,7 +271,9 @@
       font-size: 11.5px;
     }
 
-    select, input[type="number"], input[type="text"] {
+    select,
+    input[type="number"],
+    input[type="text"] {
       background: var(--bg-card-subtle);
       border: 1px solid var(--border-color);
       color: var(--text-main);
@@ -279,7 +284,8 @@
       outline: none;
     }
 
-    select:focus, input:focus {
+    select:focus,
+    input:focus {
       border-color: var(--naum-gold);
     }
 
@@ -732,26 +738,31 @@
       color: #0A090C;
       font-weight: 800;
     }
+
     .note-mao {
       background: rgba(255, 255, 255, 0.06);
       border: 1.5px solid var(--instrument-color, var(--color-surdo1));
       color: var(--instrument-color, var(--color-surdo1));
     }
+
     .note-abafado {
       background: transparent;
       border: 1.5px dashed var(--instrument-color, var(--color-surdo1));
       color: var(--instrument-color, var(--color-surdo1));
     }
+
     .note-corte {
       background: var(--text-main);
       color: var(--bg-dark);
       font-weight: 800;
     }
+
     .note-aro {
       background: transparent;
       border: 1.5px solid var(--text-silver);
       color: var(--text-silver);
     }
+
     .note-rulo {
       background: var(--naum-blue);
       border: 1px solid var(--naum-blue-light);
@@ -764,18 +775,21 @@
       background: var(--instrument-color, var(--color-caixa));
       font-weight: 800;
     }
+
     .note-fraco {
       background: transparent;
       border: 1.5px dotted var(--instrument-color, var(--color-caixa));
       color: var(--instrument-color, var(--color-caixa));
       opacity: 0.9;
     }
+
     .note-ringshot {
       background: transparent;
       border: 1.5px solid var(--text-main);
       color: var(--text-main);
       font-weight: 800;
     }
+
     .note-rufado {
       background: var(--naum-gold);
       color: #0A090C;
@@ -787,6 +801,7 @@
       flex-direction: column;
       line-height: 1;
     }
+
     .step-hand-tag {
       font-size: 7px;
       font-weight: 800;
@@ -800,22 +815,26 @@
       background: var(--instrument-color, var(--color-repique));
       font-weight: 700;
     }
+
     .note-intermedio {
       background: rgba(56, 152, 166, 0.28);
       border: 1px solid var(--color-repique);
       color: #A5E3EC;
     }
+
     .note-open {
       background: rgba(232, 195, 27, 0.22);
       border: 1.5px solid var(--naum-gold);
       color: var(--naum-gold);
       font-weight: 700;
     }
+
     .note-slap {
       background: #C84B4B;
       color: #ffffff;
       font-weight: 800;
     }
+
     .note-flam {
       background: var(--naum-gold);
       color: #0A090C;
@@ -835,14 +854,17 @@
       background: #63488F;
       color: #fff;
     }
+
     .note-boca2 {
       background: #7658A6;
       color: #fff;
     }
+
     .note-boca3 {
       background: #8868B8;
       color: #fff;
     }
+
     .note-boca4 {
       background: #A98EDA;
       color: #0A090C;
@@ -854,6 +876,7 @@
       background: var(--color-ganza);
       font-weight: 700;
     }
+
     .note-tras {
       background: transparent;
       border: 1.5px dotted var(--color-ganza);
@@ -866,12 +889,14 @@
       color: #0A090C;
       font-weight: 800;
     }
+
     .note-apito-longo {
       background: var(--naum-blue);
       border: 1.5px solid var(--naum-gold);
       color: #FFFFFF;
       font-weight: 800;
     }
+
     .note-apito-trinado {
       background: #FFFFFF;
       border: 1.5px dashed #0A090C;
@@ -885,30 +910,42 @@
         background: #fff !important;
         color: #000 !important;
       }
-      header, .top-subbar, .controls-panel, .track-actions, .btn, footer {
+
+      header,
+      .top-subbar,
+      .controls-panel,
+      .track-actions,
+      .btn,
+      footer {
         display: none !important;
       }
+
       .grid-container {
         box-shadow: none !important;
         border: 2px solid #000 !important;
         background: #fff !important;
         padding: 0 !important;
       }
+
       .step-cell {
         background: #fff !important;
         border-color: #cbd5e1 !important;
       }
+
       .track-header {
         background: #f1f5f9 !important;
         color: #000 !important;
         border-color: #cbd5e1 !important;
       }
+
       .track-name {
         color: #000 !important;
       }
+
       .step-node {
         border: 1px solid #000 !important;
       }
+
       .print-title-area {
         display: block !important;
         margin-bottom: 20px;
@@ -931,6 +968,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <header>
@@ -957,7 +995,8 @@
   <div id="mobileOrientHint" class="mobile-orient-banner" style="display: none;">
     <div class="orient-content">
       <span class="orient-icon">↻</span>
-      <span class="orient-text"><strong>Dica:</strong> Gire o celular na <strong>horizontal</strong> para visualizar os compassos e a timeline completa.</span>
+      <span class="orient-text"><strong>Dica:</strong> Gire o celular na <strong>horizontal</strong> para visualizar os
+        compassos e a timeline completa.</span>
     </div>
     <button id="btnDismissOrient" class="btn-orient-close" title="Fechar dica">&times;</button>
   </div>
@@ -966,7 +1005,8 @@
   <div id="mobileHeadphonesToast" class="mobile-headphones-toast" style="display: none;">
     <div class="hp-content">
       <span class="hp-icon">🎧</span>
-      <span class="hp-text"><strong>Monitoramento:</strong> Use fones de ouvido para evitar vazamento do metrônomo no microfone.</span>
+      <span class="hp-text"><strong>Monitoramento:</strong> Use fones de ouvido para evitar vazamento do metrônomo no
+        microfone.</span>
     </div>
     <button id="btnDismissHp" class="hp-close" title="Fechar">&times;</button>
   </div>
@@ -1047,7 +1087,8 @@
 
         <!-- Popover 1: Ajustes de Grade, Compasso e Zoom -->
         <div class="toolbar-popover-wrap">
-          <button type="button" id="btnToggleSettingsPopover" class="btn btn-popover-trigger" title="Configurações de Compasso, Extensão e Zoom">
+          <button type="button" id="btnToggleSettingsPopover" class="btn btn-popover-trigger"
+            title="Configurações de Compasso, Extensão e Zoom">
             <span>⚙</span> Ajustes <span class="caret">▾</span>
           </button>
           <div id="studioSettingsPopover" class="studio-popover-menu">
@@ -1088,7 +1129,8 @@
               </div>
             </div>
             <div class="popover-row-inline">
-              <button id="btnSnapToggle" class="btn btn-sm active" style="width: 100%; justify-content: center;" title="Alinhar ao grid (Snap)">
+              <button id="btnSnapToggle" class="btn btn-sm active" style="width: 100%; justify-content: center;"
+                title="Alinhar ao grid (Snap)">
                 Snap to Grid (10ms)
               </button>
             </div>
@@ -1108,12 +1150,14 @@
 
         <!-- Popover 2: Projeto & Exportação -->
         <div class="toolbar-popover-wrap">
-          <button type="button" id="btnToggleProjectPopover" class="btn btn-popover-trigger btn-popover-accent" title="Exportar Vídeo/Áudio ou Salvar/Abrir Projeto">
+          <button type="button" id="btnToggleProjectPopover" class="btn btn-popover-trigger btn-popover-accent"
+            title="Exportar Vídeo/Áudio ou Salvar/Abrir Projeto">
             Projeto & Exportar <span class="caret">▾</span>
           </button>
           <div id="studioProjectPopover" class="studio-popover-menu popover-align-right">
             <div class="popover-section-title">Renderizar & Baixar</div>
-            <button id="btnExportVideo" class="popover-action-item item-gold" title="Renderizar vídeo composto com áudio master">
+            <button id="btnExportVideo" class="popover-action-item item-gold"
+              title="Renderizar vídeo composto com áudio master">
               <span>🎬</span> Exportar Vídeo Mosaico
             </button>
             <button id="btnExportAudio" class="popover-action-item" title="Baixar áudio master mixado (.wav)">
@@ -1246,7 +1290,8 @@
       </div>
 
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <button id="btnSendToStudio" class="btn btn-primary" title="Renderizar este breque/levada em áudio WAV e abrir como faixa no Studio Multitrack">
+        <button id="btnSendToStudio" class="btn btn-primary"
+          title="Renderizar este breque/levada em áudio WAV e abrir como faixa no Studio Multitrack">
           ↪ Enviar p/ Studio Multitrack
         </button>
         <button id="btnExportJSON" class="btn btn-success">
@@ -1265,8 +1310,10 @@
     <!-- Main Canvas/Sequencer -->
     <main>
       <div class="print-title-area">
-        <h2 id="printTitle" style="font-size: 24px; font-weight: bold; margin-bottom: 4px;">Naumteria Studio — Mapa de Breques</h2>
-        <p id="printDetails" style="font-size: 14px; color: #475569;">BPM: 142 | Fórmula: 2/4 | Mapa de Execução dos Breques</p>
+        <h2 id="printTitle" style="font-size: 24px; font-weight: bold; margin-bottom: 4px;">Naumteria Studio — Mapa de
+          Breques</h2>
+        <p id="printDetails" style="font-size: 14px; color: #475569;">BPM: 142 | Fórmula: 2/4 | Mapa de Execução dos
+          Breques</p>
       </div>
 
       <div class="grid-container" id="gridContainer">
@@ -1282,8 +1329,11 @@
     <div style="padding: 0 24px 20px 24px; display: flex; flex-direction: column; gap: 8px;">
       <div class="legend" style="flex-wrap: wrap;">
         <span style="font-weight: 700; color: var(--naum-gold);">Fluxo Rápido de Breques:</span>
-        <span><strong>1. Pincel de Toque:</strong> Escolha um toque no cabeçalho do instrumento (ex: <code>AB</code>, <code>MP</code>, <code>RS</code>, <code>SL</code>) e clique/arraste pela grade para desenhar sem precisar clicar várias vezes.</span>
-        <span><strong>2. Levadas Base:</strong> Use o menu <code>⚡ Levada...</code> em cada instrumento para preencher a condução característica e editar seus breques por cima.</span>
+        <span><strong>1. Pincel de Toque:</strong> Escolha um toque no cabeçalho do instrumento (ex: <code>AB</code>,
+          <code>MP</code>, <code>RS</code>, <code>SL</code>) e clique/arraste pela grade para desenhar sem precisar
+          clicar várias vezes.</span>
+        <span><strong>2. Levadas Base:</strong> Use o menu <code>⚡ Levada...</code> em cada instrumento para preencher a
+          condução característica e editar seus breques por cima.</span>
         <span><strong>3. Clique Direito:</strong> Apaga a célula (também funciona arrastando).</span>
       </div>
     </div>
@@ -1403,7 +1453,8 @@
   <div class="modal-overlay" id="exportModal">
     <div class="export-modal-box">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 id="exportTitle" style="font-family: var(--font-display); font-size: 20px; letter-spacing: 0.5px;">Exportando...</h3>
+        <h3 id="exportTitle" style="font-family: var(--font-display); font-size: 20px; letter-spacing: 0.5px;">
+          Exportando...</h3>
         <button class="track-delete-btn" id="exportCloseBtn" style="font-size: 18px;">✕</button>
       </div>
 
@@ -1519,10 +1570,10 @@
           { id: 'meio', name: 'Centro / Meio (Baqueta)', label: 'CE', css: 'note-meio' },
           { id: 'intermedio', name: 'Intermédio / Fraco (Baqueta)', label: 'FR', css: 'note-intermedio' },
           { id: 'ringshot', name: 'Rimshot (Estalo de Aro)', label: 'RS', css: 'note-ringshot' },
-          { id: 'open', name: 'Mão Aberta (Grave)', label: 'MA', css: 'note-open' },
+          { id: 'open', name: 'Mão Aberta (Ressonante)', label: 'MA', css: 'note-open' },
           { id: 'slap', name: 'Slap / Tapa Seco (Mão)', label: 'SL', css: 'note-slap' },
-          { id: 'flam', name: 'Flam / Chamada Dupla', label: 'FL', css: 'note-flam' },
-          { id: 'rulo', name: 'Rulo / Subida Contínua', label: 'RL', css: 'note-rulo' }
+          { id: 'flam', name: 'Flam (Mão + Baqueta)', label: 'FL', css: 'note-flam' },
+          { id: 'rulo', name: 'Rufada / Rulo (Baqueta Pressionada)', label: 'RL', css: 'note-rulo' }
         ]
       },
       {
@@ -1533,9 +1584,8 @@
         color: '#4A9E75',
         articulations: [
           { id: 'forte', name: 'Toque Forte (Acento)', label: 'FT', css: 'note-forte' },
-          { id: 'intermedio', name: 'Toque Intermediário', label: 'IN', css: 'note-intermedio-ta' },
-          { id: 'fraco', name: 'Toque Fraco (Preenchimento)', label: 'FR', css: 'note-fraco' },
-          { id: 'aro', name: 'Toque no Aro', label: 'AR', css: 'note-aro' }
+          { id: 'medio', name: 'Toque Médio', label: 'MD', css: 'note-intermedio-ta' },
+          { id: 'fraco', name: 'Toque Fraco (Fantasma)', label: 'FR', css: 'note-fraco' }
         ]
       },
       {
@@ -1582,21 +1632,21 @@
     // Metadados da Levada Base de Caixa (Império Serrano: acento/médio e dinâmica MIDI 0-127)
     const CAIXA_IMPERIO_SERRANO_STEPS = [
       { step: 0, tipo: 'acento', vel: 125 },
-      { step: 1, tipo: 'medio',  vel: 70 },
+      { step: 1, tipo: 'medio', vel: 70 },
       { step: 2, tipo: 'acento', vel: 110 },
       { step: 3, tipo: 'acento', vel: 115 },
-      { step: 4, tipo: 'medio',  vel: 75 },
-      { step: 5, tipo: 'medio',  vel: 70 },
+      { step: 4, tipo: 'medio', vel: 75 },
+      { step: 5, tipo: 'medio', vel: 70 },
       { step: 6, tipo: 'acento', vel: 120 },
-      { step: 7, tipo: 'medio',  vel: 65 },
+      { step: 7, tipo: 'medio', vel: 65 },
       { step: 8, tipo: 'acento', vel: 125 },
-      { step: 9, tipo: 'medio',  vel: 70 },
+      { step: 9, tipo: 'medio', vel: 70 },
       { step: 10, tipo: 'acento', vel: 110 },
       { step: 11, tipo: 'acento', vel: 115 },
-      { step: 12, tipo: 'medio',  vel: 75 },
-      { step: 13, tipo: 'medio',  vel: 70 },
+      { step: 12, tipo: 'medio', vel: 75 },
+      { step: 13, tipo: 'medio', vel: 70 },
       { step: 14, tipo: 'acento', vel: 120 },
-      { step: 15, tipo: 'medio',  vel: 65 }
+      { step: 15, tipo: 'medio', vel: 65 }
     ];
 
     const INSTRUMENT_GROOVES = {
@@ -1633,19 +1683,34 @@
         { id: 'subida_rufada', name: 'Subida Rufada (Preparação de Breque)', pattern: ['rufado', 'fraco', 'rufado', 'fraco', 'rufado', 'forte', 'ringshot', null] }
       ],
       repique: [
+        { id: 'naumteria_repique_base', name: 'Levada Base — Naumteria (CE-FR-RS-MA)', pattern: ['meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'] },
         { id: 'conducao_baqueta_mao', name: 'Condução Clássica (Baqueta e Mão)', pattern: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'] },
-        { id: 'chamada_subida', name: 'Chamada de Entrada / Subida (2 Compassos)', pattern: [
-          'flam', null, 'ringshot', null, 'ringshot', 'meio', 'ringshot', null,
-          'rulo', null, 'rulo', null, 'ringshot', 'meio', 'ringshot', null
-        ] },
+        {
+          id: 'chamada_subida', name: 'Chamada de Entrada / Subida (2 Compassos)', pattern: [
+            'flam', null, 'ringshot', null, 'ringshot', 'meio', 'ringshot', null,
+            'rulo', null, 'rulo', null, 'ringshot', 'meio', 'ringshot', null
+          ]
+        },
         { id: 'virada_breque', name: 'Virada de Breque (Rimshot + Slap)', pattern: ['ringshot', 'meio', 'slap', 'open', 'ringshot', 'meio', 'ringshot', null] }
       ],
       tamborim: [
-        { id: 'carreteiro', name: 'Carreteiro Contínuo (FT-IN-FR-IN)', pattern: ['forte', 'intermedio', 'fraco', 'intermedio', 'forte', 'intermedio', 'fraco', 'intermedio'] },
-        { id: 'teleco_teco', name: 'Desenho Teleco-Teco (Sincopado)', pattern: ['forte', null, 'forte', 'intermedio', null, 'forte', 'fraco', 'forte'] },
-        { id: 'ataque_breque', name: 'Ataque de Breque (Com Toque no Aro)', pattern: ['aro', null, 'aro', null, 'forte', 'intermedio', 'forte', null] }
+        { id: 'carreteiro', name: 'Carreteiro Contínuo (FT-MD-FR-MD)', pattern: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'] },
+        { id: 'teleco_teco', name: 'Desenho Teleco-Teco (Sincopado)', pattern: ['forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte'] },
+        { id: 'ataque_breque', name: 'Ataque de Breque (Marcado)', pattern: ['forte', null, 'forte', null, 'forte', 'medio', 'forte', null] }
       ],
       agogo: [
+        {
+          id: 'naumteria_agogo_base',
+          name: 'Levada Base — Naumteria (1ª Vez + Loop Contínuo)',
+          introPattern: [
+            'boca1', null, null, 'boca1', 'boca3', null, 'boca4', null,
+            'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'
+          ],
+          pattern: [
+            null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null,
+            'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'
+          ]
+        },
         { id: 'samba_classico_4bocas', name: 'Samba Clássico (4 Bocas)', pattern: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2'] },
         { id: 'balanco_melodico', name: 'Balanço Melódico (Agudo → Grave)', pattern: ['boca4', 'boca3', null, 'boca2', 'boca1', null, 'boca2', 'boca3'] },
         { id: 'convencao_subida', name: 'Convenção / Subida em Escala', pattern: ['boca1', 'boca1', 'boca2', 'boca2', 'boca3', 'boca3', 'boca4', null] }
@@ -1674,11 +1739,14 @@
           surdo2: ['aberto', null, null, null, 'mao', null, null, null, 'aberto', null, null, null, 'mao', null, null, null],
           surdo3: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null, 'abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null],
           caixa: ['forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco'],
-          repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
-          tamborim: ['forte', 'intermedio', 'fraco', 'intermedio', 'forte', 'intermedio', 'fraco', 'intermedio', 'forte', null, 'forte', 'intermedio', null, 'forte', 'fraco', 'forte'],
-          agogo: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2', 'boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2'],
+          repique: ['meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'],
+          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte'],
+          agogo: [null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null, 'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'],
           ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
           apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+        },
+        tracksIntro: {
+          agogo: ['boca1', null, null, 'boca1', 'boca3', null, 'boca4', null, 'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1']
         },
         tracksMeta: {
           caixa: CAIXA_IMPERIO_SERRANO_STEPS
@@ -1693,7 +1761,7 @@
           surdo3: [null, null, null, null, 'aro', null, 'aro', null, 'rulo', null, 'rulo', null, 'aberto', null, 'corte', null],
           caixa: [null, null, null, null, null, null, null, null, 'rufado', 'fraco', 'rufado', 'fraco', 'ringshot', 'fraco', 'forte', null],
           repique: ['flam', null, 'ringshot', null, 'ringshot', 'meio', 'ringshot', null, 'rulo', null, 'rulo', null, 'ringshot', 'meio', 'ringshot', null],
-          tamborim: [null, null, null, null, null, null, null, null, 'forte', null, 'forte', null, 'forte', 'intermedio', 'forte', null],
+          tamborim: [null, null, null, null, null, null, null, null, 'forte', null, 'forte', null, 'forte', 'medio', 'forte', null],
           agogo: [null, null, null, null, null, null, null, null, 'boca1', 'boca2', 'boca3', 'boca4', 'boca4', null, null, null],
           ganza: [null, null, null, null, null, null, null, null, 'forte', 'fraco', 'fraco', 'fraco', 'forte', null, null, null],
           apito: ['longo', null, null, null, 'curto', null, 'curto', null, null, null, null, null, null, null, null, null]
@@ -1708,7 +1776,7 @@
           surdo3: ['corte', null, 'corte', null, null, null, 'aberto', 'aberto', 'abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null],
           caixa: ['ringshot', null, 'ringshot', null, null, null, 'rufado', 'forte', 'forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco'],
           repique: ['ringshot', null, 'slap', null, 'flam', null, 'ringshot', 'meio', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
-          tamborim: ['forte', null, 'forte', null, null, null, 'forte', 'intermedio', 'forte', 'intermedio', 'fraco', 'intermedio', 'forte', 'intermedio', 'fraco', 'intermedio'],
+          tamborim: ['forte', null, 'forte', null, null, null, 'forte', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'],
           agogo: ['boca4', null, 'boca1', null, null, null, 'boca3', 'boca4', 'boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2'],
           ganza: ['forte', null, 'forte', null, null, null, 'forte', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
           apito: ['trinado', null, null, null, 'curto', null, 'curto', null, null, null, null, null, null, null, null, null]
@@ -1726,7 +1794,7 @@
           surdo3: ['aberto', null, 'aberto', 'aberto', null, 'aberto', 'corte', null, 'aro', 'aro', 'aberto', null, 'corte', null, null, null],
           caixa: ['ringshot', 'fraco', 'ringshot', 'ringshot', 'fraco', 'ringshot', 'forte', null, 'rufado', 'fraco', 'ringshot', null, 'ringshot', null, null, null],
           repique: ['ringshot', 'meio', 'slap', 'ringshot', 'meio', 'slap', 'ringshot', null, 'rulo', null, 'ringshot', null, 'ringshot', null, null, null],
-          tamborim: ['forte', null, 'forte', 'forte', null, 'forte', 'aro', null, 'forte', 'intermedio', 'forte', null, 'forte', null, null, null],
+          tamborim: ['forte', null, 'forte', 'forte', null, 'forte', 'forte', null, 'forte', 'medio', 'forte', null, 'forte', null, null, null],
           agogo: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca1', null, 'boca4', 'boca3', 'boca2', null, 'boca1', null, null, null],
           ganza: ['forte', null, 'forte', 'forte', null, 'forte', 'forte', null, 'forte', 'fraco', 'forte', null, 'forte', null, null, null],
           apito: [null, null, null, null, null, null, null, null, 'trinado', null, null, null, 'curto', null, null, null]
@@ -1741,7 +1809,7 @@
           surdo3: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null, 'rulo', null, 'rulo', null, 'rulo', null, 'corte', null],
           caixa: ['forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'forte', 'rufado', 'forte', 'ringshot', 'forte', 'ringshot', null],
           repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'ringshot', 'meio', 'slap', 'open', 'ringshot', 'meio', 'ringshot', null],
-          tamborim: ['forte', 'intermedio', 'fraco', 'intermedio', 'forte', 'intermedio', 'fraco', 'intermedio', 'aro', null, 'aro', null, 'forte', 'intermedio', 'forte', null],
+          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', null, 'forte', null, 'forte', 'medio', 'forte', null],
           agogo: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2', 'boca1', 'boca1', 'boca2', 'boca2', 'boca3', 'boca3', 'boca4', null],
           ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', null],
           apito: [null, null, null, null, null, null, 'trinado', null, null, null, null, null, 'curto', null, 'curto', null]
@@ -1761,6 +1829,7 @@
         this.isInitialized = false;
         this.sampleBuffers = {};
         this.loadingPromises = {};
+        this.activeChokeVoices = {};
 
         // Mapeamento autêntico de cada instrumento e articulação para os samples reais
         this.sampleConfig = {
@@ -1787,20 +1856,21 @@
           'caixa:ringshot': { url: 'assets/audio/sn_72.mp3', vol: 1.12, rate: 1.0 },
           'caixa:rufado': { url: 'assets/audio/sn_66.mp3', vol: 0.98, rate: 1.0 },
 
-          // Repique / Repinique: Centro (_58), Fraco (_2e), Rimshot (_72), Mão Aberta (_68), Slap (_73), Flam (_66), Rulo (_7a)
-          'repique:meio': { url: 'assets/audio/re_58.mp3', vol: 1.0, rate: 1.0 },
-          'repique:intermedio': { url: 'assets/audio/re_2e.mp3', vol: 0.58, rate: 1.0 },
-          'repique:ringshot': { url: 'assets/audio/re_72.mp3', vol: 1.15, rate: 1.0 },
-          'repique:open': { url: 'assets/audio/re_68.mp3', vol: 0.95, rate: 0.94 },
-          'repique:slap': { url: 'assets/audio/re_73.mp3', vol: 1.12, rate: 1.0 },
-          'repique:flam': { url: 'assets/audio/re_66.mp3', vol: 1.05, rate: 1.0 },
-          'repique:rulo': { url: 'assets/audio/re_7a.mp3', vol: 0.98, rate: 1.0 },
+          // Repique / Repinique: Centro (_58), Fraco (_2e), Rimshot (_72), Mão Aberta (re_open_mao), Slap (re_slap_mao), Flam composto Mão+Baqueta (re_flam_real), Rufada (re_66)
+          'repique:meio': { url: 'assets/audio/re_58.mp3', vol: 1.0, rate: 1.04 },
+          'repique:intermedio': { url: 'assets/audio/re_2e.mp3', vol: 0.60, rate: 1.04 },
+          'repique:ringshot': { url: 'assets/audio/re_72.mp3', vol: 1.15, rate: 1.02 },
+          'repique:open': { url: 'assets/audio/re_open_mao.wav', vol: 1.0, rate: 1.0 },
+          'repique:slap': { url: 'assets/audio/re_slap_mao.wav', vol: 1.10, rate: 1.0 },
+          'repique:flam': { url: 'assets/audio/re_flam_real.wav', vol: 1.08, rate: 1.0 },
+          'repique:rulo': { url: 'assets/audio/re_66.mp3', vol: 1.02, rate: 1.0 },
 
-          // Tamborim: Forte (ta_58), Intermediário (ta_58 suave), Fraco (ta_72), Aro (hs_74 agudo)
-          'tamborim:forte': { url: 'assets/audio/ta_58.mp3', vol: 1.0, rate: 1.0 },
-          'tamborim:intermedio': { url: 'assets/audio/ta_58.mp3', vol: 0.72, rate: 0.98 },
-          'tamborim:fraco': { url: 'assets/audio/ta_72.mp3', vol: 0.55, rate: 0.96 },
-          'tamborim:aro': { url: 'assets/audio/hs_74.mp3', vol: 0.85, rate: 1.45 },
+          // Tamborim: 3 golpes reais distintos (Forte, Médio e Fraco) do mesmo tamborim em afinação bem aguda (rate: 1.32 igual nos 3) + choke monofônico
+          'tamborim:forte': { url: 'assets/audio/ta_estacio_forte.wav', vol: 1.0, rate: 1.32, chokeGroup: 'tamborim' },
+          'tamborim:medio': { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
+          'tamborim:intermedio': { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
+          'tamborim:fraco': { url: 'assets/audio/ta_estacio_fraco.wav', vol: 0.50, rate: 1.32, chokeGroup: 'tamborim' },
+          'tamborim:aro': { url: 'assets/audio/ta_72.mp3', vol: 0.85, rate: 1.0 },
 
           // Agogô: 4 Bocas (Grave ao Agudo)
           'agogo:boca1': { url: 'assets/audio/ag_6f.mp3', vol: 1.0, rate: 0.89 },
@@ -1874,6 +1944,21 @@
         }
 
         const t = startTime !== null ? startTime : ctx.currentTime;
+
+        // Choke monofônico: quando o mesmo instrumento (ex.: tamborim) recebe nova baquetada,
+        // amortece suavemente a cauda da nota anterior em 6ms para evitar faseamento no carreteiro
+        if (cfg.chokeGroup && ctx === this.ctx) {
+          const prev = this.activeChokeVoices[cfg.chokeGroup];
+          if (prev && prev.gainNode) {
+            try {
+              prev.gainNode.gain.cancelScheduledValues(t);
+              prev.gainNode.gain.setValueAtTime(prev.lastVol || 0.2, t);
+              prev.gainNode.gain.linearRampToValueAtTime(0.0001, t + 0.006);
+              if (prev.source) prev.source.stop(t + 0.008);
+            } catch (e) { }
+          }
+        }
+
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.playbackRate.value = playbackRate;
@@ -1897,6 +1982,10 @@
 
         gainNode.connect(ctx.destination);
         source.start(t);
+
+        if (cfg.chokeGroup && ctx === this.ctx) {
+          this.activeChokeVoices[cfg.chokeGroup] = { source, gainNode, lastVol: volume };
+        }
         return true;
       }
 
@@ -2058,6 +2147,7 @@
       metronomeEnabled: false,
       isPlaying: false,
       currentStep: 0,
+      loopCount: 0,       // 0 na 1ª passada (toca introPattern), >=1 a partir da 2ª repetição (mantém loopPattern)
       timerId: null,
       nextNoteTime: 0,
       mutes: {},
@@ -2066,7 +2156,8 @@
       selectedBrush: {},  // 'cycle' ou id fixo da articulação por instrumento
       selectedGroove: {}, // última levada selecionada por instrumento
       gridData: {},
-      stepMeta: {}        // metadados opcionais por step (ex: { mao: 'D'|'E', tipo: 'acento'|'medio', vel: 0-127 })
+      loopGridData: {},   // versão de repetição contínua (a partir da 2ª volta do loop) quando o 1º compasso é diferente
+      stepMeta: {}        // metadados opcionais por step (ex: { tipo: 'acento'|'medio', vel: 0-127 })
     };
 
     function computeStepVelMultiplier(noteId, meta) {
@@ -2150,7 +2241,25 @@
     function loadCustomGroovesFromStorage() {
       try {
         const raw = localStorage.getItem(CUSTOM_GROOVES_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        // Migra automaticamente padrões de 4 compassos onde os 2 primeiros são Entrada e os 2 últimos são o Loop Contínuo
+        Object.keys(parsed).forEach(instId => {
+          if (Array.isArray(parsed[instId])) {
+            parsed[instId].forEach(g => {
+              if (Array.isArray(g.pattern) && !g.introPattern && g.pattern.length >= 16 && g.pattern.length % 2 === 0) {
+                const half = g.pattern.length / 2;
+                const firstHalf = g.pattern.slice(0, half);
+                const secondHalf = g.pattern.slice(half);
+                if (JSON.stringify(firstHalf) !== JSON.stringify(secondHalf)) {
+                  g.introPattern = firstHalf;
+                  g.pattern = secondHalf;
+                }
+              }
+            });
+          }
+        });
+        return parsed;
       } catch (e) {
         return {};
       }
@@ -2172,35 +2281,44 @@
       return [...userList, ...baseList];
     }
 
-    /* Converte um padrão salvo (em semicolcheia ou fusa) para a resolução ativa da grade */
-    function expandPatternToGrid(pattern, targetTotalSteps, stepsPerMeasure, savedSubdivision = 'semicolcheia') {
-      const result = new Array(targetTotalSteps).fill(null);
-      if (!pattern || pattern.length === 0) return result;
-
+    function convertPatternResolution(srcPattern, savedSubdivision = 'semicolcheia') {
+      if (!srcPattern || srcPattern.length === 0) return [];
       const currentIsFusa = state.subdivision === 'fusa';
       const savedWasFusa = savedSubdivision === 'fusa';
-
-      if (currentIsFusa === savedWasFusa) {
-        for (let s = 0; s < targetTotalSteps; s++) {
-          result[s] = pattern[s % pattern.length] || null;
-        }
-        return result;
-      }
+      if (currentIsFusa === savedWasFusa) return srcPattern.slice();
 
       if (currentIsFusa && !savedWasFusa) {
-        // Padrão salvo em semicolcheia -> expandir para fusa (dobro de subdivisões)
-        for (let s = 0; s < targetTotalSteps; s++) {
-          if (s % 2 !== 0) continue;
-          const idx = Math.floor(s / 2) % pattern.length;
-          result[s] = pattern[idx] || null;
+        const out = new Array(srcPattern.length * 2).fill(null);
+        for (let i = 0; i < srcPattern.length; i++) {
+          out[i * 2] = srcPattern[i] || null;
         }
-        return result;
+        return out;
       }
 
-      // Padrão salvo em fusa -> reduzir para semicolcheia
+      const outLen = Math.max(1, Math.floor(srcPattern.length / 2));
+      const out = new Array(outLen).fill(null);
+      for (let i = 0; i < outLen; i++) {
+        out[i] = srcPattern[i * 2] || null;
+      }
+      return out;
+    }
+
+    /* Converte um padrão salvo (com suporte a introPattern na 1ª vez + pattern contínuo da 2ª repetição em diante) */
+    function expandPatternToGrid(pattern, targetTotalSteps, stepsPerMeasure, savedSubdivision = 'semicolcheia', introPattern = null) {
+      const result = new Array(targetTotalSteps).fill(null);
+      const loopConv = convertPatternResolution(pattern, savedSubdivision);
+      if (loopConv.length === 0) return result;
+
+      const introConv = introPattern ? convertPatternResolution(introPattern, savedSubdivision) : null;
+      const introLen = introConv ? introConv.length : 0;
+
       for (let s = 0; s < targetTotalSteps; s++) {
-        const idx = (s * 2) % pattern.length;
-        result[s] = pattern[idx] || null;
+        if (introConv && s < introLen) {
+          result[s] = introConv[s] || null;
+        } else {
+          const offset = introConv ? (s - introLen) : s;
+          result[s] = loopConv[offset % loopConv.length] || null;
+        }
       }
       return result;
     }
@@ -2222,8 +2340,26 @@
         }
       }
 
-      const patternLength = (lastActiveMeasure + 1) * stepsPerMeasure;
-      const extractedPattern = trackData.slice(0, patternLength);
+      const activeMeasuresCount = lastActiveMeasure + 1;
+      const patternLength = activeMeasuresCount * stepsPerMeasure;
+      const rawSlice = trackData.slice(0, patternLength);
+
+      // Se o usuário desenhou 2 ou 4+ compassos (par) onde a 1ª metade (entrada) é diferente da 2ª metade (repetição contínua),
+      // separa automaticamente em introPattern (1ª vez) + pattern (2ª repetição em diante)!
+      let introPattern = null;
+      let extractedPattern = rawSlice;
+      if (activeMeasuresCount >= 2 && activeMeasuresCount % 2 === 0) {
+        const halfSteps = patternLength / 2;
+        const firstHalf = rawSlice.slice(0, halfSteps);
+        const secondHalf = rawSlice.slice(halfSteps);
+        if (JSON.stringify(firstHalf) !== JSON.stringify(secondHalf)) {
+          // Verifica se são variações de entrada vs continuação (ou 4 compassos onde 1-2 é entrada e 3-4 é o loop)
+          if (activeMeasuresCount >= 4 || JSON.stringify(firstHalf.slice(2)) === JSON.stringify(secondHalf.slice(2))) {
+            introPattern = firstHalf;
+            extractedPattern = secondHalf;
+          }
+        }
+      }
 
       if (!Array.isArray(customGrooves[inst.id])) {
         customGrooves[inst.id] = [];
@@ -2240,6 +2376,7 @@
         customGrooves[inst.id].push({
           id: grooveId,
           name: grooveName,
+          introPattern,
           pattern: extractedPattern,
           savedSubdivision: state.subdivision,
           isCustom: true
@@ -2249,6 +2386,7 @@
         const newObj = {
           id: 'levada_base_custom',
           name: '⭐ Levada Base (Salva)',
+          introPattern,
           pattern: extractedPattern,
           savedSubdivision: state.subdivision,
           isCustom: true
@@ -2261,6 +2399,24 @@
       }
 
       saveCustomGroovesToStorage(customGrooves);
+
+      // Copia o JSON da levada para a área de transferência e tenta salvar no servidor local (se em localhost)
+      const groovePayload = JSON.stringify({
+        instrument: inst.id,
+        subdivision: state.subdivision,
+        introPattern,
+        pattern: extractedPattern,
+        allCustomGrooves: customGrooves
+      }, null, 2);
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(groovePayload).catch(() => { });
+      }
+      fetch('/__save_custom_grooves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: groovePayload
+      }).catch(() => { });
 
       // Aplica a levada recém-salva em todos os compassos ativos da grade
       applyInstrumentGroove(inst.id, grooveId);
@@ -2288,6 +2444,7 @@
           delete customGrooves[instId];
           saveCustomGroovesToStorage(customGrooves);
           state.selectedGroove[instId] = '';
+          delete state.loopGridData[instId];
         }
         renderStudio();
         return;
@@ -2300,21 +2457,38 @@
       audio.init();
       const totalSteps = getTotalSteps();
       const stepsPerMeasure = getStepsPerMeasure();
+      const sub = found.savedSubdivision || 'semicolcheia';
+
       state.gridData[instId] = expandPatternToGrid(
         found.pattern,
         totalSteps,
         stepsPerMeasure,
-        found.savedSubdivision || 'semicolcheia'
+        sub,
+        found.introPattern || null
       );
+
+      // Guarda a grade de repetição contínua (para a 2ª volta do Play em diante quando há introPattern)
+      if (found.introPattern) {
+        state.loopGridData[instId] = expandPatternToGrid(
+          found.pattern,
+          totalSteps,
+          stepsPerMeasure,
+          sub,
+          null
+        );
+      } else {
+        delete state.loopGridData[instId];
+      }
+
       state.stepMeta[instId] = found.stepsMeta
         ? expandPatternToGrid(found.stepsMeta, totalSteps, stepsPerMeasure, 'semicolcheia')
         : new Array(totalSteps).fill(null);
       state.selectedGroove[instId] = grooveId;
 
       // Toca o primeiro toque ativo da levada como feedback imediato
-      const firstNote = found.pattern.find(n => n !== null);
-      if (firstNote) {
-        audio.triggerInstrument(instId, firstNote, state.volumes[instId] ?? 1.0);
+      const srcFirst = (found.introPattern || found.pattern).find(n => n !== null);
+      if (srcFirst) {
+        audio.triggerInstrument(instId, srcFirst, state.volumes[instId] ?? 1.0);
       }
       renderStudio();
     }
@@ -2339,22 +2513,36 @@
           : null;
 
         if (userBase) {
+          const sub = userBase.savedSubdivision || 'semicolcheia';
           state.gridData[inst.id] = expandPatternToGrid(
             userBase.pattern,
             totalSteps,
             stepsPerMeasure,
-            userBase.savedSubdivision || 'semicolcheia'
+            sub,
+            userBase.introPattern || null
           );
+          if (userBase.introPattern) {
+            state.loopGridData[inst.id] = expandPatternToGrid(userBase.pattern, totalSteps, stepsPerMeasure, sub, null);
+          } else {
+            delete state.loopGridData[inst.id];
+          }
           state.stepMeta[inst.id] = new Array(totalSteps).fill(null);
           state.selectedGroove[inst.id] = 'levada_base_custom';
           return;
         }
 
         const trackPattern = preset.tracks[inst.id];
+        const trackIntro = preset.tracksIntro?.[inst.id] || null;
         if (trackPattern) {
-          state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure);
+          state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, 'semicolcheia', trackIntro);
+          if (trackIntro) {
+            state.loopGridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, 'semicolcheia', null);
+          } else {
+            delete state.loopGridData[inst.id];
+          }
         } else {
           state.gridData[inst.id] = new Array(totalSteps).fill(null);
+          delete state.loopGridData[inst.id];
         }
         const metaPattern = preset.tracksMeta?.[inst.id];
         if (metaPattern) {
@@ -2554,6 +2742,7 @@
           e.stopPropagation();
           state.gridData[inst.id] = new Array(totalSteps).fill(null);
           state.stepMeta[inst.id] = new Array(totalSteps).fill(null);
+          if (state.loopGridData) delete state.loopGridData[inst.id];
           state.selectedGroove[inst.id] = '';
           renderStudio();
         };
@@ -2732,6 +2921,7 @@
 
             state.gridData[inst.id][s] = targetArt;
             if (state.stepMeta[inst.id]) state.stepMeta[inst.id][s] = null;
+            if (state.loopGridData) delete state.loopGridData[inst.id];
             state.selectedGroove[inst.id] = '';
             grooveSelect.value = '';
             if (targetArt) {
@@ -2750,6 +2940,7 @@
               dragPaintState.instrumentId = inst.id;
               state.gridData[inst.id][s] = null;
               if (state.stepMeta[inst.id]) state.stepMeta[inst.id][s] = null;
+              if (state.loopGridData) delete state.loopGridData[inst.id];
               state.selectedGroove[inst.id] = '';
               grooveSelect.value = '';
               updateSingleCellDOM(cell, inst, s);
@@ -2778,6 +2969,7 @@
 
           cell.onmouseenter = () => {
             if (!dragPaintState.active || dragPaintState.instrumentId !== inst.id) return;
+            if (state.loopGridData) delete state.loopGridData[inst.id];
             if (dragPaintState.mode === 'erase') {
               if (state.gridData[inst.id][s] !== null) {
                 state.gridData[inst.id][s] = null;
@@ -2835,6 +3027,7 @@
         state.timerId = null;
       }
       state.isPlaying = true;
+      state.loopCount = 0;
       document.getElementById('playIcon').textContent = '⏸';
       document.getElementById('playText').textContent = 'Pausar Breque';
       document.getElementById('btnPlay').classList.add('btn-primary');
@@ -2853,7 +3046,12 @@
           const stepToPlay = state.currentStep;
           playStep(stepToPlay, state.nextNoteTime);
           updateCursor(stepToPlay);
-          state.currentStep = (state.currentStep + 1) % totalSteps;
+          if (state.currentStep + 1 >= totalSteps) {
+            state.currentStep = 0;
+            state.loopCount = (state.loopCount || 0) + 1;
+          } else {
+            state.currentStep += 1;
+          }
           state.nextNoteTime += stepDur;
         }
       }, 15);
@@ -2866,6 +3064,7 @@
         state.timerId = null;
       }
       state.currentStep = 0;
+      state.loopCount = 0;
       document.getElementById('playIcon').textContent = '▶';
       document.getElementById('playText').textContent = 'Reproduzir Breque';
       clearCursor();
@@ -2888,7 +3087,14 @@
         if (state.mutes[inst.id]) return;
         if (hasAnySolo && !state.solos[inst.id]) return;
 
-        const note = state.gridData[inst.id]?.[stepIndex];
+        // A partir da 2ª volta do loop (loopCount >= 1), se o instrumento tiver
+        // um padrão de loop contínuo diferente da 1ª entrada (ex.: Agogô Naumteria),
+        // toca o loop contínuo sem repetir o 1º compasso de entrada!
+        const activeGrid = (state.loopCount >= 1 && state.loopGridData?.[inst.id])
+          ? state.loopGridData[inst.id]
+          : state.gridData[inst.id];
+
+        const note = activeGrid?.[stepIndex];
         const baseVol = state.volumes[inst.id] ?? 1.0;
         const meta = state.stepMeta?.[inst.id]?.[stepIndex];
         const velMult = computeStepVelMultiplier(note, meta);
@@ -3061,6 +3267,22 @@
       state.measures++;
       document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
       stopPlayback();
+      initGridData();
+      const totalSteps = getTotalSteps();
+      const stepsPerMeasure = getStepsPerMeasure();
+      INSTRUMENTS.forEach(inst => {
+        const gId = state.selectedGroove[inst.id];
+        if (gId) {
+          const groove = getInstrumentGrooves(inst.id).find(g => g.id === gId);
+          if (groove && groove.pattern) {
+            const patSubdiv = groove.subdiv || 'semicolcheia';
+            state.gridData[inst.id] = expandPatternToGrid(groove.pattern, totalSteps, stepsPerMeasure, patSubdiv, groove.introPattern || null);
+            if (groove.introPattern && groove.introPattern.length > 0) {
+              state.loopGridData[inst.id] = expandPatternToGrid(groove.pattern, totalSteps, stepsPerMeasure, patSubdiv, null);
+            }
+          }
+        }
+      });
       renderStudio();
     };
 
@@ -3092,6 +3314,7 @@
       if (confirm('Deseja limpar todas as notas marcadas na grade?')) {
         state.gridData = {};
         state.stepMeta = {};
+        state.loopGridData = {};
         state.selectedGroove = {};
         document.getElementById('bateriaPresetSelect').value = '';
         stopPlayback();
@@ -3100,7 +3323,7 @@
     };
 
     document.getElementById('btnExportJSON').onclick = exportToJSON;
-    
+
     document.getElementById('btnImportJSON').onclick = () => {
       document.getElementById('fileInput').click();
     };
@@ -3308,4 +3531,5 @@
   </script>
   <script src="beatbox_studio.js"></script>
 </body>
+
 </html>
