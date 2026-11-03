@@ -1,14 +1,18 @@
-// Samba Breque Studio - Service Worker
-const CACHE_NAME = 'samba-breque-v3';
+// Naumteria Studio - Service Worker
+const CACHE_NAME = 'naumteria-studio-v5';
 const CORE_ASSETS = [
   './',
   'index.html',
   'beatbox_studio.css',
   'beatbox_studio.js',
   'manifest.json',
-  'assets/icon.svg',
+  'assets/logo-naumteria.png',
   'assets/icon-192.png',
-  'assets/icon-512.png'
+  'assets/icon-512.png',
+  'assets/fonts/Diamante-ExtraBold.ttf',
+  'assets/fonts/Arboria-Book.otf',
+  'assets/fonts/MyriadPro-Bold.otf',
+  'assets/fonts/MyriadVariableConcept-Roman.otf'
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,19 +47,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const isCodeOrHtml = request.mode === 'navigate' ||
+    request.url.endsWith('.html') ||
+    request.url.endsWith('.js') ||
+    request.url.endsWith('.css');
+
+  if (isCodeOrHtml) {
+    // Network-first para HTML/CSS/JS garante atualização imediata
+    event.respondWith(
+      fetch(request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return networkResponse;
+      }).catch(() => caches.match(request).then((res) => res || caches.match('index.html')))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Retorna do cache e atualiza em segundo plano para arquivos estáticos
-        fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
-          }
-        }).catch(() => {/* Offline */});
         return cachedResponse;
       }
 
-      // Se não estiver em cache, busca na rede e guarda em cache (ex: áudios mp3)
+      // Se não estiver em cache, busca na rede e guarda em cache (ex: áudios mp3 e fontes)
       return fetch(request).then((networkResponse) => {
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
@@ -67,11 +84,6 @@ self.addEventListener('fetch', (event) => {
         });
 
         return networkResponse;
-      }).catch(() => {
-        // Se falhar e for navegação, retorna o index.html
-        if (request.mode === 'navigate') {
-          return caches.match('index.html');
-        }
       });
     })
   );

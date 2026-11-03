@@ -1,13 +1,13 @@
 {
-  "name": "Samba Breque Studio",
-  "short_name": "SambaBreque",
-  "description": "Criador de Arranjos, Convenções e Beatbox para Baterias de Samba",
+  "name": "Naumteria Studio — Bateria UNESP Bauru",
+  "short_name": "Naumteria",
+  "description": "Estúdio Multitrack, Mosaico e Sequenciador de Breques da Bateria Universitária Naumteria",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0c0f17",
-  "theme_color": "#0e1320",
+  "background_color": "#0A090C",
+  "theme_color": "#0A090C",
   "categories": ["music", "audio", "multimedia"],
   "icons": [
     {
@@ -23,9 +23,9 @@
       "purpose": "any maskable"
     },
     {
-      "src": "assets/icon.svg",
+      "src": "assets/logo-naumteria.png",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/png"
     }
   ]
 }

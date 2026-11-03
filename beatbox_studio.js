@@ -106,15 +106,15 @@
   ];
 
   const INSTRUMENT_COLORS = [
-    '#3b82f6', // Surdo 1ª (Azul Real)
-    '#06b6d4', // Surdo 2ª (Ciano)
-    '#f97316', // Caixa (Laranja Samba)
-    '#eab308', // Repique (Amarelo)
-    '#10b981', // Tamborim (Verde Esmeralda)
-    '#8b5cf6', // Agogô (Roxo Vibrante)
-    '#ec4899', // Cuíca (Rosa Magenta)
-    '#84cc16', // Ganzá (Verde Lima)
-    '#ef4444'  // Breque (Voz / Fala - Vermelho)
+    '#C84B4B', // Surdo 1ª (Matte Crimson)
+    '#D4843E', // Surdo 2ª (Matte Amber)
+    '#247BB8', // Caixa (Naumteria Badger Blue)
+    '#E8C31B', // Repique (Naumteria Gold)
+    '#4A9E75', // Tamborim (Matte Sage)
+    '#8868B8', // Agogô (Matte Violet)
+    '#B85D88', // Cuíca (Matte Rose)
+    '#3898A6', // Ganzá (Matte Teal)
+    '#E05A5A'  // Breque (Voz / Fala)
   ];
 
   // --- Estado do Beatbox Studio ---
@@ -262,7 +262,7 @@
   function updateLoopUi() {
     if (dom.btnToggleLoop) {
       dom.btnToggleLoop.classList.toggle('loop-active', state.looping);
-      if (dom.loopText) dom.loopText.textContent = state.looping ? 'Loop: Ligado' : 'Loop: Desligado';
+      if (dom.loopText) dom.loopText.textContent = state.looping ? 'Loop: On' : 'Loop: Off';
     }
     if (dom.btnTimelineLoop) {
       dom.btnTimelineLoop.classList.toggle('loop-active', state.looping);
@@ -324,18 +324,18 @@
     const durSec = getTimelineDurationSec().toFixed(1);
     if (dom.statLoopDuration) {
       dom.statLoopDuration.textContent = state.looping
-        ? `${durSec}s (Loop 🔁)`
-        : `${durSec}s (Tocar até o fim)`;
+        ? `${durSec}s (Loop)`
+        : `${durSec}s`;
     }
     if (dom.statViewMode) {
       dom.statViewMode.textContent = state.viewMode === 'timeline'
-        ? 'Modo: Faixas (DAW Reaper)'
-        : 'Modo: Mosaico de Câmeras';
+        ? 'Modo: Faixas'
+        : 'Modo: Mosaico';
     }
     if (dom.reaperLoopInfo) {
       dom.reaperLoopInfo.textContent = state.looping
-        ? `${durSec}s (Loop Ativo 🔁)`
-        : `${durSec}s (Até o fim)`;
+        ? `${durSec}s • Loop`
+        : `${durSec}s`;
     }
   }
 
@@ -872,14 +872,14 @@
     ctx.clearRect(0, 0, width, height);
 
     const grad = ctx.createLinearGradient(0, 0, 0, height);
-    grad.addColorStop(0, trackColor || '#60a5fa');
-    grad.addColorStop(0.5, '#38bdf8');
-    grad.addColorStop(1, trackColor || '#2563eb');
+    grad.addColorStop(0, trackColor || '#E8C31B');
+    grad.addColorStop(0.5, trackColor || '#E8C31B');
+    grad.addColorStop(1, trackColor || '#E8C31B');
 
     const midY = height / 2;
 
     // Linha central de referência (0 dBFS / silêncio)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.fillRect(0, midY - 0.5, width, 1);
 
     const renderPeaksOnCanvas = (peaks) => {
@@ -889,7 +889,7 @@
       const center = h / 2;
 
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.fillRect(0, center - 0.5, w, 1);
 
       const barGap = 3.5;
@@ -1937,7 +1937,7 @@
 
     state.isPlaying = true;
     dom.btnMasterPlay.classList.add('playing');
-    dom.btnMasterPlay.innerHTML = `<span>⏸</span> Pausar Breque`;
+    dom.btnMasterPlay.innerHTML = `<span>⏸</span> Pausar`;
 
     updateAudioMixRouting();
 
@@ -2011,7 +2011,7 @@
 
     if (dom.btnMasterPlay) {
       dom.btnMasterPlay.classList.remove('playing');
-      dom.btnMasterPlay.innerHTML = `<span>▶</span> Reproduzir Breque`;
+      dom.btnMasterPlay.innerHTML = `<span>▶</span> Reproduzir`;
     }
 
     // Reseta Playhead e Visor Digital LCD
@@ -2450,6 +2450,9 @@
     if (dom.modeSelect) dom.modeSelect.value = state.mode;
     if (dom.measuresSelect) dom.measuresSelect.value = state.measures;
     if (dom.measuresGroup) dom.measuresGroup.style.display = state.mode === 'fixed' ? 'flex' : 'none';
+    if (dom.btnToggleMetronome) {
+      dom.btnToggleMetronome.classList.toggle('active', state.metronomeEnabled);
+    }
   }
 
   // --- Inicialização e Bind Global ---
@@ -2618,10 +2621,48 @@
     // Metrônomo Toggle
     dom.btnToggleMetronome.onclick = () => {
       state.metronomeEnabled = !state.metronomeEnabled;
-      dom.btnToggleMetronome.style.borderColor = state.metronomeEnabled ? '#3b82f6' : 'var(--border-color)';
-      dom.btnToggleMetronome.style.background = state.metronomeEnabled ? 'rgba(59, 130, 246, 0.2)' : 'var(--bg-card)';
+      dom.btnToggleMetronome.classList.toggle('active', state.metronomeEnabled);
       saveCurrentSession();
     };
+
+    // Popovers Discretos da Barra Superior (Ajustes & Projeto/Exportar)
+    const btnSettingsPop = document.getElementById('btnToggleSettingsPopover');
+    const menuSettingsPop = document.getElementById('studioSettingsPopover');
+    const btnProjectPop = document.getElementById('btnToggleProjectPopover');
+    const menuProjectPop = document.getElementById('studioProjectPopover');
+
+    const closeAllPopovers = () => {
+      if (menuSettingsPop) menuSettingsPop.classList.remove('open');
+      if (menuProjectPop) menuProjectPop.classList.remove('open');
+    };
+
+    if (btnSettingsPop && menuSettingsPop) {
+      btnSettingsPop.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = menuSettingsPop.classList.contains('open');
+        closeAllPopovers();
+        if (!isOpen) menuSettingsPop.classList.add('open');
+      };
+      menuSettingsPop.onclick = (e) => e.stopPropagation();
+    }
+
+    if (btnProjectPop && menuProjectPop) {
+      btnProjectPop.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = menuProjectPop.classList.contains('open');
+        closeAllPopovers();
+        if (!isOpen) menuProjectPop.classList.add('open');
+      };
+      menuProjectPop.onclick = (e) => {
+        if (e.target.closest('.popover-action-item')) {
+          closeAllPopovers();
+        } else {
+          e.stopPropagation();
+        }
+      };
+    }
+
+    document.addEventListener('click', closeAllPopovers);
 
     // Adicionar Faixa
     dom.btnAddTrack.onclick = addTrack;
@@ -2784,11 +2825,55 @@
     restoreSession();
   }
 
+  // Importa um arranjo/breque renderizado pelo Sequenciador diretamente como pista no Studio Multitrack
+  async function importSequencerBounce(wavBlob, durationSec, bpm, meter, measures) {
+    stopStudioPlayback();
+
+    if (bpm) state.bpm = bpm;
+    if (meter) state.meter = meter;
+    if (measures) state.measures = measures;
+
+    let targetTrack = state.tracks.find(t => t.name === 'Base Bateria (Sequenciador)');
+    if (!targetTrack) {
+      targetTrack = state.tracks.find(t => !t.mediaUrl);
+    }
+    if (!targetTrack) {
+      if (state.tracks.length < 9) {
+        targetTrack = createTrack('Base Bateria (Sequenciador)', state.tracks.length);
+        state.tracks.unshift(targetTrack);
+      } else {
+        targetTrack = state.tracks[0];
+      }
+    }
+
+    targetTrack.name = 'Base Bateria (Sequenciador)';
+    if (targetTrack._offsetTimer) {
+      clearTimeout(targetTrack._offsetTimer);
+      targetTrack._offsetTimer = null;
+    }
+    if (targetTrack.mediaUrl) {
+      URL.revokeObjectURL(targetTrack.mediaUrl);
+    }
+
+    targetTrack.mediaBlob = wavBlob;
+    targetTrack.mediaUrl = URL.createObjectURL(wavBlob);
+    targetTrack.mediaType = 'audio';
+    targetTrack.duration = durationSec;
+    targetTrack.offsetMs = 0;
+    targetTrack.waveformPeaks = null;
+
+    syncToolbarControls();
+    await extractWaveformPeaks(targetTrack);
+    renderStudioViews();
+    await saveCurrentSession();
+  }
+
   // Exporta init para ser chamado pelo orquestrador
   window.BeatboxStudio = {
     init,
     stopStudioPlayback,
-    openQuickRecord
+    openQuickRecord,
+    importSequencerBounce
   };
 
 })();
