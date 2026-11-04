@@ -1396,14 +1396,11 @@
           <span id="speedTrainerIcon">⚡</span> <span id="speedTrainerText">Treino: Off</span>
         </button>
 
-        <!-- Presets de Levadas Base da Bateria -->
+        <!-- Presets da Bateria -->
         <div class="control-group">
-          <label for="bateriaPresetSelect">Levada Base</label>
-          <select id="bateriaPresetSelect" title="Carregar levada base da bateria completa">
-            <option value="" disabled selected hidden>🥁 Levada Base...</option>
-            <option value="batucada_completa">🥁 Batucada Base Oficial (Naumteria)</option>
-            <option value="batucada_tradicional">🥁 Batucada Base Tradicional (Rio / Estácio)</option>
-            <option value="batucada_partido_alto">🥁 Batucada Base Swingada (Partido Alto)</option>
+          <label for="bateriaPresetSelect">Presets Bateria</label>
+          <select id="bateriaPresetSelect" title="Carregar ou salvar presets da bateria completa">
+            <option value="" disabled selected hidden>🥁 Presets Bateria...</option>
           </select>
         </div>
 
@@ -1797,22 +1794,13 @@
 
     const INSTRUMENT_GROOVES = {
       surdo1: [
-        { id: 'tradicional_abafado', name: 'Marcação Tradicional (Abafado T1 + Aberto T2)', pattern: ['abafado', null, null, null, 'aberto', null, null, null] },
-        { id: 'tradicional_mao', name: 'Marcação com Mão (Mão T1 + Aberto T2)', pattern: ['mao', null, null, null, 'aberto', null, null, null] },
-        { id: 'marca_seca', name: 'Marcação Seca (Só Tempo 2 Aberto)', pattern: [null, null, null, null, 'aberto', null, null, null] },
-        { id: 'dobrado_breque', name: 'Apoio Dobrado (Breque / Balanço)', pattern: ['abafado', null, 'mao', null, 'aberto', null, null, 'mao'] }
+        { id: 'surdo1_base', name: 'Levada Base — Surdo de 1ª', pattern: ['abafado', null, null, null, 'aberto', null, null, null] }
       ],
       surdo2: [
-        { id: 'resposta_abafado', name: 'Resposta Tradicional (Aberto T1 + Abafado T2)', pattern: ['aberto', null, null, null, 'abafado', null, null, null] },
-        { id: 'resposta_mao', name: 'Resposta com Mão (Aberto T1 + Mão T2)', pattern: ['aberto', null, null, null, 'mao', null, null, null] },
-        { id: 'resposta_seca', name: 'Resposta Seca (Só Tempo 1 Aberto)', pattern: ['aberto', null, null, null, null, null, null, null] },
-        { id: 'antecipado', name: 'Resposta Antecipada (Com Anacruse)', pattern: ['aberto', null, null, null, 'mao', null, null, 'aberto'] }
+        { id: 'surdo2_base', name: 'Levada Base — Surdo de 2ª', pattern: ['aberto', null, null, null, 'abafado', null, null, null] }
       ],
       surdo3: [
-        { id: 'corte_samba_enredo', name: 'Corte de Samba-Enredo (Balanço Clássico)', pattern: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null] },
-        { id: 'balanco_universitario', name: 'Balanço Universitário (Naumteria)', pattern: [null, 'aberto', 'corte', 'aberto', null, 'aberto', 'abafado', 'aberto'] },
-        { id: 'subida_rulo', name: 'Subida em Rulo + Corte', pattern: ['rulo', null, 'rulo', null, 'rulo', null, 'corte', null] },
-        { id: 'contagem_aro', name: 'Contagem / Convenção no Aro', pattern: ['aro', null, 'aro', null, 'aro', 'aro', 'aberto', null] }
+        { id: 'surdo3_base', name: 'Levada Base — Surdo de 3ª', pattern: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null] }
       ],
       caixa: [
         {
@@ -1822,27 +1810,13 @@
           bpm_padrao: 140,
           pattern: CAIXA_IMPERIO_SERRANO_STEPS.map(s => s.tipo === 'acento' ? 'forte' : 'fraco'),
           stepsMeta: CAIXA_IMPERIO_SERRANO_STEPS
-        },
-        { id: 'reto_cima_baixo', name: 'Reto / Samba-Enredo (Cima-Baixo)', pattern: ['forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco'] },
-        { id: 'partido_alto_swingado', name: 'Partido Alto / Swingado (Com Rimshot)', pattern: ['ringshot', 'fraco', 'forte', 'fraco', 'ringshot', 'fraco', 'fraco', 'forte'] },
-        { id: 'martelado_pesado', name: 'Condução Pesada (Acento no Contratempo)', pattern: ['fraco', 'fraco', 'ringshot', 'fraco', 'fraco', 'fraco', 'ringshot', 'fraco'] },
-        { id: 'subida_rufada', name: 'Subida Rufada (Preparação de Breque)', pattern: ['rufado', 'fraco', 'rufado', 'fraco', 'rufado', 'forte', 'ringshot', null] }
+        }
       ],
       repique: [
-        { id: 'naumteria_repique_base', name: 'Levada Base — Naumteria (CE-FR-RS-MA)', pattern: ['meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'] },
-        { id: 'conducao_baqueta_mao', name: 'Condução Clássica (Baqueta e Mão)', pattern: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'] },
-        {
-          id: 'chamada_subida', name: 'Chamada de Entrada / Subida (2 Compassos)', pattern: [
-            'flam', null, 'ringshot', null, 'ringshot', 'meio', 'ringshot', null,
-            'rulo', null, 'rulo', null, 'ringshot', 'meio', 'ringshot', null
-          ]
-        },
-        { id: 'virada_breque', name: 'Virada de Breque (Rimshot + Slap)', pattern: ['ringshot', 'meio', 'slap', 'open', 'ringshot', 'meio', 'ringshot', null] }
+        { id: 'naumteria_repique_base', name: 'Levada Base — Naumteria', pattern: ['meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'] }
       ],
       tamborim: [
-        { id: 'carreteiro', name: 'Carreteiro Contínuo (FT-MD-FR-MD)', pattern: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'] },
-        { id: 'teleco_teco', name: 'Desenho Teleco-Teco (Sincopado)', pattern: ['forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte'] },
-        { id: 'ataque_breque', name: 'Ataque de Breque (Marcado)', pattern: ['forte', null, 'forte', null, 'forte', 'medio', 'forte', null] }
+        { id: 'carreteiro', name: 'Levada Base — Carreteiro (FT-MD-FR-MD)', pattern: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'] }
       ],
       agogo: [
         {
@@ -1856,79 +1830,20 @@
             null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null,
             'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'
           ]
-        },
-        { id: 'samba_classico_4bocas', name: 'Samba Clássico (4 Bocas)', pattern: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2'] },
-        { id: 'balanco_melodico', name: 'Balanço Melódico (Agudo → Grave)', pattern: ['boca4', 'boca3', null, 'boca2', 'boca1', null, 'boca2', 'boca3'] },
-        { id: 'convencao_subida', name: 'Convenção / Subida em Escala', pattern: ['boca1', 'boca1', 'boca2', 'boca2', 'boca3', 'boca3', 'boca4', null] }
+        }
       ],
       ganza: [
-        { id: 'forte_fraco_3x', name: 'Condução Padrão (Forte, Fraco, Fraco, Fraco)', pattern: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'] },
-        { id: 'acento_contratempo', name: 'Acento no Contratempo', pattern: ['fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco'] },
-        { id: 'marcacao_seca', name: 'Marcação de Breque (Só Cabeça do Tempo)', pattern: ['forte', null, null, null, 'forte', null, null, null] }
+        { id: 'ganza_base', name: 'Levada Base — Condução Padrão', pattern: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'] }
       ],
       apito: [
-        { id: 'chamada_mestre', name: 'Chamada de Entrada (Longo + 2 Curtos)', pattern: ['longo', null, null, null, 'curto', null, 'curto', null] },
-        { id: 'alerta_breque', name: 'Alerta de Breque (Trinado + Corte)', pattern: ['trinado', null, null, null, 'curto', null, 'curto', null] },
-        { id: 'contagem_4', name: 'Contagem de Pulso (4 Apitos Curtos)', pattern: ['curto', null, 'curto', null, 'curto', null, 'curto', null] }
+        { id: 'apito_base', name: 'Levada Base — Chamada de Entrada', pattern: ['longo', null, null, null, 'curto', null, 'curto', null] }
       ]
     };
 
     /* =========================================================================
        1C. PRESETS DE BATERIA COMPLETA E BREQUES (MÚLTIPLOS COMPASSOS)
        ========================================================================= */
-    const BATERIA_PRESETS = {
-      batucada_completa: {
-        name: 'Batucada Base Oficial (Naumteria)',
-        measures: 2,
-        tracks: {
-          surdo1: ['mao', null, null, null, 'aberto', null, null, null, 'mao', null, null, null, 'aberto', null, null, null],
-          surdo2: ['aberto', null, null, null, 'mao', null, null, null, 'aberto', null, null, null, 'mao', null, null, null],
-          surdo3: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null, 'abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null],
-          caixa: ['forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco'],
-          repique: ['meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'],
-          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte'],
-          agogo: [null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null, 'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'],
-          ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
-          apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
-        },
-        tracksIntro: {
-          agogo: ['boca1', null, null, 'boca1', 'boca3', null, 'boca4', null, 'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1']
-        },
-        tracksMeta: {
-          caixa: CAIXA_IMPERIO_SERRANO_STEPS
-        }
-      },
-      batucada_tradicional: {
-        name: 'Batucada Base Tradicional (Rio / Estácio)',
-        measures: 2,
-        tracks: {
-          surdo1: ['abafado', null, null, null, 'aberto', null, null, null, 'abafado', null, null, null, 'aberto', null, null, null],
-          surdo2: ['aberto', null, null, null, 'abafado', null, null, null, 'aberto', null, null, null, 'abafado', null, null, null],
-          surdo3: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null, 'abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null],
-          caixa: ['forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco'],
-          repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
-          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'],
-          agogo: ['boca1', null, 'boca2', null, 'boca3', null, 'boca4', null, 'boca1', null, 'boca2', null, 'boca3', null, 'boca4', null],
-          ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
-          apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
-        }
-      },
-      batucada_partido_alto: {
-        name: 'Batucada Base Swingada (Partido Alto / Roda)',
-        measures: 2,
-        tracks: {
-          surdo1: ['mao', null, 'abafado', null, 'aberto', null, null, 'mao', 'mao', null, 'abafado', null, 'aberto', null, null, 'mao'],
-          surdo2: ['aberto', null, null, null, 'mao', null, null, 'aberto', 'aberto', null, null, null, 'mao', null, null, 'aberto'],
-          surdo3: [null, 'aberto', 'corte', 'aberto', null, 'aberto', 'abafado', 'aberto', null, 'aberto', 'corte', 'aberto', null, 'aberto', 'abafado', 'aberto'],
-          caixa: ['ringshot', 'fraco', 'forte', 'fraco', 'ringshot', 'fraco', 'fraco', 'forte', 'ringshot', 'fraco', 'forte', 'fraco', 'ringshot', 'fraco', 'fraco', 'forte'],
-          repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
-          tamborim: ['forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte', 'forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte'],
-          agogo: ['boca4', null, 'boca3', null, 'boca2', null, 'boca1', 'boca1', 'boca4', null, 'boca3', null, 'boca2', null, 'boca1', 'boca1'],
-          ganza: ['forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco'],
-          apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
-        }
-      }
-    };
+    const BATERIA_PRESETS = {};
 
     /* =========================================================================
        2. MOTOR HÍBRIDO DE ÁUDIO WEB AUDIO API (SAMPLES REAIS + RENDER WAV OFFLINE)
@@ -2897,12 +2812,94 @@
       renderStudio();
     }
 
-    function applyBateriaPreset(presetId) {
-      const preset = BATERIA_PRESETS[presetId];
-      if (!preset) return;
+    const CUSTOM_BATERIA_PRESETS_KEY = 'naumteria_custom_bateria_presets_v1';
 
+    function loadCustomBateriaPresets() {
+      try {
+        const raw = localStorage.getItem(CUSTOM_BATERIA_PRESETS_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveCustomBateriaPresetsToStorage(obj) {
+      try {
+        localStorage.setItem(CUSTOM_BATERIA_PRESETS_KEY, JSON.stringify(obj));
+      } catch (e) {
+        console.warn('Erro ao salvar presets de bateria:', e);
+      }
+    }
+
+    let customBateriaPresets = loadCustomBateriaPresets();
+
+    function updateBateriaPresetSelect() {
+      const select = document.getElementById('bateriaPresetSelect');
+      if (!select) return;
+      select.innerHTML = '';
+
+      const defOpt = document.createElement('option');
+      defOpt.value = '';
+      defOpt.disabled = true;
+      defOpt.selected = true;
+      defOpt.hidden = true;
+      defOpt.textContent = '🥁 Presets Bateria...';
+      select.appendChild(defOpt);
+
+      const nativeKeys = Object.keys(BATERIA_PRESETS);
+      if (nativeKeys.length > 0) {
+        const groupNative = document.createElement('optgroup');
+        groupNative.label = 'Presets Nativos';
+        nativeKeys.forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = k;
+          opt.textContent = `🥁 ${BATERIA_PRESETS[k].name || k}`;
+          groupNative.appendChild(opt);
+        });
+        select.appendChild(groupNative);
+      }
+
+      const customKeys = Object.keys(customBateriaPresets);
+      if (customKeys.length > 0) {
+        const groupCustom = document.createElement('optgroup');
+        groupCustom.label = 'Meus Presets Salvos';
+        customKeys.forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = 'custom:' + k;
+          opt.textContent = `⭐ ${customBateriaPresets[k].name || k}`;
+          groupCustom.appendChild(opt);
+        });
+        select.appendChild(groupCustom);
+      }
+
+      const groupActions = document.createElement('optgroup');
+      groupActions.label = 'Ações';
+
+      const saveOpt = document.createElement('option');
+      saveOpt.value = '__save_bateria__';
+      saveOpt.textContent = '💾 Salvar grade atual como Preset...';
+      groupActions.appendChild(saveOpt);
+
+      if (customKeys.length > 0) {
+        const clearOpt = document.createElement('option');
+        clearOpt.value = '__clear_custom_bateria__';
+        clearOpt.textContent = '🗑 Excluir meus presets salvos';
+        groupActions.appendChild(clearOpt);
+      }
+
+      select.appendChild(groupActions);
+    }
+
+    function applyBateriaPresetObject(preset) {
+      if (!preset) return;
       audio.init();
-      if (state.measures < preset.measures) {
+
+      if (preset.bpm) {
+        state.bpm = preset.bpm;
+        document.getElementById('bpmSlider').value = state.bpm;
+        document.getElementById('bpmDisplay').textContent = state.bpm;
+      }
+      if (preset.measures && state.measures !== preset.measures) {
         state.measures = preset.measures;
         document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
       }
@@ -2911,36 +2908,12 @@
       const stepsPerMeasure = getStepsPerMeasure();
 
       INSTRUMENTS.forEach(inst => {
-        // Se for a Batucada Completa (Levada Base) e o usuário tiver salvo sua própria Levada Base para este instrumento, prioriza a do usuário!
-        const userBase = (presetId === 'batucada_completa' && Array.isArray(customGrooves[inst.id]))
-          ? customGrooves[inst.id].find(g => g.id === 'levada_base_custom')
-          : null;
-
-        if (userBase) {
-          const sub = userBase.savedSubdivision || 'semicolcheia';
-          state.gridData[inst.id] = expandPatternToGrid(
-            userBase.pattern,
-            totalSteps,
-            stepsPerMeasure,
-            sub,
-            userBase.introPattern || null
-          );
-          if (userBase.introPattern) {
-            state.loopGridData[inst.id] = expandPatternToGrid(userBase.pattern, totalSteps, stepsPerMeasure, sub, null);
-          } else {
-            delete state.loopGridData[inst.id];
-          }
-          state.stepMeta[inst.id] = new Array(totalSteps).fill(null);
-          state.selectedGroove[inst.id] = 'levada_base_custom';
-          return;
-        }
-
-        const trackPattern = preset.tracks[inst.id];
-        const trackIntro = preset.tracksIntro?.[inst.id] || null;
+        const trackPattern = preset.tracks ? preset.tracks[inst.id] : null;
+        const trackIntro = preset.tracksIntro ? preset.tracksIntro[inst.id] : null;
         if (trackPattern) {
-          state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, 'semicolcheia', trackIntro);
+          state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, preset.subdivision || 'semicolcheia', trackIntro);
           if (trackIntro) {
-            state.loopGridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, 'semicolcheia', null);
+            state.loopGridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, preset.subdivision || 'semicolcheia', null);
           } else {
             delete state.loopGridData[inst.id];
           }
@@ -2948,15 +2921,94 @@
           state.gridData[inst.id] = new Array(totalSteps).fill(null);
           delete state.loopGridData[inst.id];
         }
-        const metaPattern = preset.tracksMeta?.[inst.id];
+
+        const metaPattern = preset.tracksMeta ? preset.tracksMeta[inst.id] : null;
         if (metaPattern) {
           state.stepMeta[inst.id] = expandPatternToGrid(metaPattern, totalSteps, stepsPerMeasure);
         } else {
           state.stepMeta[inst.id] = new Array(totalSteps).fill(null);
         }
+        state.selectedGroove[inst.id] = null;
       });
 
       renderStudio();
+    }
+
+    function applyBateriaPreset(presetId) {
+      if (!presetId) return;
+      if (presetId.startsWith('custom:')) {
+        const id = presetId.replace('custom:', '');
+        applyBateriaPresetObject(customBateriaPresets[id]);
+      } else if (BATERIA_PRESETS[presetId]) {
+        applyBateriaPresetObject(BATERIA_PRESETS[presetId]);
+      }
+    }
+
+    function saveCurrentBateriaAsPreset() {
+      const hasAnyNote = INSTRUMENTS.some(inst =>
+        (state.gridData[inst.id] || []).some(n => n !== null)
+      );
+      if (!hasAnyNote) {
+        alert('Desenhe os toques dos instrumentos na grade antes de salvar o preset da bateria.');
+        return;
+      }
+
+      const typed = prompt('Digite o nome deste Preset de Bateria:', 'Novo Preset de Bateria');
+      if (!typed || !typed.trim()) return;
+
+      const presetName = typed.trim();
+      const presetId = 'preset_' + Date.now();
+
+      const tracks = {};
+      const tracksIntro = {};
+      const tracksMeta = {};
+
+      INSTRUMENTS.forEach(inst => {
+        const data = state.gridData[inst.id] || [];
+        tracks[inst.id] = data.slice();
+        if (state.loopGridData && state.loopGridData[inst.id]) {
+          tracksIntro[inst.id] = data.slice();
+          tracks[inst.id] = state.loopGridData[inst.id].slice();
+        }
+        if (state.stepMeta && state.stepMeta[inst.id]) {
+          tracksMeta[inst.id] = state.stepMeta[inst.id].slice();
+        }
+      });
+
+      const newPreset = {
+        id: presetId,
+        name: presetName,
+        measures: state.measures,
+        bpm: state.bpm,
+        meter: state.meter,
+        subdivision: state.subdivision,
+        tracks,
+        tracksIntro: Object.keys(tracksIntro).length > 0 ? tracksIntro : undefined,
+        tracksMeta: Object.keys(tracksMeta).length > 0 ? tracksMeta : undefined
+      };
+
+      customBateriaPresets[presetId] = newPreset;
+      saveCustomBateriaPresetsToStorage(customBateriaPresets);
+      updateBateriaPresetSelect();
+      document.getElementById('bateriaPresetSelect').value = 'custom:' + presetId;
+
+      const jsonStr = JSON.stringify(newPreset, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(jsonStr).catch(() => {});
+      }
+
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = presetName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      a.href = url;
+      a.download = `bateria_preset_${safeName}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      alert(`Preset "${presetName}" salvo com sucesso!
+
+O arquivo JSON foi baixado e também copiado para a Área de Transferência para você me enviar.`);
     }
 
     function duplicateMeasure(measureIndex) {
@@ -3697,6 +3749,7 @@
           volumes: state.volumes
         },
         customGrooves,
+        customBateriaPresets,
         gridData: state.gridData
       };
 
@@ -3714,6 +3767,18 @@
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target.result);
+          if (data.tracks && (data.measures || data.bpm)) {
+            // Arquivo de preset individual de bateria
+            applyBateriaPresetObject(data);
+            if (data.name) {
+              const presetId = data.id || ('preset_' + Date.now());
+              customBateriaPresets[presetId] = data;
+              saveCustomBateriaPresetsToStorage(customBateriaPresets);
+              updateBateriaPresetSelect();
+            }
+            return;
+          }
+
           if (!data.gridData || !data.settings) {
             alert('Arquivo JSON inválido para o Naumteria Studio.');
             return;
@@ -3730,6 +3795,11 @@
           if (data.customGrooves && typeof data.customGrooves === 'object') {
             Object.assign(customGrooves, data.customGrooves);
             saveCustomGroovesToStorage(customGrooves);
+          }
+          if (data.customBateriaPresets && typeof data.customBateriaPresets === 'object') {
+            Object.assign(customBateriaPresets, data.customBateriaPresets);
+            saveCustomBateriaPresetsToStorage(customBateriaPresets);
+            updateBateriaPresetSelect();
           }
           state.gridData = data.gridData;
 
@@ -3873,9 +3943,24 @@
     };
 
     document.getElementById('bateriaPresetSelect').onchange = (e) => {
-      if (e.target.value) {
-        applyBateriaPreset(e.target.value);
+      const val = e.target.value;
+      if (!val) return;
+      if (val === '__save_bateria__') {
+        saveCurrentBateriaAsPreset();
+        e.target.value = '';
+        return;
       }
+      if (val === '__clear_custom_bateria__') {
+        if (confirm('Deseja realmente apagar todos os presets de bateria salvos por você?')) {
+          customBateriaPresets = {};
+          saveCustomBateriaPresetsToStorage(customBateriaPresets);
+          updateBateriaPresetSelect();
+        }
+        e.target.value = '';
+        return;
+      }
+      applyBateriaPreset(val);
+      e.target.value = '';
     };
 
     document.getElementById('btnSendToStudio').onclick = sendSequenceToMultitrackStudio;
@@ -3897,6 +3982,22 @@
     document.getElementById('btnImportJSON').onclick = () => {
       document.getElementById('fileInput').click();
     };
+
+    const btnSaveProject = document.getElementById('btnSaveProject');
+    if (btnSaveProject) {
+      btnSaveProject.onclick = () => {
+        exportToJSON();
+        togglePopover('exportPopover', false);
+      };
+    }
+
+    const btnLoadProject = document.getElementById('btnLoadProject');
+    if (btnLoadProject) {
+      btnLoadProject.onclick = () => {
+        document.getElementById('fileInput').click();
+        togglePopover('exportPopover', false);
+      };
+    }
 
     document.getElementById('fileInput').onchange = (e) => {
       if (e.target.files.length > 0) {
@@ -4201,6 +4302,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       state.gridData = {};
       initGridData();
+      updateBateriaPresetSelect();
       renderStudio();
       checkOrientation();
       checkSharedBrequeUrl();
