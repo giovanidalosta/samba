@@ -849,6 +849,14 @@
       font-weight: 700;
     }
 
+    /* Tamborim Nota Aguda */
+    .note-agudo-ta {
+      background: #9EE2C0;
+      border: 1.5px solid var(--color-tamborim);
+      color: #0A090C;
+      font-weight: 800;
+    }
+
     /* Agogô (4 bocas) */
     .note-boca1 {
       background: #63488F;
@@ -1202,14 +1210,21 @@
 
       <!-- Direita: Seletor de Visão, Nova Pista e Popovers Discretos -->
       <div class="studio-toolbar-group transport-right">
-        <div class="studio-view-switch" title="Alternar entre Faixas (Timeline) e Mosaico">
+        <div class="studio-view-switch" title="Alternar entre Faixas (Timeline), Mosaico e Gravação">
           <button id="btnViewTimeline" class="view-switch-btn active" data-view="timeline">
             Faixas
           </button>
           <button id="btnViewMosaic" class="view-switch-btn" data-view="mosaic">
             Mosaico
           </button>
+          <button id="btnViewRecord" class="view-switch-btn" data-view="record">
+            Gravar
+          </button>
         </div>
+
+        <button id="btnToolbarNewProject" class="btn btn-secondary" title="Montar um novo projeto do zero">
+          <span>✨</span> Montar Projeto
+        </button>
 
         <button id="btnAddTrack" class="btn" title="Adicionar nova faixa ao estúdio">
           <span>+</span> Nova Faixa
@@ -1271,7 +1286,7 @@
 
             <div class="popover-divider"></div>
             <div class="studio-quick-stats" id="studioQuickStats">
-              <span class="stat-tag" id="statTrackCount">4 Faixas</span>
+              <span class="stat-tag" id="statTrackCount">0 Faixas</span>
               <span class="stat-tag" id="statLoopDuration">4.0s</span>
               <span class="stat-tag" id="statViewMode">Modo: Faixas</span>
             </div>
@@ -1285,6 +1300,15 @@
             Projeto & Exportar <span class="caret">▾</span>
           </button>
           <div id="studioProjectPopover" class="studio-popover-menu popover-align-right">
+            <div class="popover-section-title">Gerenciar Projeto</div>
+            <button id="btnNewProject" class="popover-action-item item-gold" title="Montar um novo projeto do zero">
+              <span>✨</span> Montar Novo Projeto
+            </button>
+            <button id="btnClearProject" class="popover-action-item" title="Zerar todas as faixas do projeto atual">
+              <span>🗑️</span> Zerar Projeto (Limpar)
+            </button>
+
+            <div class="popover-divider"></div>
             <div class="popover-section-title">Renderizar & Baixar</div>
             <button id="btnExportVideo" class="popover-action-item item-gold"
               title="Renderizar vídeo composto com áudio master">
@@ -1342,6 +1366,122 @@
     <div class="mosaic-workspace" id="mosaicWorkspace" style="display: none;">
       <div class="mosaic-grid layout-auto" id="mosaicGrid" data-count="4">
         <!-- Cards de faixas gerados dinamicamente via JS -->
+      </div>
+    </div>
+
+    <!-- VISUALIZAÇÃO 3: ÁREA DE GRAVAÇÃO DEDICADA (ABA GRAVAR) -->
+    <div class="record-workspace" id="recordWorkspace" style="display: none;">
+      <div class="record-workspace-inner">
+        <!-- Cabeçalho do Workspace de Gravação -->
+        <div class="record-workspace-header">
+          <div class="rec-header-left">
+            <div class="rec-track-picker">
+              <label for="recTrackSelect"><span class="rec-header-dot">●</span> Gravar na Faixa:</label>
+              <select id="recTrackSelect" class="rec-device-select rec-track-select" title="Selecione qual faixa deseja gravar"></select>
+            </div>
+            <div class="rec-mode-selector">
+              <button type="button" class="rec-mode-pill active" id="recModeVideoBtn" data-mode="video">
+                📹 Câmera & Mic
+              </button>
+              <button type="button" class="rec-mode-pill" id="recModeAudioBtn" data-mode="audio">
+                🎙️ Só Microfone
+              </button>
+            </div>
+          </div>
+
+          <div class="rec-header-right">
+            <div class="record-headphone-tip">
+              🎧 Fones de ouvido recomendados
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="recordBackBtn" title="Voltar para as Faixas">
+              <span>◂</span> Faixas
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Dispositivos e Perfil de Áudio -->
+        <div class="record-device-bar" id="recordDeviceBar">
+          <div class="rec-device-group">
+            <label for="recAudioDevice">Microfone</label>
+            <select id="recAudioDevice" class="rec-device-select" title="Selecione o microfone exato para gravação">
+              <option value="">Detectando microfones...</option>
+            </select>
+          </div>
+          <div class="rec-device-group" id="recVideoDeviceGroup">
+            <label for="recVideoDevice">Câmera</label>
+            <select id="recVideoDevice" class="rec-device-select" title="Selecione a câmera para gravação">
+              <option value="">Detectando câmeras...</option>
+            </select>
+          </div>
+          <div class="rec-device-group">
+            <label for="recAudioProfile">Perfil Áudio</label>
+            <select id="recAudioProfile" class="rec-device-select" title="Tratamento acústico da gravação">
+              <option value="raw" selected>Studio Puro (Sem cortes)</option>
+              <option value="filtered">Redução de Ruído & Eco</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Viewfinder Central e Medidores -->
+        <div class="viewfinder-wrapper" id="recordViewfinderWrapper">
+          <video id="viewfinderVideo" class="viewfinder-video" autoplay playsinline></video>
+
+          <!-- Viewfinder Especial quando no Modo Só Microfone -->
+          <div class="audio-only-viewfinder" id="audioOnlyViewfinder" style="display: none;">
+            <div class="audio-pulsing-circle" id="audioPulsingCircle">
+              <div class="audio-pulsing-ring ring-1"></div>
+              <div class="audio-pulsing-ring ring-2"></div>
+              <img src="assets/logo-naumteria.png" alt="Naumteria" class="audio-viewfinder-logo">
+            </div>
+            <div class="audio-viewfinder-instrument" id="audioViewfinderInstrument">Faixa de Áudio</div>
+            <div class="audio-viewfinder-sub">Captação Direta de Microfone</div>
+          </div>
+
+          <!-- Indicador de Gravando AO VIVO -->
+          <div class="rec-live-indicator" id="recLiveIndicator">
+            <div class="rec-pulse-dot"></div>
+            <span>GRAVANDO</span>
+          </div>
+
+          <!-- VU Meter do Microfone -->
+          <div class="mic-meter-bar-wrapper">
+            <span style="font-size: 10px; font-family: var(--font-mono); color: var(--text-silver);">MIC</span>
+            <div class="mic-meter-fill">
+              <div class="mic-meter-level" id="micMeterLevel"></div>
+            </div>
+          </div>
+
+          <!-- Barra de Progresso do Take -->
+          <div class="rec-progress-container">
+            <div class="rec-progress-bar" id="recProgressBar"></div>
+          </div>
+
+          <!-- Contagem Regressiva Pré-Roll (1 Compasso) -->
+          <div class="countdown-overlay" id="countdownOverlay">
+            <div class="countdown-number" id="countdownNumber">4</div>
+            <div class="countdown-subtext" id="countdownSubtext">Prepare-se...</div>
+          </div>
+        </div>
+
+        <!-- Rodapé de Ações de Gravação -->
+        <div class="record-workspace-footer">
+          <div class="record-tip-text" id="recordTipText">
+            Overdub sincronizado com as outras faixas do projeto.
+          </div>
+
+          <button type="button" id="btnStartRecord" class="record-btn-main">
+            <span>●</span> Iniciar Gravação
+          </button>
+
+          <div class="review-actions-group" id="reviewActions">
+            <button type="button" id="btnDiscardTake" class="btn btn-danger">
+              Descartar e Regravar
+            </button>
+            <button type="button" id="btnKeepTake" class="btn btn-primary">
+              Salvar Take na Pista
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1418,6 +1558,15 @@
           <label for="bateriaPresetSelect">Presets Bateria</label>
           <select id="bateriaPresetSelect" title="Carregar ou salvar presets da bateria completa">
             <option value="" disabled selected hidden>🥁 Presets Bateria...</option>
+          </select>
+        </div>
+
+        <!-- Kit de som do Tamborim -->
+        <div class="control-group">
+          <label for="tamborimKitSelect">Kit Tamborim</label>
+          <select id="tamborimKitSelect" title="Escolha o som usado nos toques Forte / Médio / Fraco do tamborim">
+            <option value="thalita" selected>Thalita Santos (padrão)</option>
+            <option value="estacio">Estácio (agudo)</option>
           </select>
         </div>
 
@@ -1499,111 +1648,6 @@
   <!-- =========================================================================
        MODAL DE GRAVAÇÃO (WEBCAM + MICROFONE + OVERDUB)
        ========================================================================= -->
-  <div class="modal-overlay" id="recordModal">
-    <div class="record-modal-box">
-      <div class="record-modal-header">
-        <h3 id="recordModalTitle">Gravar Instrumento</h3>
-
-        <!-- Seletor de Modo: Câmera & Mic vs Apenas Microfone -->
-        <div class="rec-mode-selector">
-          <button class="rec-mode-pill active" id="recModeVideoBtn" data-mode="video">
-            Câmera & Mic
-          </button>
-          <button class="rec-mode-pill" id="recModeAudioBtn" data-mode="audio">
-            Só Microfone
-          </button>
-        </div>
-
-        <div class="record-headphone-tip">
-          Use fones de ouvido
-        </div>
-        <button class="track-delete-btn" id="recordCloseBtn" style="font-size: 18px;">✕</button>
-      </div>
-
-      <!-- Barra de Dispositivos e Qualidade de Áudio -->
-      <div class="record-device-bar" id="recordDeviceBar">
-        <div class="rec-device-group">
-          <label for="recAudioDevice">Microfone</label>
-          <select id="recAudioDevice" class="rec-device-select" title="Selecione o microfone exato para gravação">
-            <option value="">Detectando microfones...</option>
-          </select>
-        </div>
-        <div class="rec-device-group" id="recVideoDeviceGroup">
-          <label for="recVideoDevice">Câmera</label>
-          <select id="recVideoDevice" class="rec-device-select" title="Selecione a câmera para gravação">
-            <option value="">Detectando câmeras...</option>
-          </select>
-        </div>
-        <div class="rec-device-group">
-          <label for="recAudioProfile">Perfil Áudio</label>
-          <select id="recAudioProfile" class="rec-device-select" title="Tratamento acústico da gravação">
-            <option value="raw" selected>Studio Puro (Sem cortes)</option>
-            <option value="filtered">Redução de Ruído & Eco</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="viewfinder-wrapper">
-        <video id="viewfinderVideo" class="viewfinder-video" autoplay playsinline></video>
-
-        <!-- Viewfinder Especial quando no Modo Só Microfone -->
-        <div class="audio-only-viewfinder" id="audioOnlyViewfinder" style="display: none;">
-          <div class="audio-pulsing-circle" id="audioPulsingCircle">
-            <div class="audio-pulsing-ring ring-1"></div>
-            <div class="audio-pulsing-ring ring-2"></div>
-            <img src="assets/logo-naumteria.png" alt="Naumteria" class="audio-viewfinder-logo">
-          </div>
-          <div class="audio-viewfinder-instrument" id="audioViewfinderInstrument">Surdo 1ª (Tum)</div>
-          <div class="audio-viewfinder-sub">Captação Direta de Microfone</div>
-        </div>
-
-        <!-- Indicador de Gravando AO VIVO -->
-        <div class="rec-live-indicator" id="recLiveIndicator">
-          <div class="rec-pulse-dot"></div>
-          <span>GRAVANDO</span>
-        </div>
-
-        <!-- VU Meter do Microfone -->
-        <div class="mic-meter-bar-wrapper">
-          <span style="font-size: 10px; font-family: var(--font-mono); color: var(--text-silver);">MIC</span>
-          <div class="mic-meter-fill">
-            <div class="mic-meter-level" id="micMeterLevel"></div>
-          </div>
-        </div>
-
-        <!-- Barra de Progresso do Take -->
-        <div class="rec-progress-container">
-          <div class="rec-progress-bar" id="recProgressBar"></div>
-        </div>
-
-        <!-- Contagem Regressiva Pré-Roll (1 Compasso) -->
-        <div class="countdown-overlay" id="countdownOverlay">
-          <div class="countdown-number" id="countdownNumber">4</div>
-          <div class="countdown-subtext" id="countdownSubtext">Prepare-se...</div>
-        </div>
-      </div>
-
-      <div class="record-modal-footer">
-        <div style="font-size: 12px; color: var(--text-muted);" id="recordTipText">
-          1 compasso de contagem antes de iniciar a gravação com overdub das faixas ativas.
-        </div>
-
-        <button id="btnStartRecord" class="record-btn-main">
-          <span>●</span> Iniciar Gravação
-        </button>
-
-        <div class="review-actions-group" id="reviewActions">
-          <button id="btnDiscardTake" class="btn btn-danger">
-            Descartar e Regravar
-          </button>
-          <button id="btnKeepTake" class="btn btn-primary">
-            Salvar Take na Pista
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- =========================================================================
        MODAL DE EXPORTAÇÃO DE VÍDEO / ÁUDIO
        ========================================================================= -->
@@ -1629,6 +1673,99 @@
 
   <!-- Canvas invisível para renderização do vídeo mosaico -->
   <canvas id="exportRenderCanvas"></canvas>
+
+  <!-- =========================================================================
+       MODAL DE MONTAGEM DE NOVO PROJETO (ESTÚDIO MULTITRACK)
+       ========================================================================= -->
+  <div class="modal-overlay" id="newProjectModal">
+    <div class="project-modal-box">
+      <div class="project-modal-header">
+        <div class="project-modal-title-wrap">
+          <span class="project-modal-icon">✨</span>
+          <div>
+            <h3>Montar Novo Projeto</h3>
+            <span class="project-modal-subtitle">Configure o andamento, compasso e instrumentos do seu samba</span>
+          </div>
+        </div>
+        <button class="track-delete-btn" id="newProjectCloseBtn" style="font-size: 18px;" title="Fechar">✕</button>
+      </div>
+
+      <div class="project-modal-body">
+        <!-- 1. Dados Básicos -->
+        <div class="project-form-section">
+          <label class="project-form-label" for="newProjectName">Nome do Projeto</label>
+          <input type="text" id="newProjectName" class="project-text-input" placeholder="Ex: Samba-Breque Naumteria" value="Novo Projeto Samba">
+        </div>
+
+        <div class="project-form-grid">
+          <!-- Andamento BPM -->
+          <div class="project-form-section">
+            <div class="label-with-value">
+              <label class="project-form-label" for="newProjectBpm">Andamento (BPM)</label>
+              <span id="newProjectBpmVal" class="project-val-badge">120 BPM</span>
+            </div>
+            <div class="bpm-slider-row">
+              <button type="button" class="btn-step" id="btnNewProjBpmMinus">−</button>
+              <input type="range" id="newProjectBpm" min="60" max="200" value="120" step="1">
+              <button type="button" class="btn-step" id="btnNewProjBpmPlus">+</button>
+            </div>
+            <div class="bpm-quick-presets" id="newProjectBpmPresets">
+              <button type="button" class="btn-chip" data-bpm="96">Lento (96)</button>
+              <button type="button" class="btn-chip" data-bpm="110">Partido Alto (110)</button>
+              <button type="button" class="btn-chip active" data-bpm="120">Padrão (120)</button>
+              <button type="button" class="btn-chip" data-bpm="136">Naumteria (136)</button>
+              <button type="button" class="btn-chip" data-bpm="148">Enredo (148)</button>
+            </div>
+          </div>
+
+          <!-- Compasso & Extensão -->
+          <div class="project-form-section">
+            <label class="project-form-label" for="newProjectMeter">Fórmula de Compasso</label>
+            <select id="newProjectMeter" class="project-select-input">
+              <option value="2/4" selected>2/4 (Samba Tradicional Binário)</option>
+              <option value="4/4">4/4 (Quatro Tempos)</option>
+            </select>
+
+            <label class="project-form-label" for="newProjectMode" style="margin-top: 12px;">Extensão da Gravação</label>
+            <select id="newProjectMode" class="project-select-input">
+              <option value="free" selected>Livre (Duração baseada na gravação)</option>
+              <option value="fixed">Compassos Fixos (Loop)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 2. Estrutura Inicial de Faixas -->
+        <div class="project-form-section">
+          <div class="label-with-value">
+            <label class="project-form-label">Faixas Iniciais do Projeto</label>
+            <span class="project-hint-badge" id="newProjectTrackCountHint">0 faixas (Projeto Zerado)</span>
+          </div>
+          <p class="project-section-desc">
+            Por padrão, o projeto inicia <strong>zerado</strong> (sem nenhuma faixa). Você pode adicionar faixas conforme queira no estúdio, ou pré-selecionar os instrumentos abaixo:
+          </p>
+
+          <div class="project-instruments-picker" id="newProjectInstrumentsPicker">
+            <!-- Gerado dinamicamente via JS -->
+          </div>
+
+          <div class="picker-quick-actions">
+            <button type="button" class="btn-link" id="btnPickerClearAll">Zerar Todas (Projeto Zerado)</button>
+            <span class="picker-sep">•</span>
+            <button type="button" class="btn-link" id="btnPickerSelectClassic">Bateria Básica (4)</button>
+            <span class="picker-sep">•</span>
+            <button type="button" class="btn-link" id="btnPickerSelectAll">Todas as 9 Faixas</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-modal-footer">
+        <button type="button" id="btnNewProjectCancel" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="btnNewProjectConfirm" class="btn btn-gold">
+          <span>✨</span> Criar Projeto Zerado
+        </button>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1746,7 +1883,8 @@
         articulations: [
           { id: 'forte', name: 'Toque Forte (Acento)', label: 'FT', css: 'note-forte' },
           { id: 'medio', name: 'Toque Médio', label: 'MD', css: 'note-intermedio-ta' },
-          { id: 'fraco', name: 'Toque Fraco (Fantasma)', label: 'FR', css: 'note-fraco' }
+          { id: 'fraco', name: 'Toque Fraco (Fantasma)', label: 'FR', css: 'note-fraco' },
+          { id: 'agudo', name: 'Nota Aguda (Dedo por Baixo)', label: 'AG', css: 'note-agudo-ta' }
         ]
       },
       {
@@ -2005,12 +2143,14 @@
           'repique:flam': { url: 'assets/audio/re_flam_real.wav', vol: 1.08, rate: 1.0 },
           'repique:rulo': { url: 'assets/audio/re_66.mp3', vol: 1.02, rate: 1.0 },
 
-          // Tamborim: 3 golpes reais distintos (Forte, Médio e Fraco) do mesmo tamborim em afinação bem aguda (rate: 1.32 igual nos 3) + choke monofônico
-          'tamborim:forte': { url: 'assets/audio/ta_estacio_forte.wav', vol: 1.0, rate: 1.32, chokeGroup: 'tamborim' },
-          'tamborim:medio': { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
-          'tamborim:intermedio': { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
-          'tamborim:fraco': { url: 'assets/audio/ta_estacio_fraco.wav', vol: 0.50, rate: 1.32, chokeGroup: 'tamborim' },
+          // Tamborim: Kit Thalita Santos como padrão oficial (3 golpes reais com dinâmica própria + aro + agudo + choke monofônico)
+          'tamborim:forte': { url: 'assets/audio/ta_thalita_grave_forte.wav', vol: 0.86, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:medio': { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.50, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:intermedio': { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.50, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:fraco': { url: 'assets/audio/ta_thalita_grave_fraco.wav', vol: 0.34, rate: 1.0, chokeGroup: 'tamborim' },
           'tamborim:aro': { url: 'assets/audio/ta_72.mp3', vol: 0.85, rate: 1.0 },
+          // Nota aguda (dedo por baixo da pele): sample real do kit Thalita
+          'tamborim:agudo': { url: 'assets/audio/ta_thalita_agudo.wav', vol: 0.74, rate: 1.0, chokeGroup: 'tamborim' },
 
           // Agogô: 4 Bocas (Grave ao Agudo)
           'agogo:boca1': { url: 'assets/audio/ag_6f.mp3', vol: 1.0, rate: 0.89 },
@@ -2029,6 +2169,40 @@
           'apito:longo': { url: 'assets/audio/ot_d0.mp3', vol: 0.88, rate: 1.0 },
           'apito:trinado': { url: 'assets/audio/ot_d4.mp3', vol: 0.92, rate: 1.0 }
         };
+
+        // Kits do tamborim: 'thalita' é o kit padrão oficial substituindo o original, 'estacio' como opção alternativa.
+        this.tamborimKits = {
+          thalita: {
+            label: 'Thalita Santos (padrão)',
+            map: {
+              forte: { url: 'assets/audio/ta_thalita_grave_forte.wav', vol: 0.86, rate: 1.0, chokeGroup: 'tamborim' },
+              medio: { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.50, rate: 1.0, chokeGroup: 'tamborim' },
+              intermedio: { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.50, rate: 1.0, chokeGroup: 'tamborim' },
+              fraco: { url: 'assets/audio/ta_thalita_grave_fraco.wav', vol: 0.34, rate: 1.0, chokeGroup: 'tamborim' }
+            }
+          },
+          estacio: {
+            label: 'Estácio (agudo)',
+            map: {
+              forte: { url: 'assets/audio/ta_estacio_forte.wav', vol: 1.0, rate: 1.32, chokeGroup: 'tamborim' },
+              medio: { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
+              intermedio: { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
+              fraco: { url: 'assets/audio/ta_estacio_fraco.wav', vol: 0.50, rate: 1.32, chokeGroup: 'tamborim' }
+            }
+          }
+        };
+        this.tamborimKit = 'thalita';
+      }
+
+      setTamborimKit(kitId) {
+        const kit = this.tamborimKits[kitId];
+        if (!kit) return false;
+        for (const [art, cfg] of Object.entries(kit.map)) {
+          this.sampleConfig[`tamborim:${art}`] = { ...cfg };
+          this.loadSample(cfg.url);
+        }
+        this.tamborimKit = kitId;
+        return true;
       }
 
       getDecoderContext() {
@@ -2571,6 +2745,17 @@
        3. ESTADO DA APLICAÇÃO E SEQUENCIADOR
        ========================================================================= */
     const audio = new SambaAudioEngine();
+    const TAMBORIM_KIT_STORAGE_KEY = 'naumteria_tamborim_kit';
+    try {
+      const savedKit = localStorage.getItem(TAMBORIM_KIT_STORAGE_KEY);
+      // Se não houver seleção salva, ou se for o antigo padrão 'estacio', atualiza para 'thalita'
+      if (!savedKit || savedKit === 'estacio') {
+        audio.setTamborimKit('thalita');
+        localStorage.setItem(TAMBORIM_KIT_STORAGE_KEY, 'thalita');
+      } else if (savedKit && audio.tamborimKits[savedKit]) {
+        audio.setTamborimKit(savedKit);
+      }
+    } catch (e) { }
     audio.preloadSamples();
 
     const state = {
@@ -4084,6 +4269,14 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       e.target.value = '';
     };
 
+    const tamborimKitSelect = document.getElementById('tamborimKitSelect');
+    tamborimKitSelect.value = audio.tamborimKit;
+    tamborimKitSelect.onchange = (e) => {
+      if (!audio.setTamborimKit(e.target.value)) return;
+      try { localStorage.setItem(TAMBORIM_KIT_STORAGE_KEY, e.target.value); } catch (err) { }
+      audio.triggerInstrument('tamborim', 'forte'); // prévia do novo som
+    };
+
     document.getElementById('btnSendToStudio').onclick = sendSequenceToMultitrackStudio;
 
     document.getElementById('btnClear').onclick = () => {
@@ -4104,21 +4297,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       document.getElementById('fileInput').click();
     };
 
-    const btnSaveProject = document.getElementById('btnSaveProject');
-    if (btnSaveProject) {
-      btnSaveProject.onclick = () => {
-        exportToJSON();
-        togglePopover('exportPopover', false);
-      };
-    }
 
-    const btnLoadProject = document.getElementById('btnLoadProject');
-    if (btnLoadProject) {
-      btnLoadProject.onclick = () => {
-        document.getElementById('fileInput').click();
-        togglePopover('exportPopover', false);
-      };
-    }
 
     document.getElementById('fileInput').onchange = (e) => {
       if (e.target.files.length > 0) {
@@ -4196,6 +4375,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
         if (mobNavSequencer) mobNavSequencer.classList.remove('active');
         if (mobNavMosaic) mobNavMosaic.classList.remove('active');
+        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
         tabBeatbox.classList.add('active');
         tabSequencer.classList.remove('active');
         stopPlayback(); // Para o sequenciador se estiver tocando
@@ -4205,6 +4385,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         if (mobNavSequencer) mobNavSequencer.classList.add('active');
         if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
         if (mobNavMosaic) mobNavMosaic.classList.remove('active');
+        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
         tabSequencer.classList.add('active');
         tabBeatbox.classList.remove('active');
         if (window.BeatboxStudio) {
@@ -4219,12 +4400,11 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     if (mobNavBeatbox) {
       mobNavBeatbox.onclick = () => {
-        if (currentActiveTab !== 'tab-beatbox') {
-          switchTab('tab-beatbox');
-        }
+        if (currentActiveTab !== 'tab-beatbox') switchTab('tab-beatbox');
         if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
         if (mobNavMosaic) mobNavMosaic.classList.remove('active');
         if (mobNavSequencer) mobNavSequencer.classList.remove('active');
+        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
         if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
           window.BeatboxStudio.switchViewMode('timeline');
         } else {
@@ -4235,17 +4415,22 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
 
     if (mobNavSequencer) {
-      mobNavSequencer.onclick = () => switchTab('tab-sequencer');
+      mobNavSequencer.onclick = () => {
+        switchTab('tab-sequencer');
+        if (mobNavSequencer) mobNavSequencer.classList.add('active');
+        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
+        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
+        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
+      };
     }
 
     if (mobNavMosaic) {
       mobNavMosaic.onclick = () => {
-        if (currentActiveTab !== 'tab-beatbox') {
-          switchTab('tab-beatbox');
-        }
+        if (currentActiveTab !== 'tab-beatbox') switchTab('tab-beatbox');
         if (mobNavMosaic) mobNavMosaic.classList.add('active');
         if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
         if (mobNavSequencer) mobNavSequencer.classList.remove('active');
+        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
         if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
           window.BeatboxStudio.switchViewMode('mosaic');
         } else {
@@ -4286,21 +4471,19 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       };
     }
 
-    // Botão Gravar Global da Barra Móvel
+    // Botão Gravar da Barra Móvel (Aba Completa)
     if (mobGlobalRecord) {
       mobGlobalRecord.onclick = () => {
         if (currentActiveTab !== 'tab-beatbox') {
           switchTab('tab-beatbox');
         }
+        if (mobGlobalRecord) mobGlobalRecord.classList.add('active');
+        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
+        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
+        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
         showHeadphonesToast();
-        if (window.BeatboxStudio && typeof window.BeatboxStudio.openQuickRecord === 'function') {
-          window.BeatboxStudio.openQuickRecord();
-          return;
-        }
-        // Fallback: Dispara modal de gravação na primeira faixa vazia ou disponível
-        const firstRecordBtn = document.querySelector('.btn-empty-action, .btn-record-slot, .btn-rec-arm, .btn-tcp-rec');
-        if (firstRecordBtn) {
-          firstRecordBtn.click();
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
+          window.BeatboxStudio.switchViewMode('record');
         }
       };
     }

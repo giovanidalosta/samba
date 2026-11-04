@@ -183,11 +183,33 @@
     dom.led2 = document.getElementById('metroLed2');
     dom.mosaicGrid = document.getElementById('mosaicGrid');
     dom.btnAddTrack = document.getElementById('btnAddTrack');
+    dom.btnToolbarNewProject = document.getElementById('btnToolbarNewProject');
+    dom.btnNewProject = document.getElementById('btnNewProject');
+    dom.btnClearProject = document.getElementById('btnClearProject');
     dom.btnExportVideo = document.getElementById('btnExportVideo');
     dom.btnExportAudio = document.getElementById('btnExportAudio');
     dom.btnSaveProject = document.getElementById('btnSaveProject');
     dom.btnLoadProject = document.getElementById('btnLoadProject');
     dom.projectFileInput = document.getElementById('projectFileInput');
+
+    // Modal Montar Novo Projeto
+    dom.newProjectModal = document.getElementById('newProjectModal');
+    dom.newProjectCloseBtn = document.getElementById('newProjectCloseBtn');
+    dom.newProjectCancelBtn = document.getElementById('btnNewProjectCancel');
+    dom.newProjectConfirmBtn = document.getElementById('btnNewProjectConfirm');
+    dom.newProjectName = document.getElementById('newProjectName');
+    dom.newProjectBpm = document.getElementById('newProjectBpm');
+    dom.newProjectBpmVal = document.getElementById('newProjectBpmVal');
+    dom.btnNewProjBpmMinus = document.getElementById('btnNewProjBpmMinus');
+    dom.btnNewProjBpmPlus = document.getElementById('btnNewProjBpmPlus');
+    dom.newProjectBpmPresets = document.getElementById('newProjectBpmPresets');
+    dom.newProjectMeter = document.getElementById('newProjectMeter');
+    dom.newProjectMode = document.getElementById('newProjectMode');
+    dom.newProjectInstrumentsPicker = document.getElementById('newProjectInstrumentsPicker');
+    dom.newProjectTrackCountHint = document.getElementById('newProjectTrackCountHint');
+    dom.btnPickerClearAll = document.getElementById('btnPickerClearAll');
+    dom.btnPickerSelectClassic = document.getElementById('btnPickerSelectClassic');
+    dom.btnPickerSelectAll = document.getElementById('btnPickerSelectAll');
 
     // Seletor de Modo de Exibição (Reaper Timeline vs Mosaico)
     dom.btnViewTimeline = document.getElementById('btnViewTimeline');
@@ -215,10 +237,14 @@
     dom.statLoopDuration = document.getElementById('statLoopDuration');
     dom.statViewMode = document.getElementById('statViewMode');
 
-    // Modal de Gravação
-    dom.recordModal = document.getElementById('recordModal');
-    dom.recordModalTitle = document.getElementById('recordModalTitle');
-    dom.recordCloseBtn = document.getElementById('recordCloseBtn');
+    // Workspace e Aba de Gravação
+    dom.recordWorkspace = document.getElementById('recordWorkspace');
+    dom.recordModal = dom.recordWorkspace; // Compatibilidade retroativa
+    dom.recordModalTitle = document.getElementById('recordModalTitle') || { textContent: '' };
+    dom.recordCloseBtn = document.getElementById('recordCloseBtn') || document.getElementById('recordBackBtn');
+    dom.recordBackBtn = document.getElementById('recordBackBtn');
+    dom.btnViewRecord = document.getElementById('btnViewRecord');
+    dom.recTrackSelect = document.getElementById('recTrackSelect');
     dom.recordDeviceBar = document.getElementById('recordDeviceBar');
     dom.recAudioDevice = document.getElementById('recAudioDevice');
     dom.recVideoDevice = document.getElementById('recVideoDevice');
@@ -298,30 +324,140 @@
     return (4 * beatsPerMeasure * 60) / state.bpm;
   }
 
-  // --- Alternância entre Modo Faixas REAPER e Mosaico ---
-  function switchViewMode(newMode) {
+  // --- Alternância entre Modo Faixas REAPER, Mosaico e Gravação ---
+  async function switchViewMode(newMode, trackId = null, preferredMode = null) {
+    const previousMode = state.viewMode;
     state.viewMode = newMode;
+
     if (dom.btnViewTimeline) {
       dom.btnViewTimeline.classList.toggle('active', state.viewMode === 'timeline');
     }
     if (dom.btnViewMosaic) {
       dom.btnViewMosaic.classList.toggle('active', state.viewMode === 'mosaic');
     }
+    if (dom.btnViewRecord) {
+      dom.btnViewRecord.classList.toggle('active', state.viewMode === 'record');
+    }
+
     const mobNavBeatbox = document.getElementById('mobNavBeatbox');
     const mobNavMosaic = document.getElementById('mobNavMosaic');
+    const mobGlobalRecord = document.getElementById('mobGlobalRecord');
     const isSequencer = document.getElementById('tab-sequencer')?.classList.contains('active');
-    if (mobNavBeatbox && mobNavMosaic && !isSequencer) {
-      mobNavBeatbox.classList.toggle('active', state.viewMode === 'timeline');
-      mobNavMosaic.classList.toggle('active', state.viewMode === 'mosaic');
+
+    if (!isSequencer) {
+      if (mobNavBeatbox) mobNavBeatbox.classList.toggle('active', state.viewMode === 'timeline');
+      if (mobNavMosaic) mobNavMosaic.classList.toggle('active', state.viewMode === 'mosaic');
+      if (mobGlobalRecord) mobGlobalRecord.classList.toggle('active', state.viewMode === 'record');
     }
+
     if (dom.timelineWorkspace) {
       dom.timelineWorkspace.style.display = state.viewMode === 'timeline' ? 'flex' : 'none';
     }
     if (dom.mosaicWorkspace) {
       dom.mosaicWorkspace.style.display = state.viewMode === 'mosaic' ? 'flex' : 'none';
     }
+    if (dom.recordWorkspace) {
+      dom.recordWorkspace.style.display = state.viewMode === 'record' ? 'flex' : 'none';
+    }
+
+    // Se estiver saindo da gravação, encerra streams de webcam/mic para poupar bateria e recursos
+    if (previousMode === 'record' && newMode !== 'record') {
+      stopRecordingView();
+    }
+
+    // Se estiver entrando no modo gravação, inicializa o viewfinder e captura
+    if (state.viewMode === 'record') {
+      await startRecordingView(trackId, preferredMode);
+    }
+
     updateQuickStats();
     saveCurrentSession();
+  }
+
+  // Preenche o seletor de faixas na tela de gravação
+  function updateRecTrackPicker() {
+    if (!dom.recTrackSelect) return;
+    dom.recTrackSelect.innerHTML = '';
+
+    state.tracks.forEach((t, idx) => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      const statusIcon = t.mediaUrl ? '🎬 ' : '🎙️ ';
+      opt.textContent = `${statusIcon}Faixa ${idx + 1}: ${t.name}${t.mediaUrl ? ' (Gravada)' : ' (Vazia)'}`;
+      if (t.id === recordingContext.activeTrackId) {
+        opt.selected = true;
+      }
+      dom.recTrackSelect.appendChild(opt);
+    });
+
+    const optNew = document.createElement('option');
+    optNew.value = '__new__';
+    optNew.textContent = '➕ Adicionar Nova Faixa...';
+    dom.recTrackSelect.appendChild(optNew);
+
+    const activeTrack = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    if (dom.audioViewfinderInstrument && activeTrack) {
+      dom.audioViewfinderInstrument.textContent = activeTrack.name;
+    }
+  }
+
+  // Inicializa o ambiente e viewfinder da aba Gravar
+  async function startRecordingView(trackId = null, preferredMode = null) {
+    stopStudioPlayback();
+
+    // Se não houver faixas criadas, cria a primeira faixa do projeto
+    if (state.tracks.length === 0) {
+      addTrack();
+    }
+
+    let targetTrack = null;
+    if (trackId) {
+      targetTrack = state.tracks.find(t => t.id === trackId);
+    }
+    if (!targetTrack && recordingContext.activeTrackId) {
+      targetTrack = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    }
+    if (!targetTrack) {
+      targetTrack = state.tracks.find(t => !t.mediaUrl) || state.tracks[0];
+    }
+    if (targetTrack) {
+      recordingContext.activeTrackId = targetTrack.id;
+    }
+
+    recordingContext.aborted = false;
+    recordingContext.isCountingDown = false;
+    recordingContext.isRecording = false;
+    recordingContext.lastRecordedBlob = null;
+
+    if (dom.reviewActions) dom.reviewActions.classList.remove('active');
+    if (dom.btnStartRecord) {
+      dom.btnStartRecord.style.display = 'inline-flex';
+      dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
+      dom.btnStartRecord.classList.remove('is-recording');
+    }
+    if (dom.recLiveIndicator) dom.recLiveIndicator.classList.remove('active');
+    if (dom.recProgressBar) dom.recProgressBar.style.width = '0%';
+    if (dom.countdownOverlay) dom.countdownOverlay.classList.remove('active');
+
+    updateRecTrackPicker();
+    await populateMediaDevices();
+    const mode = preferredMode || recordingContext.captureMode || 'video';
+    await setRecordingMode(mode);
+  }
+
+  // Desativa os dispositivos de captura e visualizadores ao sair da aba Gravar
+  function stopRecordingView() {
+    stopCurrentRecording(false);
+    cleanupReviewMedia();
+    disconnectMicMeter();
+
+    if (recordingContext.stream) {
+      recordingContext.stream.getTracks().forEach(t => t.stop());
+      recordingContext.stream = null;
+    }
+    if (dom.viewfinderVideo) {
+      dom.viewfinderVideo.srcObject = null;
+    }
   }
 
   function updateQuickStats() {
@@ -352,6 +488,37 @@
     dom.mosaicGrid.innerHTML = '';
     dom.mosaicGrid.setAttribute('data-count', state.tracks.length);
 
+    if (state.tracks.length === 0) {
+      const emptyMosaic = document.createElement('div');
+      emptyMosaic.className = 'studio-empty-mosaic-hero';
+      emptyMosaic.innerHTML = `
+        <div class="empty-hero-icon">🎬</div>
+        <h3 class="empty-hero-title">Mosaico Zerado • Monte suas Câmeras</h3>
+        <p class="empty-hero-desc">
+          Nenhuma faixa no projeto. Adicione instrumentos ou vozes para compor seu mosaico:
+        </p>
+        <div class="empty-hero-presets">
+          ${INSTRUMENT_PRESETS.map((preset, idx) => `
+            <button class="btn-preset-add" data-preset="${idx}" title="Adicionar faixa de ${escapeHtml(preset)}">
+              <span class="preset-color-dot" style="background: ${INSTRUMENT_COLORS[idx % INSTRUMENT_COLORS.length]};"></span>
+              ${escapeHtml(preset)}
+            </button>
+          `).join('')}
+        </div>
+        <div class="empty-hero-actions">
+          <button class="btn btn-gold btn-hero-add-track" title="Adicionar nova faixa">
+            <span>➕</span> Adicionar Faixa ao Mosaico
+          </button>
+          <button class="btn btn-secondary btn-hero-new-project" title="Configurar e montar novo projeto">
+            <span>✨</span> Montar Projeto
+          </button>
+        </div>
+      `;
+      dom.mosaicGrid.appendChild(emptyMosaic);
+      bindMosaicEmptyEvents(emptyMosaic);
+      return;
+    }
+
     state.tracks.forEach((track, index) => {
       const card = document.createElement('div');
       card.className = 'track-card';
@@ -365,7 +532,7 @@
           <div class="track-badge-num">${index + 1}</div>
           <input type="text" class="track-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" title="Clique para editar o nome do instrumento">
         </div>
-        ${state.tracks.length > 1 ? `<button class="track-delete-btn" data-id="${track.id}" title="Remover esta faixa">✕</button>` : ''}
+        <button class="track-delete-btn" data-id="${track.id}" title="Remover esta faixa">✕</button>
       `;
 
       // Video/Audio Viewport Stage
@@ -481,6 +648,21 @@
       dom.mosaicGrid.appendChild(card);
     });
 
+    if (state.tracks.length > 0 && state.tracks.length < 9) {
+      const addCard = document.createElement('div');
+      addCard.className = 'track-card track-add-card';
+      addCard.title = 'Adicionar nova faixa ao estúdio';
+      addCard.innerHTML = `
+        <div class="track-add-card-content">
+          <span class="track-add-icon">➕</span>
+          <span class="track-add-label">Adicionar Faixa</span>
+          <span class="track-add-sub">Pista ${state.tracks.length + 1} de 9</span>
+        </div>
+      `;
+      addCard.onclick = () => addTrack();
+      dom.mosaicGrid.appendChild(addCard);
+    }
+
     bindTrackEvents();
     updateAudioMixRouting();
   }
@@ -508,10 +690,11 @@
     dom.mosaicGrid.querySelectorAll('.track-delete-btn').forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.id;
-        if (state.tracks.length <= 1) return;
-        if (confirm('Deseja remover esta faixa e seu vídeo gravado?')) {
-          removeTrack(id);
+        const track = state.tracks.find(t => t.id === id);
+        if (track && track.mediaUrl) {
+          if (!confirm(`Deseja remover a faixa "${track.name}" e seu vídeo gravado?`)) return;
         }
+        removeTrack(id);
       };
     });
 
@@ -624,6 +807,33 @@
     updateAudioMixRouting();
   }
 
+
+  function bindMosaicEmptyEvents(container) {
+    container.querySelectorAll('.btn-preset-add').forEach(btn => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.preset, 10);
+        addTrack(INSTRUMENT_PRESETS[idx]);
+      };
+    });
+    const addBtn = container.querySelector('.btn-hero-add-track');
+    if (addBtn) addBtn.onclick = () => addTrack();
+    const newProjBtn = container.querySelector('.btn-hero-new-project');
+    if (newProjBtn) newProjBtn.onclick = openNewProjectModal;
+  }
+
+  function bindTimelineEmptyEvents(container) {
+    container.querySelectorAll('.btn-preset-add').forEach(btn => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.preset, 10);
+        addTrack(INSTRUMENT_PRESETS[idx]);
+      };
+    });
+    const addBtn = container.querySelector('.btn-hero-add-track');
+    if (addBtn) addBtn.onclick = () => addTrack();
+    const newProjBtn = container.querySelector('.btn-hero-new-project');
+    if (newProjBtn) newProjBtn.onclick = openNewProjectModal;
+  }
+
   // --- RENDERIZADOR DA DAW ESTILO REAPER (FAIXAS HORIZONTAIS MULTITRACK) ---
   function renderReaperTimeline() {
     if (!dom.reaperTracksStack || !dom.reaperRulerBars) return;
@@ -657,6 +867,37 @@
     // 2. Renderiza as Faixas Empilhadas (Multitrack Stack)
     dom.reaperTracksStack.innerHTML = '';
 
+    if (state.tracks.length === 0) {
+      const emptyProjectHero = document.createElement('div');
+      emptyProjectHero.className = 'studio-empty-project-hero';
+      emptyProjectHero.innerHTML = `
+        <div class="empty-hero-icon">🥁</div>
+        <h3 class="empty-hero-title">Projeto Zerado • Monte sua Bateria</h3>
+        <p class="empty-hero-desc">
+          O projeto não possui nenhuma faixa. Adicione as pistas de instrumentos ou vozes que deseja gravar:
+        </p>
+        <div class="empty-hero-presets">
+          ${INSTRUMENT_PRESETS.map((preset, idx) => `
+            <button class="btn-preset-add" data-preset="${idx}" title="Adicionar faixa de ${escapeHtml(preset)}">
+              <span class="preset-color-dot" style="background: ${INSTRUMENT_COLORS[idx % INSTRUMENT_COLORS.length]};"></span>
+              ${escapeHtml(preset)}
+            </button>
+          `).join('')}
+        </div>
+        <div class="empty-hero-actions">
+          <button class="btn btn-gold btn-hero-add-track" title="Adicionar faixa em branco">
+            <span>➕</span> Adicionar Faixa em Branco
+          </button>
+          <button class="btn btn-secondary btn-hero-new-project" title="Configurar e montar novo projeto">
+            <span>✨</span> Montar Projeto (Opções)
+          </button>
+        </div>
+      `;
+      dom.reaperTracksStack.appendChild(emptyProjectHero);
+      bindTimelineEmptyEvents(emptyProjectHero);
+      return;
+    }
+
     const hasSolo = state.tracks.some(t => t.solo);
 
     state.tracks.forEach((track, index) => {
@@ -679,7 +920,7 @@
         <div class="tcp-header-row">
           <span class="tcp-track-number">${String(index + 1).padStart(2, '0')}</span>
           <input type="text" class="tcp-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" title="Clique para editar o nome da faixa">
-          ${state.tracks.length > 1 ? `<button class="tcp-btn-delete" data-id="${track.id}" title="Remover faixa">✕</button>` : ''}
+          <button class="tcp-btn-delete" data-id="${track.id}" title="Remover faixa">✕</button>
         </div>
 
         <!-- Linha 2: REC ARM, Mute, Solo e Miniatura -->
@@ -1040,10 +1281,11 @@
     dom.reaperTracksStack.querySelectorAll('.tcp-btn-delete').forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.id;
-        if (state.tracks.length <= 1) return;
-        if (confirm('Deseja remover esta pista do projeto?')) {
-          removeTrack(id);
+        const track = state.tracks.find(t => t.id === id);
+        if (track && track.mediaUrl) {
+          if (!confirm(`Deseja remover a pista "${track.name}" e sua gravação?`)) return;
         }
+        removeTrack(id);
       };
     });
 
@@ -1192,15 +1434,22 @@
     }
   }
 
-  function addTrack() {
+  function addTrack(name) {
     if (state.tracks.length >= 9) {
       alert('Limite de 9 faixas no projeto atingido.');
       return;
     }
-    const newTrack = createTrack(null, state.tracks.length);
+    let trackName = name;
+    if (!trackName) {
+      const usedNames = state.tracks.map(t => t.name.toLowerCase());
+      const nextPreset = INSTRUMENT_PRESETS.find(p => !usedNames.includes(p.toLowerCase()));
+      trackName = nextPreset || `Faixa ${state.tracks.length + 1}`;
+    }
+    const newTrack = createTrack(trackName, state.tracks.length);
     state.tracks.push(newTrack);
     renderStudioViews();
     saveCurrentSession();
+    return newTrack;
   }
 
   function removeTrack(id) {
@@ -1456,40 +1705,11 @@
   }
 
   async function openRecordingModal(trackId, preferredMode = 'video') {
-    const track = state.tracks.find(t => t.id === trackId);
-    if (!track) return;
-
-    stopStudioPlayback();
-
-    recordingContext.activeTrackId = trackId;
-    recordingContext.aborted = false;
-    recordingContext.isCountingDown = false;
-    recordingContext.isRecording = false;
-    recordingContext.lastRecordedBlob = null;
-
-    dom.recordModalTitle.textContent = `Gravar: ${track.name}`;
-    dom.recordModal.classList.add('active');
-    dom.reviewActions.classList.remove('active');
-    dom.btnStartRecord.style.display = 'inline-flex';
-    dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
-    dom.btnStartRecord.classList.remove('is-recording');
-    dom.recLiveIndicator.classList.remove('active');
-    dom.recProgressBar.style.width = '0%';
-    dom.countdownOverlay.classList.remove('active');
-
-    renderReaperTimeline();
-
-    // Popula dispositivos previamente conhecidos
-    await populateMediaDevices();
-    await setRecordingMode(preferredMode);
+    await switchViewMode('record', trackId, preferredMode);
   }
 
   function openQuickRecord() {
-    // Seleciona a primeira faixa vazia ou a primeira faixa disponível
-    const targetTrack = state.tracks.find(t => !t.mediaUrl) || state.tracks[0];
-    if (targetTrack) {
-      openRecordingModal(targetTrack.id, 'audio');
-    }
+    switchViewMode('record');
   }
 
   function setupMicMeter(stream) {
@@ -1533,22 +1753,7 @@
   }
 
   function closeRecordingModal() {
-    stopCurrentRecording(false);
-    cleanupReviewMedia();
-    disconnectMicMeter();
-
-    if (recordingContext.stream) {
-      recordingContext.stream.getTracks().forEach(t => t.stop());
-      recordingContext.stream = null;
-    }
-    if (dom.viewfinderVideo) {
-      dom.viewfinderVideo.srcObject = null;
-    }
-
-    recordingContext.activeTrackId = null;
-    dom.recordModal.classList.remove('active');
-    stopStudioPlayback();
-    renderReaperTimeline();
+    switchViewMode('timeline');
   }
 
   // Contagem regressiva antes da gravação (1 compasso de pré-roll)
@@ -1653,7 +1858,7 @@
 
     recorder.onstop = () => {
       // Se a gravação foi cancelada ou o modal foi fechado, ignora o review
-      if (recordingContext.aborted || !dom.recordModal.classList.contains('active')) {
+      if (recordingContext.aborted || state.viewMode !== 'record') {
         recordingContext.recordedChunks = [];
         return;
       }
@@ -1864,9 +2069,20 @@
         saveCurrentSession();
       });
     }
-    closeRecordingModal();
+    cleanupReviewMedia();
+    recordingContext.lastRecordedBlob = null;
+    recordingContext.recordedChunks = [];
+    if (dom.reviewActions) dom.reviewActions.classList.remove('active');
+    if (dom.btnStartRecord) {
+      dom.btnStartRecord.style.display = 'inline-flex';
+      dom.btnStartRecord.textContent = '🔴 Gravar Novo Take';
+    }
+    if (dom.recProgressBar) dom.recProgressBar.style.width = '0%';
+    updateRecTrackPicker();
     renderStudioViews();
     saveCurrentSession();
+    // Restaura o visor para novo take na mesma faixa ou outra faixa escolhida
+    setRecordingMode(recordingContext.captureMode);
   }
 
   function discardAndRetry() {
@@ -1936,6 +2152,10 @@
   // --- Sincronização & Playback Master do Mosaico e Linha de Tempo ---
   function startStudioPlayback() {
     getAudioContext();
+    if (state.tracks.length === 0) {
+      alert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
+      return;
+    }
     const hasMedia = state.tracks.some(t => t.videoElement);
     if (!hasMedia && !state.metronomeEnabled) {
       alert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
@@ -2509,42 +2729,49 @@
 
   async function restoreSession() {
     const saved = await loadProjectFromDB();
-    if (saved && saved.tracks && saved.tracks.length > 0) {
-      state.bpm = saved.bpm || 120;
-      state.meter = saved.meter || '2/4';
-      state.mode = saved.mode || 'free';
-      state.measures = saved.measures || 4;
-      state.looping = !!saved.looping;
-      state.metronomeEnabled = saved.metronomeEnabled !== undefined ? saved.metronomeEnabled : true;
-      state.viewMode = saved.viewMode || 'timeline';
-      state.zoomLevel = saved.zoomLevel || 100;
+    if (saved && Array.isArray(saved.tracks)) {
+      // Se continha apenas os 4 dummies originais sem nenhuma gravação, zera:
+      const isLegacyDummyTracks = saved.tracks.length === 4 &&
+        saved.tracks.every(t => !t.mediaBlob && !t.duration && !t.mediaDataUrl) &&
+        saved.tracks[0].name.startsWith('Surdo 1ª') &&
+        saved.tracks[1].name.startsWith('Surdo 2ª') &&
+        saved.tracks[2].name.startsWith('Caixa') &&
+        saved.tracks[3].name.startsWith('Tamborim');
 
-      state.tracks = saved.tracks.map((st, i) => {
-        const tr = createTrack(st.name, i);
-        tr.id = st.id || tr.id;
-        tr.volume = st.volume !== undefined ? st.volume : 1.0;
-        tr.muted = !!st.muted;
-        tr.solo = !!st.solo;
-        tr.offsetMs = st.offsetMs || 0;
-        tr.duration = st.duration || 0;
-        tr.waveformPeaks = st.waveformPeaks || null;
-        if (st.mediaBlob) {
-          tr.mediaBlob = st.mediaBlob;
-          tr.mediaUrl = URL.createObjectURL(st.mediaBlob);
-          tr.mediaType = st.mediaType || (st.mediaBlob.type && st.mediaBlob.type.startsWith('audio') ? 'audio' : 'video');
-        } else {
-          tr.mediaType = st.mediaType || 'video';
-        }
-        return tr;
-      });
+      if (isLegacyDummyTracks) {
+        state.tracks = [];
+      } else {
+        state.bpm = saved.bpm || 120;
+        state.meter = saved.meter || '2/4';
+        state.mode = saved.mode || 'free';
+        state.measures = saved.measures || 4;
+        state.looping = !!saved.looping;
+        state.metronomeEnabled = saved.metronomeEnabled !== undefined ? saved.metronomeEnabled : true;
+        state.viewMode = saved.viewMode || 'timeline';
+        state.zoomLevel = saved.zoomLevel || 100;
+
+        state.tracks = saved.tracks.map((st, i) => {
+          const tr = createTrack(st.name, i);
+          tr.id = st.id || tr.id;
+          tr.volume = st.volume !== undefined ? st.volume : 1.0;
+          tr.muted = !!st.muted;
+          tr.solo = !!st.solo;
+          tr.offsetMs = st.offsetMs || 0;
+          tr.duration = st.duration || 0;
+          tr.waveformPeaks = st.waveformPeaks || null;
+          if (st.mediaBlob) {
+            tr.mediaBlob = st.mediaBlob;
+            tr.mediaUrl = URL.createObjectURL(st.mediaBlob);
+            tr.mediaType = st.mediaType || (st.mediaBlob.type && st.mediaBlob.type.startsWith('audio') ? 'audio' : 'video');
+          } else {
+            tr.mediaType = st.mediaType || 'video';
+          }
+          return tr;
+        });
+      }
     } else {
-      // 4 Faixas padrão em branco com sugestões de instrumentos
-      state.tracks = [
-        createTrack('Surdo 1ª (Tum)', 0),
-        createTrack('Surdo 2ª (Tump)', 1),
-        createTrack('Caixa (Tchá)', 2),
-        createTrack('Tamborim (Teleco-teco)', 4)
-      ];
+      // Primeiro acesso: o projeto abre ZERADO, sem nenhuma faixa
+      state.tracks = [];
     }
 
     if (dom.zoomLevelVal) dom.zoomLevelVal.textContent = `${state.zoomLevel}%`;
@@ -2566,6 +2793,145 @@
     if (dom.btnToggleMetronome) {
       dom.btnToggleMetronome.classList.toggle('active', state.metronomeEnabled);
     }
+  }
+
+
+  // --- Lógica do Modal de Montagem de Novo Projeto ---
+  const modalSelectedInstruments = new Set();
+
+  function openNewProjectModal() {
+    if (!dom.newProjectModal) return;
+
+    if (dom.newProjectName) dom.newProjectName.value = 'Novo Projeto Samba';
+    if (dom.newProjectBpm) dom.newProjectBpm.value = state.bpm || 120;
+    if (dom.newProjectBpmVal) dom.newProjectBpmVal.textContent = `${state.bpm || 120} BPM`;
+    if (dom.newProjectMeter) dom.newProjectMeter.value = state.meter || '2/4';
+    if (dom.newProjectMode) dom.newProjectMode.value = state.mode || 'free';
+
+    // Por padrão o projeto começa ZERADO (0 faixas)
+    modalSelectedInstruments.clear();
+    renderModalInstrumentsPicker();
+    updateModalBpmChips(state.bpm || 120);
+
+    dom.newProjectModal.classList.add('active');
+  }
+
+  function closeNewProjectModal() {
+    if (dom.newProjectModal) {
+      dom.newProjectModal.classList.remove('active');
+    }
+  }
+
+  function renderModalInstrumentsPicker() {
+    if (!dom.newProjectInstrumentsPicker) return;
+    dom.newProjectInstrumentsPicker.innerHTML = '';
+
+    INSTRUMENT_PRESETS.forEach((preset, idx) => {
+      const isSelected = modalSelectedInstruments.has(idx);
+      const color = INSTRUMENT_COLORS[idx % INSTRUMENT_COLORS.length];
+
+      const chip = document.createElement('div');
+      chip.className = `instrument-pick-chip ${isSelected ? 'selected' : ''}`;
+      chip.dataset.idx = idx;
+      chip.innerHTML = `
+        <div class="pick-check">${isSelected ? '✓' : ''}</div>
+        <div class="pick-info">
+          <span class="preset-color-dot" style="background: ${color};"></span>
+          <span class="pick-name" title="${escapeHtml(preset)}">${escapeHtml(preset)}</span>
+        </div>
+      `;
+
+      chip.onclick = () => {
+        if (modalSelectedInstruments.has(idx)) {
+          modalSelectedInstruments.delete(idx);
+        } else {
+          modalSelectedInstruments.add(idx);
+        }
+        renderModalInstrumentsPicker();
+      };
+
+      dom.newProjectInstrumentsPicker.appendChild(chip);
+    });
+
+    updateModalTrackCountHint();
+  }
+
+  function updateModalTrackCountHint() {
+    const count = modalSelectedInstruments.size;
+    if (dom.newProjectTrackCountHint) {
+      dom.newProjectTrackCountHint.textContent = count === 0
+        ? '0 faixas (Projeto Zerado)'
+        : `${count} faixa${count > 1 ? 's' : ''} pré-selecionada${count > 1 ? 's' : ''}`;
+    }
+    if (dom.newProjectConfirmBtn) {
+      dom.newProjectConfirmBtn.innerHTML = count === 0
+        ? '<span>✨</span> Criar Projeto Zerado'
+        : `<span>✨</span> Criar Projeto com ${count} Faixa${count > 1 ? 's' : ''}`;
+    }
+  }
+
+  function updateModalBpmChips(bpm) {
+    if (!dom.newProjectBpmPresets) return;
+    dom.newProjectBpmPresets.querySelectorAll('.btn-chip').forEach(btn => {
+      const chipBpm = parseInt(btn.dataset.bpm, 10);
+      btn.classList.toggle('active', chipBpm === bpm);
+    });
+  }
+
+  function confirmNewProject() {
+    const hasMedia = state.tracks.some(t => t.mediaUrl || t.mediaBlob);
+    if (hasMedia) {
+      const ok = confirm('O projeto atual possui gravações. Deseja iniciar um novo projeto e descartar a sessão atual?');
+      if (!ok) return;
+    }
+
+    stopStudioPlayback();
+
+    state.tracks.forEach(tr => {
+      if (tr.mediaUrl) URL.revokeObjectURL(tr.mediaUrl);
+    });
+
+    const newBpm = parseInt(dom.newProjectBpm ? dom.newProjectBpm.value : 120, 10) || 120;
+    const newMeter = dom.newProjectMeter ? dom.newProjectMeter.value : '2/4';
+    const newMode = dom.newProjectMode ? dom.newProjectMode.value : 'free';
+
+    state.bpm = newBpm;
+    state.meter = newMeter;
+    state.mode = newMode;
+    state.looping = false;
+
+    // Se nenhuma faixa marcada: o novo projeto fica totalmente ZERADO
+    if (modalSelectedInstruments.size === 0) {
+      state.tracks = [];
+    } else {
+      const selectedIndices = Array.from(modalSelectedInstruments).sort((a, b) => a - b);
+      state.tracks = selectedIndices.map((presetIdx, i) =>
+        createTrack(INSTRUMENT_PRESETS[presetIdx], i)
+      );
+    }
+
+    syncToolbarControls();
+    updateLoopUi();
+    renderStudioViews();
+    saveCurrentSession();
+    closeNewProjectModal();
+  }
+
+  function clearCurrentProjectTracks() {
+    const hasMedia = state.tracks.some(t => t.mediaUrl || t.mediaBlob);
+    const msg = hasMedia
+      ? 'Deseja zerar todas as faixas e apagar as gravações do projeto atual?'
+      : 'Deseja zerar todas as faixas do projeto atual?';
+    if (!confirm(msg)) return;
+
+    stopStudioPlayback();
+    state.tracks.forEach(tr => {
+      if (tr.mediaUrl) URL.revokeObjectURL(tr.mediaUrl);
+    });
+
+    state.tracks = [];
+    saveCurrentSession();
+    renderStudioViews();
   }
 
   // --- Inicialização e Bind Global ---
@@ -2777,6 +3143,87 @@
 
     document.addEventListener('click', closeAllPopovers);
 
+    // Ações de Montar Novo Projeto & Zerar
+    if (dom.btnToolbarNewProject) {
+      dom.btnToolbarNewProject.onclick = openNewProjectModal;
+    }
+    if (dom.btnNewProject) {
+      dom.btnNewProject.onclick = openNewProjectModal;
+    }
+    if (dom.btnClearProject) {
+      dom.btnClearProject.onclick = clearCurrentProjectTracks;
+    }
+
+    // Modal de Novo Projeto
+    if (dom.newProjectCloseBtn) {
+      dom.newProjectCloseBtn.onclick = closeNewProjectModal;
+    }
+    if (dom.newProjectCancelBtn) {
+      dom.newProjectCancelBtn.onclick = closeNewProjectModal;
+    }
+    if (dom.newProjectConfirmBtn) {
+      dom.newProjectConfirmBtn.onclick = confirmNewProject;
+    }
+
+    if (dom.newProjectBpm) {
+      dom.newProjectBpm.oninput = (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (dom.newProjectBpmVal) dom.newProjectBpmVal.textContent = `${val} BPM`;
+        updateModalBpmChips(val);
+      };
+    }
+    if (dom.btnNewProjBpmMinus) {
+      dom.btnNewProjBpmMinus.onclick = () => {
+        if (!dom.newProjectBpm) return;
+        const cur = parseInt(dom.newProjectBpm.value, 10) || 120;
+        const next = Math.max(60, cur - 1);
+        dom.newProjectBpm.value = next;
+        if (dom.newProjectBpmVal) dom.newProjectBpmVal.textContent = `${next} BPM`;
+        updateModalBpmChips(next);
+      };
+    }
+    if (dom.btnNewProjBpmPlus) {
+      dom.btnNewProjBpmPlus.onclick = () => {
+        if (!dom.newProjectBpm) return;
+        const cur = parseInt(dom.newProjectBpm.value, 10) || 120;
+        const next = Math.min(200, cur + 1);
+        dom.newProjectBpm.value = next;
+        if (dom.newProjectBpmVal) dom.newProjectBpmVal.textContent = `${next} BPM`;
+        updateModalBpmChips(next);
+      };
+    }
+    if (dom.newProjectBpmPresets) {
+      dom.newProjectBpmPresets.querySelectorAll('.btn-chip').forEach(btn => {
+        btn.onclick = () => {
+          const bpm = parseInt(btn.dataset.bpm, 10);
+          if (dom.newProjectBpm) dom.newProjectBpm.value = bpm;
+          if (dom.newProjectBpmVal) dom.newProjectBpmVal.textContent = `${bpm} BPM`;
+          updateModalBpmChips(bpm);
+        };
+      });
+    }
+
+    if (dom.btnPickerClearAll) {
+      dom.btnPickerClearAll.onclick = () => {
+        modalSelectedInstruments.clear();
+        renderModalInstrumentsPicker();
+      };
+    }
+    if (dom.btnPickerSelectClassic) {
+      dom.btnPickerSelectClassic.onclick = () => {
+        modalSelectedInstruments.clear();
+        [0, 1, 2, 4].forEach(i => modalSelectedInstruments.add(i));
+        renderModalInstrumentsPicker();
+      };
+    }
+    if (dom.btnPickerSelectAll) {
+      dom.btnPickerSelectAll.onclick = () => {
+        modalSelectedInstruments.clear();
+        INSTRUMENT_PRESETS.forEach((_, i) => modalSelectedInstruments.add(i));
+        renderModalInstrumentsPicker();
+      };
+    }
+
     // Adicionar Faixa
     dom.btnAddTrack.onclick = addTrack;
 
@@ -2785,8 +3232,41 @@
     dom.btnExportAudio.onclick = exportMixedAudio;
     dom.exportCloseBtn.onclick = () => dom.exportModal.classList.remove('active');
 
-    // Gravação Modal & Seletores de Modo
-    dom.recordCloseBtn.onclick = closeRecordingModal;
+    // Gravação (Aba & Controles)
+    if (dom.btnViewRecord) {
+      dom.btnViewRecord.onclick = () => switchViewMode('record');
+    }
+    if (dom.recordBackBtn) {
+      dom.recordBackBtn.onclick = () => switchViewMode('timeline');
+    }
+    if (dom.recordCloseBtn) {
+      dom.recordCloseBtn.onclick = () => switchViewMode('timeline');
+    }
+
+    // Seletor dinâmico de qual faixa gravar
+    if (dom.recTrackSelect) {
+      dom.recTrackSelect.onchange = (e) => {
+        const val = e.target.value;
+        if (val === '__new__') {
+          const newTrk = addTrack();
+          if (newTrk) {
+            recordingContext.activeTrackId = newTrk.id;
+            updateRecTrackPicker();
+            const trk = state.tracks.find(t => t.id === newTrk.id);
+            if (dom.audioViewfinderInstrument && trk) {
+              dom.audioViewfinderInstrument.textContent = trk.name;
+            }
+          }
+        } else {
+          recordingContext.activeTrackId = val;
+          const trk = state.tracks.find(t => t.id === val);
+          if (dom.audioViewfinderInstrument && trk) {
+            dom.audioViewfinderInstrument.textContent = trk.name;
+          }
+        }
+      };
+    }
+
     if (dom.recModeVideoBtn) {
       dom.recModeVideoBtn.onclick = () => setRecordingMode('video');
     }
@@ -2799,7 +3279,7 @@
       dom.recAudioDevice.onchange = (e) => {
         state.selectedAudioDeviceId = e.target.value;
         localStorage.setItem('samba_selected_audio_dev', state.selectedAudioDeviceId);
-        if (dom.recordModal.classList.contains('active')) {
+        if (state.viewMode === 'record') {
           setRecordingMode(recordingContext.captureMode);
         }
       };
@@ -2808,7 +3288,7 @@
       dom.recVideoDevice.onchange = (e) => {
         state.selectedVideoDeviceId = e.target.value;
         localStorage.setItem('samba_selected_video_dev', state.selectedVideoDeviceId);
-        if (dom.recordModal.classList.contains('active') && recordingContext.captureMode === 'video') {
+        if (state.viewMode === 'record' && recordingContext.captureMode === 'video') {
           setRecordingMode('video');
         }
       };
@@ -2817,7 +3297,7 @@
       dom.recAudioProfile.onchange = (e) => {
         state.audioProfile = e.target.value;
         localStorage.setItem('samba_audio_profile', state.audioProfile);
-        if (dom.recordModal.classList.contains('active')) {
+        if (state.viewMode === 'record') {
           setRecordingMode(recordingContext.captureMode);
         }
       };
@@ -2988,7 +3468,10 @@
     stopStudioPlayback,
     openQuickRecord,
     importSequencerBounce,
-    switchViewMode
+    switchViewMode,
+    openNewProjectModal,
+    clearCurrentProjectTracks,
+    addTrack
   };
 
 })();
