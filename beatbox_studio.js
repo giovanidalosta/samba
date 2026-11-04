@@ -2272,8 +2272,56 @@
     }
   }
 
-  // --- Exportação de Áudio Mixado ---
-  function exportMixedAudio() {
+
+  function encodeAudioBufferToWav(audioBuffer) {
+    const numCh = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const numSamples = audioBuffer.length;
+    const bytesPerSample = 2;
+    const blockAlign = numCh * bytesPerSample;
+    const dataSize = numSamples * blockAlign;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    const writeStr = (offset, str) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numCh, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    const channels = [];
+    for (let c = 0; c < numCh; c++) {
+      channels.push(audioBuffer.getChannelData(c));
+    }
+
+    let offset = 44;
+    for (let i = 0; i < numSamples; i++) {
+      for (let c = 0; c < numCh; c++) {
+        const sample = Math.max(-1, Math.min(1, channels[c][i]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  // --- Exportação de Áudio Mixado (Renderização WAV de Alta Fidelidade) ---
+  async function exportMixedAudio() {
     const recordedTracks = state.tracks.filter(t => t.videoElement);
     if (recordedTracks.length === 0) {
       alert('Nenhuma gravação encontrada para exportar o áudio!');
@@ -2283,9 +2331,59 @@
     stopStudioPlayback();
 
     dom.exportModal.classList.add('active');
-    dom.exportTitle.textContent = '🎵 Exportando Áudio Mixado...';
-    dom.exportStatus.textContent = 'Mixando faixas e gerando arquivo de áudio...';
-    dom.exportProgressBar.style.width = '40%';
+    dom.exportTitle.textContent = '🎵 Exportando Áudio Master (.wav)...';
+    dom.exportStatus.textContent = 'Renderizando mixdown estéreo em alta fidelidade...';
+    dom.exportProgressBar.style.width = '30%';
+
+    // 1. Tenta renderização ultra-rápida via OfflineAudioContext em formato WAV puro
+    try {
+      const audioContext = getAudioContext();
+      const durationSec = Math.max(1, getTimelineDurationSec());
+      const sampleRate = 44100;
+      const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+      if (OfflineCtx) {
+        const offlineCtx = new OfflineCtx(2, Math.ceil(durationSec * sampleRate), sampleRate);
+        const hasSolo = state.tracks.some(t => t.solo);
+        let decodedCount = 0;
+
+        for (const track of recordedTracks) {
+          if (!track.mediaBlob) continue;
+          try {
+            const arrayBuf = await track.mediaBlob.arrayBuffer();
+            const audioBuf = await audioContext.decodeAudioData(arrayBuf.slice(0));
+            const src = offlineCtx.createBufferSource();
+            src.buffer = audioBuf;
+
+            const gain = offlineCtx.createGain();
+            gain.gain.value = getEffectiveTrackVolume(track, hasSolo);
+
+            src.connect(gain);
+            gain.connect(offlineCtx.destination);
+
+            const startTime = Math.max(0, (track.offsetMs || 0) / 1000);
+            src.start(startTime);
+            decodedCount++;
+          } catch (decErr) {
+            console.warn('Decodificação OfflineAudioContext falhou para:', track.name, decErr);
+          }
+        }
+
+        if (decodedCount > 0) {
+          dom.exportProgressBar.style.width = '75%';
+          const renderedBuffer = await offlineCtx.startRendering();
+          const wavBlob = encodeAudioBufferToWav(renderedBuffer);
+          downloadBlob(wavBlob, `naumteria_master_${state.bpm}bpm.wav`);
+
+          dom.exportProgressBar.style.width = '100%';
+          dom.exportStatus.textContent = '✅ Áudio Master (.wav) exportado com sucesso!';
+          setTimeout(() => dom.exportModal.classList.remove('active'), 1200);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Tentando fallback para MediaRecorder:', err);
+    }
 
     try {
       const audioContext = getAudioContext();

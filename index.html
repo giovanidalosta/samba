@@ -966,6 +966,111 @@
       color: var(--text-muted);
       background: var(--bg-header);
     }
+  
+    /* Novos Recursos: Tap Tempo, Share, Speed Trainer & Pads */
+    .btn-tap-tempo {
+      background: rgba(232, 195, 27, 0.14);
+      border: 1px solid var(--naum-gold);
+      color: var(--naum-gold);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.08s ease, background 0.12s ease;
+      flex-shrink: 0;
+    }
+    .btn-tap-tempo:active {
+      transform: scale(0.90);
+      background: var(--naum-gold);
+      color: #0A090C;
+    }
+    .btn-share-link {
+      background: rgba(36, 123, 184, 0.16) !important;
+      border: 1px solid var(--naum-blue-light) !important;
+      color: #7CC0EE !important;
+      font-weight: 700 !important;
+    }
+    .btn-share-link:hover {
+      background: rgba(36, 123, 184, 0.32) !important;
+      color: #FFFFFF !important;
+    }
+    .share-toast {
+      position: fixed;
+      bottom: 74px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 17, 24, 0.96);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--naum-gold);
+      border-radius: 12px;
+      padding: 10px 18px;
+      color: #FFFFFF;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+      z-index: 1100;
+      animation: popoverFade 0.2s ease-out;
+    }
+    .track-header.pad-pressed {
+      background: rgba(232, 195, 27, 0.22) !important;
+      border-color: var(--naum-gold) !important;
+      transform: scale(0.975);
+      transition: transform 0.08s ease, background 0.08s ease;
+    }
+    .track-header {
+      cursor: pointer;
+    }
+    .sequencer-countdown-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 9, 12, 0.80);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .seq-countdown-box {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .seq-countdown-number {
+      font-family: var(--font-display);
+      font-size: 88px;
+      font-weight: 800;
+      color: var(--naum-gold);
+      text-shadow: 0 0 35px rgba(232, 195, 27, 0.65);
+      line-height: 1;
+    }
+    .seq-countdown-label {
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-silver);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+    .speed-toast-pill {
+      background: rgba(232, 195, 27, 0.2);
+      border: 1px solid var(--naum-gold);
+      color: var(--naum-gold);
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
   </style>
 </head>
 
@@ -1058,8 +1163,9 @@
           </div>
         </div>
 
-        <!-- BPM Compacto -->
+        <!-- BPM Compacto & Tap -->
         <div class="control-group bpm-compact-group">
+          <button id="btnStudioTap" class="btn-tap-tempo" title="Tap Tempo: Toque no ritmo para definir o BPM">TAP</button>
           <label for="studioBpm">BPM</label>
           <button id="btnBpmMinus" class="btn-step" title="Diminuir BPM">−</button>
           <input type="range" id="studioBpm" min="60" max="200" value="120" step="1" style="width: 72px;">
@@ -1240,8 +1346,9 @@
           <span>⏹</span> Parar
         </button>
 
-        <!-- BPM Slider -->
+        <!-- BPM Slider & Tap Tempo -->
         <div class="control-group">
+          <button id="btnTapTempo" class="btn-tap-tempo" title="Tap Tempo: Toque no ritmo da bateria para definir o BPM">TAP</button>
           <label for="bpmSlider">BPM</label>
           <div class="bpm-wrapper">
             <input type="range" id="bpmSlider" min="80" max="170" value="142" step="1">
@@ -1279,6 +1386,16 @@
           <span id="metronomeIcon">⏱</span> Metrônomo
         </button>
 
+        <!-- Contagem Pré-Roll (1 Compasso de Baqueta) -->
+        <button id="btnPreRoll" class="btn" title="Contagem de 1 compasso antes de iniciar">
+          <span id="preRollIcon">⏱</span> <span id="preRollText">Contagem: Off</span>
+        </button>
+
+        <!-- Speed Trainer (Acelerador de Ensaio) -->
+        <button id="btnSpeedTrainer" class="btn" title="Acelera automaticamente o BPM a cada repetição em Loop (+2 BPM)">
+          <span id="speedTrainerIcon">⚡</span> <span id="speedTrainerText">Treino: Off</span>
+        </button>
+
         <!-- Presets de Bateria Completa / Breques -->
         <div class="control-group">
           <label for="bateriaPresetSelect">Arranjo</label>
@@ -1302,6 +1419,10 @@
         <button id="btnSendToStudio" class="btn btn-primary"
           title="Renderizar este breque/levada em áudio WAV e abrir como faixa no Studio Multitrack">
           ↪ <span class="send-label">Enviar p/ Studio</span>
+        </button>
+        <button id="btnShareLink" class="btn btn-share-link"
+          title="Copiar link direto do breque para enviar no WhatsApp da bateria">
+          <span>🔗</span> Compartilhar Link
         </button>
         <button id="btnExportJSON" class="btn btn-success">
           Salvar
@@ -1343,9 +1464,23 @@
           clicar várias vezes.</span>
         <span><strong>2. Levadas Base:</strong> Use o menu <code>⚡ Levada...</code> em cada instrumento para preencher a
           condução característica e editar seus breques por cima.</span>
-        <span><strong>3. Clique Direito:</strong> Apaga a célula (também funciona arrastando).</span>
+        <span><strong>3. Toque para Ouvir (Audition):</strong> Clique no nome/ícone do instrumento para ouvir o timbre imediatamente com vibração.</span>
       </div>
     </div>
+
+    <!-- Overlay de Contagem Pré-Roll no Sequenciador -->
+    <div id="seqPreRollOverlay" class="sequencer-countdown-overlay" style="display: none;">
+      <div class="seq-countdown-box">
+        <div class="seq-countdown-number" id="seqPreRollNum">4</div>
+        <div class="seq-countdown-label">Prepare-se...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Flutuante de Compartilhamento -->
+  <div id="shareToast" class="share-toast" style="display: none;">
+    <span style="font-size: 16px;">🔗</span>
+    <span id="shareToastText">Link copiado! Cole no WhatsApp da bateria.</span>
   </div>
 
   <!-- =========================================================================
@@ -2097,6 +2232,21 @@
         return { wavBlob, durationSec: loopDurationSec };
       }
 
+            playPreRollClick(beatIndex, isDownbeat = false) {
+        if (!this.ctx) this.init();
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(isDownbeat ? 1400 : 950, ctx.currentTime);
+        gain.gain.setValueAtTime(0.75, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.09);
+      }
+
       encodeAudioBufferToWav(audioBuffer) {
         const numCh = audioBuffer.numberOfChannels;
         const sampleRate = audioBuffer.sampleRate;
@@ -2762,6 +2912,17 @@
         actions.appendChild(btnSolo);
         actions.appendChild(btnAudition);
         actions.appendChild(btnClearTrack);
+                info.style.cursor = 'pointer';
+        info.title = `Toque para ouvir o timbre de ${inst.name}`;
+        info.onclick = (e) => {
+          e.stopPropagation();
+          const brush = state.selectedBrush[inst.id];
+          const artId = (brush && brush !== 'cycle' && brush !== 'erase') ? brush : inst.articulations[0].id;
+          audio.triggerInstrument(inst.id, artId, state.volumes[inst.id] ?? 1.0);
+          if (navigator.vibrate) navigator.vibrate(20);
+          header.classList.add('pad-pressed');
+          setTimeout(() => header.classList.remove('pad-pressed'), 120);
+        };
         headerTop.appendChild(info);
         headerTop.appendChild(actions);
 
@@ -3010,6 +3171,148 @@
       updatePrintDetails();
     }
 
+        // Estado dos novos recursos: Contagem, Speed Trainer e Tap
+    state.preRollEnabled = false;
+    state.speedTrainerMode = 0; // 0 = off, 2 = +2 BPM, 4 = +4 BPM
+
+    function runPreRollCountdown(onFinished) {
+      audio.init();
+      const overlay = document.getElementById('seqPreRollOverlay');
+      const numDisplay = document.getElementById('seqPreRollNum');
+      if (!overlay || !numDisplay) return onFinished();
+
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+      const beatDurMs = (60 / state.bpm) * 1000;
+      let currentBeat = 1;
+
+      overlay.style.display = 'flex';
+      numDisplay.textContent = currentBeat;
+      audio.playPreRollClick(currentBeat, currentBeat === 1);
+      if (navigator.vibrate) navigator.vibrate(25);
+
+      const countTimer = setInterval(() => {
+        currentBeat++;
+        if (currentBeat <= beatsPerMeasure) {
+          numDisplay.textContent = currentBeat;
+          audio.playPreRollClick(currentBeat, false);
+          if (navigator.vibrate) navigator.vibrate(15);
+        } else {
+          clearInterval(countTimer);
+          overlay.style.display = 'none';
+          onFinished();
+        }
+      }, beatDurMs);
+    }
+
+    function shareBrequeLink() {
+      try {
+        const payload = {
+          v: '2',
+          b: state.bpm,
+          m: state.meter,
+          s: state.subdivision,
+          c: state.measures,
+          vol: state.volumes,
+          g: state.gridData
+        };
+        const jsonStr = JSON.stringify(payload);
+        const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+        const shareUrl = `${window.location.origin}${window.location.pathname}#breque=${b64}`;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareUrl).then(() => {
+            showShareToast('✅ Link do breque copiado! Cole no WhatsApp da bateria.');
+          }).catch(() => {
+            prompt('Copie o link abaixo para enviar:', shareUrl);
+          });
+        } else {
+          prompt('Copie o link abaixo para enviar:', shareUrl);
+        }
+      } catch (e) {
+        alert('Erro ao gerar link de compartilhamento: ' + e.message);
+      }
+    }
+
+    function showShareToast(msg) {
+      const toast = document.getElementById('shareToast');
+      const text = document.getElementById('shareToastText');
+      if (!toast || !text) return;
+      text.textContent = msg;
+      toast.style.display = 'flex';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+
+    function checkSharedBrequeUrl() {
+      const hash = window.location.hash;
+      if (!hash || !hash.startsWith('#breque=')) return;
+      try {
+        const b64 = hash.substring(8);
+        const jsonStr = decodeURIComponent(escape(atob(b64)));
+        const data = JSON.parse(jsonStr);
+        if (!data || !data.g) return;
+
+        state.bpm = data.b || 142;
+        state.meter = data.m || '2/4';
+        state.subdivision = data.s || 'semicolcheia';
+        state.measures = data.c || 2;
+        if (data.vol) state.volumes = { ...state.volumes, ...data.vol };
+        state.gridData = data.g;
+
+        const slider = document.getElementById('bpmSlider');
+        const disp = document.getElementById('bpmDisplay');
+        if (slider) slider.value = state.bpm;
+        if (disp) disp.textContent = state.bpm;
+        const meterSel = document.getElementById('meterSelect');
+        if (meterSel) meterSel.value = state.meter;
+        const subdivSel = document.getElementById('subdivSelect');
+        if (subdivSel) subdivSel.value = state.subdivision;
+        const measDisp = document.getElementById('measureCountDisplay');
+        if (measDisp) measDisp.textContent = `${state.measures} Compassos`;
+
+        switchTab('tab-sequencer');
+        renderStudio();
+        showShareToast('🥁 Breque carregado via link compartilhado!');
+      } catch (err) {
+        console.warn('Erro ao carregar breque via hash:', err);
+      }
+    }
+    window.addEventListener('hashchange', checkSharedBrequeUrl);
+
+    let tapTimes = [];
+    function handleTap(isStudio = false) {
+      const now = performance.now();
+      tapTimes = tapTimes.filter(t => now - t < 2500);
+      tapTimes.push(now);
+
+      if (navigator.vibrate) navigator.vibrate(18);
+
+      if (tapTimes.length >= 2) {
+        const intervals = [];
+        for (let i = 1; i < tapTimes.length; i++) {
+          intervals.push(tapTimes[i] - tapTimes[i - 1]);
+        }
+        const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        const newBpm = Math.min(200, Math.max(60, Math.round(60000 / avgInterval)));
+
+        if (isStudio) {
+          const studioBpmInput = document.getElementById('studioBpm');
+          if (studioBpmInput) {
+            studioBpmInput.value = newBpm;
+            studioBpmInput.dispatchEvent(new Event('input'));
+          }
+        } else {
+          state.bpm = newBpm;
+          const bpmSlider = document.getElementById('bpmSlider');
+          const bpmDisplay = document.getElementById('bpmDisplay');
+          if (bpmSlider) bpmSlider.value = newBpm;
+          if (bpmDisplay) bpmDisplay.textContent = newBpm;
+          updatePrintDetails();
+        }
+      }
+    }
+
     function computeNextCycledArticulation(inst, stepIndex) {
       const current = state.gridData[inst.id][stepIndex];
       const arts = inst.articulations;
@@ -3060,6 +3363,15 @@
           if (state.currentStep + 1 >= totalSteps) {
             state.currentStep = 0;
             state.loopCount = (state.loopCount || 0) + 1;
+            // Speed Trainer: Acelera o andamento a cada volta completa
+            if (state.speedTrainerMode > 0 && state.bpm < 185) {
+              state.bpm = Math.min(185, state.bpm + state.speedTrainerMode);
+              const bpmSlider = document.getElementById('bpmSlider');
+              const bpmDisplay = document.getElementById('bpmDisplay');
+              if (bpmSlider) bpmSlider.value = state.bpm;
+              if (bpmDisplay) bpmDisplay.textContent = state.bpm;
+              updatePrintDetails();
+            }
           } else {
             state.currentStep += 1;
           }
@@ -3250,7 +3562,11 @@
       if (state.isPlaying) {
         stopPlayback();
       } else {
-        startPlayback();
+        if (state.preRollEnabled) {
+          runPreRollCountdown(() => startPlayback());
+        } else {
+          startPlayback();
+        }
       }
     };
 
@@ -3348,6 +3664,42 @@
     document.getElementById('btnPrint').onclick = () => {
       window.print();
     };
+    // Tap Tempo, Contagem Pré-Roll, Speed Trainer e Compartilhamento
+    const btnTap = document.getElementById('btnTapTempo');
+    if (btnTap) btnTap.onclick = () => handleTap(false);
+
+    const btnStudioTap = document.getElementById('btnStudioTap');
+    if (btnStudioTap) btnStudioTap.onclick = () => handleTap(true);
+
+    const btnPreRoll = document.getElementById('btnPreRoll');
+    if (btnPreRoll) {
+      btnPreRoll.onclick = () => {
+        state.preRollEnabled = !state.preRollEnabled;
+        btnPreRoll.classList.toggle('btn-primary', state.preRollEnabled);
+        const text = document.getElementById('preRollText');
+        if (text) text.textContent = `Contagem: ${state.preRollEnabled ? '1 Comp' : 'Off'}`;
+      };
+    }
+
+    const btnSpeedTrainer = document.getElementById('btnSpeedTrainer');
+    if (btnSpeedTrainer) {
+      btnSpeedTrainer.onclick = () => {
+        if (!state.speedTrainerMode) state.speedTrainerMode = 0;
+        if (state.speedTrainerMode === 0) state.speedTrainerMode = 2;
+        else if (state.speedTrainerMode === 2) state.speedTrainerMode = 4;
+        else state.speedTrainerMode = 0;
+
+        btnSpeedTrainer.classList.toggle('btn-primary', state.speedTrainerMode > 0);
+        const text = document.getElementById('speedTrainerText');
+        if (text) text.textContent = state.speedTrainerMode > 0 ? `Treino: +${state.speedTrainerMode} BPM` : 'Treino: Off';
+      };
+    }
+
+    const btnShareLink = document.getElementById('btnShareLink');
+    if (btnShareLink) {
+      btnShareLink.onclick = shareBrequeLink;
+    }
+
 
     // Gerenciador de Abas (Tabs) - Desktop & Mobile
     const tabBtnBeatbox = document.getElementById('tabBtnBeatbox');
@@ -3598,6 +3950,7 @@
       initGridData();
       renderStudio();
       checkOrientation();
+      checkSharedBrequeUrl();
       if (window.BeatboxStudio) {
         window.BeatboxStudio.init();
       }
