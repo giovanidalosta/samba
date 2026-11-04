@@ -1821,12 +1821,14 @@
         {
           id: 'surdo3_base',
           name: 'Levada Base — Surdo de 3ª (Naumteria)',
-          introPattern: [
-            'corte', null, null, null, 'aberto', null, 'aberto', null,
-            'corte', null, null, null, 'aberto', 'aberto', null, 'aberto'
-          ],
           pattern: [
+            // Compasso 1
             'corte', null, null, null, 'aberto', null, 'aberto', null,
+            // Compasso 2
+            'corte', null, null, null, 'aberto', 'aberto', null, 'aberto',
+            // Compasso 3
+            'corte', null, null, null, 'aberto', null, 'aberto', null,
+            // Compasso 4
             'corte', null, 'aberto', null, 'corte', 'aberto', 'corte', 'aberto'
           ]
         }
@@ -1835,12 +1837,14 @@
         {
           id: 'caixa_base',
           name: 'Levada Base — Caixa (Naumteria)',
-          introPattern: [
-            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco',
-            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'rufado', 'fraco'
-          ],
           pattern: [
+            // Compasso 1
             'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco',
+            // Compasso 2
+            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'rufado', 'fraco',
+            // Compasso 3
+            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco',
+            // Compasso 4
             'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'fraco', 'fraco'
           ]
         }
@@ -1863,11 +1867,11 @@
         {
           id: 'naumteria_agogo_base',
           name: 'Levada Base — Agogô (Naumteria)',
-          introPattern: [
-            'boca1', null, null, 'boca1', 'boca3', null, 'boca4', null,
-            'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'
-          ],
           pattern: [
+            // Compasso 1 & 2
+            'boca1', null, null, 'boca1', 'boca3', null, 'boca4', null,
+            'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1',
+            // Compasso 3 & 4
             null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null,
             'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'
           ]
@@ -1895,23 +1899,63 @@
     const BATERIA_PRESETS = {
       samba_reto_naumteria: {
         name: 'Samba Reto Naumteria',
-        measures: 2,
+        measures: 4,
         bpm: 142,
         tracks: {
-          surdo1: ['abafado', null, null, null, 'aberto', null, null, null, 'abafado', null, null, null, 'aberto', null, null, null],
-          surdo2: ['aberto', null, null, null, 'abafado', null, null, null, 'aberto', null, null, null, 'abafado', null, null, null],
-          surdo3: ['corte', null, null, null, 'aberto', null, 'aberto', null, 'corte', null, 'aberto', null, 'corte', 'aberto', 'corte', 'aberto'],
-          caixa: ['forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'fraco', 'fraco'],
-          repique: ['meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'],
-          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'],
-          agogo: [null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null, 'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'],
-          ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
-          apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
-        },
-        tracksIntro: {
-          surdo3: ['corte', null, null, null, 'aberto', null, 'aberto', null, 'corte', null, null, null, 'aberto', 'aberto', null, 'aberto'],
-          caixa: ['forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'rufado', 'fraco'],
-          agogo: ['boca1', null, null, 'boca1', 'boca3', null, 'boca4', null, 'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1']
+          surdo1: [
+            'abafado', null, null, null, 'aberto', null, null, null,
+            'abafado', null, null, null, 'aberto', null, null, null,
+            'abafado', null, null, null, 'aberto', null, null, null,
+            'abafado', null, null, null, 'aberto', null, null, null
+          ],
+          surdo2: [
+            'aberto', null, null, null, 'abafado', null, null, null,
+            'aberto', null, null, null, 'abafado', null, null, null,
+            'aberto', null, null, null, 'abafado', null, null, null,
+            'aberto', null, null, null, 'abafado', null, null, null
+          ],
+          surdo3: [
+            'corte', null, null, null, 'aberto', null, 'aberto', null,
+            'corte', null, null, null, 'aberto', 'aberto', null, 'aberto',
+            'corte', null, null, null, 'aberto', null, 'aberto', null,
+            'corte', null, 'aberto', null, 'corte', 'aberto', 'corte', 'aberto'
+          ],
+          caixa: [
+            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco',
+            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'rufado', 'fraco',
+            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco',
+            'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'fraco', 'fraco'
+          ],
+          repique: [
+            'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open',
+            'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open',
+            'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open',
+            'meio', 'intermedio', 'ringshot', 'open', 'meio', 'intermedio', 'ringshot', 'open'
+          ],
+          tamborim: [
+            'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio',
+            'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio',
+            'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio',
+            'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'
+          ],
+          agogo: [
+            'boca1', null, null, 'boca1', 'boca3', null, 'boca4', null,
+            'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1',
+            null, 'boca1', null, 'boca1', 'boca3', null, 'boca4', null,
+            'boca3', null, 'boca3', null, 'boca2', 'boca2', null, 'boca1'
+          ],
+          ganza: [
+            'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco',
+            'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco',
+            'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco',
+            'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'
+          ],
+          apito: [
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null
+          ]
         }
       }
     };
@@ -2845,8 +2889,14 @@
       if (!found) return;
 
       audio.init();
-      const totalSteps = getTotalSteps();
       const stepsPerMeasure = getStepsPerMeasure();
+      const neededMeasures = Math.ceil(((found.introPattern || found.pattern).length) / stepsPerMeasure);
+      if (state.measures < neededMeasures) {
+        state.measures = neededMeasures;
+        document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
+        initGridData();
+      }
+      const totalSteps = getTotalSteps();
       const sub = found.savedSubdivision || 'semicolcheia';
 
       state.gridData[instId] = expandPatternToGrid(
