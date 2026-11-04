@@ -2001,13 +2001,20 @@
         };
       }
 
+      getDecoderContext() {
+        if (!this.decoderCtx) {
+          const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+          this.decoderCtx = new OfflineCtx(1, 44100, 44100);
+        }
+        return this.decoderCtx;
+      }
+
       init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           this.ctx = new AudioContext();
           this.isInitialized = true;
           this.initNoiseBuffer();
-          this.preloadSamples();
         }
         if (this.ctx && this.ctx.state === 'suspended') {
           this.ctx.resume().catch(() => {});
@@ -2027,23 +2034,19 @@
       }
 
       preloadSamples() {
-        if (!this.ctx) return Promise.resolve();
-        const uniqueUrls = Array.from(new Set(Object.values(this.sampleConfig).map(cfg => cfg.url)));
-        
-        // Decodificação em fila suave para não sobrecarregar o worker thread do navegador
-        (async () => {
-          for (const url of uniqueUrls) {
-            try {
-              await this.loadSample(url);
-            } catch (e) { }
+        // Pré-carrega todos os samples imediatamente via decoder offline
+        // Não depende do AudioContext estar 'running', decodifica 100% no carregamento da página!
+        if (typeof window !== 'undefined' && window.SAMBA_SOUNDBANK) {
+          for (const url of Object.keys(window.SAMBA_SOUNDBANK)) {
+            this.loadSample(url);
           }
-        })();
-        return Promise.resolve();
+        }
       }
 
       decodeAudio(arrayBuffer, targetCtx = null) {
-        const ctx = targetCtx || this.ctx;
-        if (!ctx) return Promise.reject(new Error('AudioContext indisponível'));
+        // Usa OfflineAudioContext para decodificação instantânea sem bloqueio por autoplay
+        const ctx = targetCtx || this.getDecoderContext();
+        if (!ctx) return Promise.reject(new Error('Contexto de decodificação indisponível'));
         const copy = arrayBuffer.slice(0);
         return new Promise((resolve, reject) => {
           let settled = false;
@@ -2069,7 +2072,7 @@
         if (this.loadingPromises[url]) return this.loadingPromises[url];
 
         this.loadingPromises[url] = (async () => {
-          // 1. Tenta carregar a partir do Soundbank Base64 embutido (100% offline, file:/// sem CORS)
+          // 1. Tenta decodificar do Soundbank Base64 embutido (100% offline, file:/// sem CORS)
           if (typeof window !== 'undefined' && window.SAMBA_SOUNDBANK && window.SAMBA_SOUNDBANK[url]) {
             try {
               const dataUri = window.SAMBA_SOUNDBANK[url];
@@ -2110,6 +2113,7 @@
       }
 
       playSample(cfg, volMult = 1.0, targetCtx = null, startTime = null) {
+        this.init();
         const ctx = targetCtx || this.ctx;
         if (!ctx) return false;
         const url = typeof cfg === 'string' ? cfg : cfg.url;
@@ -2278,16 +2282,13 @@
           case 'caixa': {
             const isRim = articulationId === 'ringshot';
             const isGhost = articulationId === 'fraco';
-            const isRufado = articulationId === 'rufado';
             const dur = isGhost ? 0.07 : (isRim ? 0.20 : 0.15);
             const amt = isGhost ? 0.35 : (isRim ? 1.1 : 0.85);
 
-            // 1. Corpo / Afinação de pele da caixa (220Hz -> 140Hz)
             playTone(isRim ? 320 : 220, 140, dur * 0.6, amt * 0.6, 'triangle');
-            // 2. Ruído metálico da esteira de resposta (2600Hz a 4000Hz)
             playNoise(isRim ? 3400 : 2800, dur, amt * 0.9, 'bandpass', 1.4);
             if (isRim) {
-              playTone(1250, 900, 0.06, 0.7, 'sine'); // estalo do aro
+              playTone(1250, 900, 0.06, 0.7, 'sine');
             }
             break;
           }
@@ -2298,20 +2299,16 @@
             const isSlap = articulationId === 'slap';
 
             if (isSlap) {
-              // Tapa de mão seco e estalado
               playNoise(3000, 0.06, 0.95, 'highpass', 1.2);
               playTone(480, 250, 0.05, 0.7, 'triangle');
             } else if (isOpenMao) {
-              // Toque de mão aberta ressonante
               playTone(410, 360, 0.32, 0.9, 'sine');
               playTone(820, 720, 0.20, 0.4, 'triangle');
             } else if (isRim) {
-              // Estalo de rimshot na borda
               playTone(1500, 1200, 0.12, 1.0, 'triangle');
               playTone(460, 380, 0.15, 0.7, 'sine');
               playNoise(3800, 0.08, 0.8, 'bandpass', 2.0);
             } else {
-              // Baquetada no centro
               playTone(450, 370, 0.18, 0.85, 'triangle');
               playTone(900, 740, 0.10, 0.4, 'sine');
               playNoise(2200, 0.04, 0.45, 'bandpass', 1.2);
@@ -2330,7 +2327,6 @@
             const dur = isFraco ? 0.04 : (isForte ? 0.08 : 0.06);
             const amt = isFraco ? 0.4 : (isForte ? 1.0 : 0.75);
 
-            // Toque cortante característico do tamborim
             playTone(1080, 920, dur, amt, 'triangle');
             playTone(2160, 1840, dur * 0.5, amt * 0.5, 'sine');
             playNoise(3800, 0.025, amt * 0.6, 'highpass', 1.8);
@@ -2339,10 +2335,10 @@
 
           case 'agogo': {
             const agogoFreqs = {
-              boca1: 523,  // Boca 1 (Mais Grave) ~ Dó5
-              boca2: 659,  // Boca 2 (Médio-Grave) ~ Mi5
-              boca3: 830,  // Boca 3 (Médio-Aguda) ~ Sol#5
-              boca4: 1046  // Boca 4 (Mais Aguda) ~ Dó6
+              boca1: 523,
+              boca2: 659,
+              boca3: 830,
+              boca4: 1046
             };
             const f = agogoFreqs[articulationId] || 659;
             playBell(f, 0.35, 0.85);
@@ -2544,7 +2540,7 @@
     /* =========================================================================
        3. ESTADO DA APLICAÇÃO E SEQUENCIADOR
        ========================================================================= */
-    const audio = new SambaAudioEngine();
+    const audio = new SambaAudioEngine();\n    audio.preloadSamples();
 
     const state = {
       bpm: 142,
