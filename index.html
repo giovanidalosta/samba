@@ -1396,16 +1396,14 @@
           <span id="speedTrainerIcon">⚡</span> <span id="speedTrainerText">Treino: Off</span>
         </button>
 
-        <!-- Presets de Bateria Completa / Breques -->
+        <!-- Presets de Levadas Base da Bateria -->
         <div class="control-group">
-          <label for="bateriaPresetSelect">Arranjo</label>
-          <select id="bateriaPresetSelect" title="Carregar levada ou breque completo na bateria">
-            <option value="" disabled selected hidden>⚡ Preset...</option>
-            <option value="batucada_completa">🥁 Batucada Completa (Levada Base)</option>
-            <option value="subida_entrada">🔥 Chamada de Repique + Subida</option>
-            <option value="breque_parada_retomada">✋ Breque Parada Seca + Retomada</option>
-            <option value="breque_sincopado">⚡ Breque Sincopado (Convenção)</option>
-            <option value="virada_geral">🚀 Virada Geral + Apito de Mestre</option>
+          <label for="bateriaPresetSelect">Levada Base</label>
+          <select id="bateriaPresetSelect" title="Carregar levada base da bateria completa">
+            <option value="" disabled selected hidden>🥁 Levada Base...</option>
+            <option value="batucada_completa">🥁 Batucada Base Oficial (Naumteria)</option>
+            <option value="batucada_tradicional">🥁 Batucada Base Tradicional (Rio / Estácio)</option>
+            <option value="batucada_partido_alto">🥁 Batucada Base Swingada (Partido Alto)</option>
           </select>
         </div>
 
@@ -1878,7 +1876,7 @@
        ========================================================================= */
     const BATERIA_PRESETS = {
       batucada_completa: {
-        name: 'Batucada Completa (Levada Base)',
+        name: 'Batucada Base Oficial (Naumteria)',
         measures: 2,
         tracks: {
           surdo1: ['mao', null, null, null, 'aberto', null, null, null, 'mao', null, null, null, 'aberto', null, null, null],
@@ -1898,70 +1896,34 @@
           caixa: CAIXA_IMPERIO_SERRANO_STEPS
         }
       },
-      subida_entrada: {
-        name: 'Chamada de Repique + Subida da Bateria',
+      batucada_tradicional: {
+        name: 'Batucada Base Tradicional (Rio / Estácio)',
         measures: 2,
         tracks: {
-          surdo1: [null, null, null, null, null, null, null, null, 'abafado', null, null, null, 'aberto', null, null, null],
-          surdo2: [null, null, null, null, null, null, null, null, 'aberto', null, null, null, 'abafado', null, null, null],
-          surdo3: [null, null, null, null, 'aro', null, 'aro', null, 'rulo', null, 'rulo', null, 'aberto', null, 'corte', null],
-          caixa: [null, null, null, null, null, null, null, null, 'rufado', 'fraco', 'rufado', 'fraco', 'ringshot', 'fraco', 'forte', null],
-          repique: ['flam', null, 'ringshot', null, 'ringshot', 'meio', 'ringshot', null, 'rulo', null, 'rulo', null, 'ringshot', 'meio', 'ringshot', null],
-          tamborim: [null, null, null, null, null, null, null, null, 'forte', null, 'forte', null, 'forte', 'medio', 'forte', null],
-          agogo: [null, null, null, null, null, null, null, null, 'boca1', 'boca2', 'boca3', 'boca4', 'boca4', null, null, null],
-          ganza: [null, null, null, null, null, null, null, null, 'forte', 'fraco', 'fraco', 'fraco', 'forte', null, null, null],
-          apito: ['longo', null, null, null, 'curto', null, 'curto', null, null, null, null, null, null, null, null, null]
+          surdo1: ['abafado', null, null, null, 'aberto', null, null, null, 'abafado', null, null, null, 'aberto', null, null, null],
+          surdo2: ['aberto', null, null, null, 'abafado', null, null, null, 'aberto', null, null, null, 'abafado', null, null, null],
+          surdo3: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null, 'abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null],
+          caixa: ['forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'fraco'],
+          repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
+          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'],
+          agogo: ['boca1', null, 'boca2', null, 'boca3', null, 'boca4', null, 'boca1', null, 'boca2', null, 'boca3', null, 'boca4', null],
+          ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
+          apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
         }
       },
-      breque_parada_retomada: {
-        name: 'Breque Parada Seca + Retomada',
+      batucada_partido_alto: {
+        name: 'Batucada Base Swingada (Partido Alto / Roda)',
         measures: 2,
         tracks: {
-          surdo1: ['aberto', null, 'abafado', null, null, null, null, null, 'mao', null, null, null, 'aberto', null, null, null],
-          surdo2: ['aberto', null, 'abafado', null, null, null, null, null, 'aberto', null, null, null, 'mao', null, null, null],
-          surdo3: ['corte', null, 'corte', null, null, null, 'aberto', 'aberto', 'abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null],
-          caixa: ['ringshot', null, 'ringshot', null, null, null, 'rufado', 'forte', 'forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco'],
-          repique: ['ringshot', null, 'slap', null, 'flam', null, 'ringshot', 'meio', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
-          tamborim: ['forte', null, 'forte', null, null, null, 'forte', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio'],
-          agogo: ['boca4', null, 'boca1', null, null, null, 'boca3', 'boca4', 'boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2'],
-          ganza: ['forte', null, 'forte', null, null, null, 'forte', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'],
-          apito: ['trinado', null, null, null, 'curto', null, 'curto', null, null, null, null, null, null, null, null, null]
-        },
-        tracksMeta: {
-          caixa: [null, null, null, null, null, null, null, null, ...CAIXA_IMPERIO_SERRANO_STEPS.slice(8, 16)]
-        }
-      },
-      breque_sincopado: {
-        name: 'Breque Sincopado (Convenção Naumteria)',
-        measures: 2,
-        tracks: {
-          surdo1: ['aberto', null, null, 'aberto', null, null, 'abafado', null, 'aberto', null, 'aberto', null, 'abafado', null, null, null],
-          surdo2: [null, null, 'aberto', null, null, 'aberto', 'abafado', null, 'aberto', null, 'aberto', null, 'abafado', null, null, null],
-          surdo3: ['aberto', null, 'aberto', 'aberto', null, 'aberto', 'corte', null, 'aro', 'aro', 'aberto', null, 'corte', null, null, null],
-          caixa: ['ringshot', 'fraco', 'ringshot', 'ringshot', 'fraco', 'ringshot', 'forte', null, 'rufado', 'fraco', 'ringshot', null, 'ringshot', null, null, null],
-          repique: ['ringshot', 'meio', 'slap', 'ringshot', 'meio', 'slap', 'ringshot', null, 'rulo', null, 'ringshot', null, 'ringshot', null, null, null],
-          tamborim: ['forte', null, 'forte', 'forte', null, 'forte', 'forte', null, 'forte', 'medio', 'forte', null, 'forte', null, null, null],
-          agogo: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca1', null, 'boca4', 'boca3', 'boca2', null, 'boca1', null, null, null],
-          ganza: ['forte', null, 'forte', 'forte', null, 'forte', 'forte', null, 'forte', 'fraco', 'forte', null, 'forte', null, null, null],
-          apito: [null, null, null, null, null, null, null, null, 'trinado', null, null, null, 'curto', null, null, null]
-        }
-      },
-      virada_geral: {
-        name: 'Virada Geral + Apito de Mestre',
-        measures: 2,
-        tracks: {
-          surdo1: ['mao', null, null, null, 'aberto', null, null, null, 'aberto', null, 'aberto', null, 'aberto', null, 'abafado', null],
-          surdo2: ['aberto', null, null, null, 'mao', null, null, null, null, 'aberto', null, 'aberto', null, 'aberto', 'abafado', null],
-          surdo3: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null, 'rulo', null, 'rulo', null, 'rulo', null, 'corte', null],
-          caixa: ['forte', 'fraco', 'forte', 'forte', 'fraco', 'fraco', 'forte', 'fraco', 'rufado', 'forte', 'rufado', 'forte', 'ringshot', 'forte', 'ringshot', null],
-          repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'ringshot', 'meio', 'slap', 'open', 'ringshot', 'meio', 'ringshot', null],
-          tamborim: ['forte', 'medio', 'fraco', 'medio', 'forte', 'medio', 'fraco', 'medio', 'forte', null, 'forte', null, 'forte', 'medio', 'forte', null],
-          agogo: ['boca1', null, 'boca2', 'boca3', null, 'boca4', 'boca3', 'boca2', 'boca1', 'boca1', 'boca2', 'boca2', 'boca3', 'boca3', 'boca4', null],
-          ganza: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', null],
-          apito: [null, null, null, null, null, null, 'trinado', null, null, null, null, null, 'curto', null, 'curto', null]
-        },
-        tracksMeta: {
-          caixa: [...CAIXA_IMPERIO_SERRANO_STEPS.slice(0, 8), null, null, null, null, null, null, null, null]
+          surdo1: ['mao', null, 'abafado', null, 'aberto', null, null, 'mao', 'mao', null, 'abafado', null, 'aberto', null, null, 'mao'],
+          surdo2: ['aberto', null, null, null, 'mao', null, null, 'aberto', 'aberto', null, null, null, 'mao', null, null, 'aberto'],
+          surdo3: [null, 'aberto', 'corte', 'aberto', null, 'aberto', 'abafado', 'aberto', null, 'aberto', 'corte', 'aberto', null, 'aberto', 'abafado', 'aberto'],
+          caixa: ['ringshot', 'fraco', 'forte', 'fraco', 'ringshot', 'fraco', 'fraco', 'forte', 'ringshot', 'fraco', 'forte', 'fraco', 'ringshot', 'fraco', 'fraco', 'forte'],
+          repique: ['meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap', 'meio', 'intermedio', 'open', 'slap', 'ringshot', 'intermedio', 'open', 'slap'],
+          tamborim: ['forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte', 'forte', null, 'forte', 'medio', null, 'forte', 'fraco', 'forte'],
+          agogo: ['boca4', null, 'boca3', null, 'boca2', null, 'boca1', 'boca1', 'boca4', null, 'boca3', null, 'boca2', null, 'boca1', 'boca1'],
+          ganza: ['forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco', 'forte', 'fraco'],
+          apito: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
         }
       }
     };
