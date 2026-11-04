@@ -1800,7 +1800,18 @@
         { id: 'surdo2_base', name: 'Levada Base — Surdo de 2ª', pattern: ['aberto', null, null, null, 'abafado', null, null, null] }
       ],
       surdo3: [
-        { id: 'surdo3_base', name: 'Levada Base — Surdo de 3ª', pattern: ['abafado', null, 'aberto', 'aberto', null, 'corte', 'aberto', null] }
+        {
+          id: 'surdo3_base',
+          name: 'Levada Base — Surdo de 3ª (Naumteria)',
+          introPattern: [
+            'aberto', null, 'aberto', null, 'corte', null, null, null,
+            'aberto', 'aberto', null, 'aberto', 'corte', null, null, null
+          ],
+          pattern: [
+            'aberto', null, 'aberto', null, 'corte', null, 'aberto', null,
+            'corte', 'aberto', 'corte', 'aberto', 'corte', null, null, null
+          ]
+        }
       ],
       caixa: [
         {
