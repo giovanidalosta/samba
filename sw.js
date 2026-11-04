@@ -1,10 +1,11 @@
 // Naumteria Studio - Service Worker
-const CACHE_NAME = 'naumteria-studio-v10';
+const CACHE_NAME = 'naumteria-studio-v11';
 const CORE_ASSETS = [
   './',
   'index.html',
   'beatbox_studio.css',
   'beatbox_studio.js',
+  'assets/soundbank.js',
   'manifest.json',
   'assets/logo-naumteria.png',
   'assets/icon-192.png',
