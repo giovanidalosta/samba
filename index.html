@@ -2006,6 +2006,7 @@
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           this.ctx = new AudioContext();
           this.isInitialized = true;
+          this.initNoiseBuffer();
           this.preloadSamples();
         }
         if (this.ctx && this.ctx.state === 'suspended') {
@@ -2013,25 +2014,52 @@
         }
       }
 
+      initNoiseBuffer() {
+        if (this.noiseBuffer || !this.ctx) return;
+        try {
+          const rate = this.ctx.sampleRate || 44100;
+          this.noiseBuffer = this.ctx.createBuffer(1, rate, rate);
+          const out = this.noiseBuffer.getChannelData(0);
+          for (let i = 0; i < rate; i++) {
+            out[i] = Math.random() * 2 - 1;
+          }
+        } catch (e) { }
+      }
+
       preloadSamples() {
         if (!this.ctx) return Promise.resolve();
-        const uniqueUrls = new Set(Object.values(this.sampleConfig).map(cfg => cfg.url));
-        return Promise.all(Array.from(uniqueUrls).map(url => this.loadSample(url)));
+        const uniqueUrls = Array.from(new Set(Object.values(this.sampleConfig).map(cfg => cfg.url)));
+        
+        // Decodificação em fila suave para não sobrecarregar o worker thread do navegador
+        (async () => {
+          for (const url of uniqueUrls) {
+            try {
+              await this.loadSample(url);
+            } catch (e) { }
+          }
+        })();
+        return Promise.resolve();
       }
 
       decodeAudio(arrayBuffer, targetCtx = null) {
         const ctx = targetCtx || this.ctx;
+        if (!ctx) return Promise.reject(new Error('AudioContext indisponível'));
+        const copy = arrayBuffer.slice(0);
         return new Promise((resolve, reject) => {
-          if (!ctx) return reject(new Error('AudioContext indisponível'));
+          let settled = false;
+          const onSuccess = (decoded) => {
+            if (!settled) { settled = true; resolve(decoded); }
+          };
+          const onError = (err) => {
+            if (!settled) { settled = true; reject(err || new Error('decodeAudioData falhou')); }
+          };
           try {
-            const copy = arrayBuffer.slice(0);
-            ctx.decodeAudioData(
-              copy,
-              decoded => resolve(decoded),
-              err => reject(err)
-            );
+            const p = ctx.decodeAudioData(copy, onSuccess, onError);
+            if (p && typeof p.then === 'function') {
+              p.then(onSuccess, onError);
+            }
           } catch (e) {
-            reject(e);
+            onError(e);
           }
         });
       }
@@ -2041,11 +2069,12 @@
         if (this.loadingPromises[url]) return this.loadingPromises[url];
 
         this.loadingPromises[url] = (async () => {
-          // 1. Tenta decodificar do Soundbank Base64 embutido (funciona 100% em file:/// e offline sem CORS)
+          // 1. Tenta carregar a partir do Soundbank Base64 embutido (100% offline, file:/// sem CORS)
           if (typeof window !== 'undefined' && window.SAMBA_SOUNDBANK && window.SAMBA_SOUNDBANK[url]) {
             try {
               const dataUri = window.SAMBA_SOUNDBANK[url];
-              const base64 = dataUri.split(',')[1];
+              const commaIdx = dataUri.indexOf(',');
+              const base64 = commaIdx !== -1 ? dataUri.substring(commaIdx + 1) : dataUri;
               const binaryString = atob(base64);
               const len = binaryString.length;
               const bytes = new Uint8Array(len);
@@ -2053,25 +2082,28 @@
                 bytes[i] = binaryString.charCodeAt(i);
               }
               const decoded = await this.decodeAudio(bytes.buffer, targetCtx);
-              this.sampleBuffers[url] = decoded;
-              return decoded;
+              if (decoded) {
+                this.sampleBuffers[url] = decoded;
+                return decoded;
+              }
             } catch (err) {
-              console.warn(`Erro decodificando soundbank embutido para ${url}:`, err);
+              console.warn(`Aviso no soundbank para ${url}:`, err);
             }
           }
 
-          // 2. Fallback para fetch de rede (quando executado via servidor HTTP/HTTPS)
+          // 2. Fallback de rede (quando em servidor web HTTP/HTTPS)
           try {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const arrayBuf = await res.arrayBuffer();
             const decoded = await this.decodeAudio(arrayBuf, targetCtx);
-            this.sampleBuffers[url] = decoded;
-            return decoded;
-          } catch (err) {
-            console.warn(`Fallback para síntese em ${url}:`, err.message);
-            return null;
-          }
+            if (decoded) {
+              this.sampleBuffers[url] = decoded;
+              return decoded;
+            }
+          } catch (err) { }
+
+          return null;
         })();
 
         return this.loadingPromises[url];
@@ -2081,7 +2113,7 @@
         const ctx = targetCtx || this.ctx;
         if (!ctx) return false;
         const url = typeof cfg === 'string' ? cfg : cfg.url;
-        const volume = (cfg.vol ?? 1.0) * volMult;
+        const volume = Math.min(2.0, (cfg.vol ?? 1.0) * volMult);
         const playbackRate = cfg.rate ?? 1.0;
 
         const buffer = this.sampleBuffers[url];
@@ -2090,18 +2122,18 @@
           return false;
         }
 
-        const t = startTime !== null ? startTime : ctx.currentTime;
+        const now = ctx.currentTime;
+        const t = startTime !== null ? Math.max(now, startTime) : (now + 0.003);
 
-        // Choke monofônico: quando o mesmo instrumento (ex.: tamborim) recebe nova baquetada,
-        // amortece suavemente a cauda da nota anterior em 6ms para evitar faseamento no carreteiro
+        // Choke monofônico para tamborim (abafa suavemente nota anterior)
         if (cfg.chokeGroup && ctx === this.ctx) {
           const prev = this.activeChokeVoices[cfg.chokeGroup];
           if (prev && prev.gainNode) {
             try {
               prev.gainNode.gain.cancelScheduledValues(t);
               prev.gainNode.gain.setValueAtTime(prev.lastVol || 0.2, t);
-              prev.gainNode.gain.linearRampToValueAtTime(0.0001, t + 0.006);
-              if (prev.source) prev.source.stop(t + 0.008);
+              prev.gainNode.gain.linearRampToValueAtTime(0.0001, t + 0.008);
+              if (prev.source) prev.source.stop(t + 0.01);
             } catch (e) { }
           }
         }
@@ -2112,22 +2144,9 @@
 
         const gainNode = ctx.createGain();
         gainNode.gain.setValueAtTime(volume, t);
-        if (cfg.decay) {
-          gainNode.gain.setValueAtTime(volume, t + cfg.decay * 0.4);
-          gainNode.gain.exponentialRampToValueAtTime(0.001, t + cfg.decay);
-        }
-
-        if (cfg.filter) {
-          const filter = ctx.createBiquadFilter();
-          filter.type = cfg.filter.type;
-          filter.frequency.value = cfg.filter.freq;
-          source.connect(filter);
-          filter.connect(gainNode);
-        } else {
-          source.connect(gainNode);
-        }
 
         gainNode.connect(ctx.destination);
+        source.connect(gainNode);
         source.start(t);
 
         if (cfg.chokeGroup && ctx === this.ctx) {
@@ -2136,54 +2155,80 @@
         return true;
       }
 
-      /* Síntese procedural de alta fidelidade para todos os naipes (funciona instantaneamente sem arquivos) */
+      /* =======================================================================
+         SÍNTESE PROCEDURAL DE ALTA FIDELIDADE (ZERO LATÊNCIA E NUNCA FALHA)
+         Garante áudio perfeito e encorpado para TODOS os 8 naipes da bateria.
+         ======================================================================= */
       playFallbackInstrument(instrumentId, articulationId, volMult = 1.0, startTime = null) {
+        this.init();
         const ctx = this.ctx;
         if (!ctx) return;
-        const t = startTime !== null ? startTime : ctx.currentTime;
-        const vol = Math.min(1.5, Math.max(0.05, volMult));
 
-        const playNoiseBurst = (freq, duration, q = 1.0, type = 'bandpass', gainVal = 0.5) => {
+        const now = ctx.currentTime;
+        const t = startTime !== null ? Math.max(now, startTime) : (now + 0.003);
+        const vol = Math.min(1.8, Math.max(0.1, volMult));
+
+        // Helper para ruído percussivo (esteira de caixa, ganzá, estalo de repique)
+        const playNoise = (filterFreq, durationSec, gainAmt = 0.7, filterType = 'bandpass', qVal = 1.5) => {
           try {
-            const bufferSize = Math.max(256, Math.floor(ctx.sampleRate * duration));
-            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-              output[i] = Math.random() * 2 - 1;
-            }
-            const whiteNoise = ctx.createBufferSource();
-            whiteNoise.buffer = noiseBuffer;
+            if (!this.noiseBuffer) this.initNoiseBuffer();
+            const noise = ctx.createBufferSource();
+            noise.buffer = this.noiseBuffer;
+            noise.loop = true;
 
             const filter = ctx.createBiquadFilter();
-            filter.type = type;
-            filter.frequency.setValueAtTime(freq, t);
-            filter.Q.value = q;
+            filter.type = filterType;
+            filter.frequency.setValueAtTime(filterFreq, t);
+            filter.Q.value = qVal;
 
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(gainVal * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+            gain.gain.setValueAtTime(gainAmt * vol, t);
+            gain.gain.linearRampToValueAtTime(0.0001, t + durationSec);
 
-            whiteNoise.connect(filter);
+            noise.connect(filter);
             filter.connect(gain);
             gain.connect(ctx.destination);
-            whiteNoise.start(t);
-            whiteNoise.stop(t + duration);
+
+            noise.start(t);
+            noise.stop(t + durationSec + 0.02);
           } catch (e) { }
         };
 
-        const playMetalPing = (freq, duration, gainVal = 0.6) => {
+        // Helper para tom percussivo ressonante de metal/pele
+        const playTone = (startFreq, endFreq, durationSec, gainAmt = 0.8, oscType = 'triangle') => {
+          try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = oscType;
+            osc.frequency.setValueAtTime(startFreq, t);
+            if (endFreq && endFreq !== startFreq) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t + durationSec * 0.4);
+            }
+            gain.gain.setValueAtTime(gainAmt * vol, t);
+            gain.gain.linearRampToValueAtTime(0.0001, t + durationSec);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + durationSec + 0.02);
+          } catch (e) { }
+        };
+
+        // Helper para campanas/sinos metálicos harmônicos (Agogô)
+        const playBell = (fundamentalFreq, durationSec = 0.35, gainAmt = 0.75) => {
           try {
             const osc1 = ctx.createOscillator();
             const osc2 = ctx.createOscillator();
             const gain = ctx.createGain();
 
             osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(freq, t);
-            osc2.type = 'triangle';
-            osc2.frequency.setValueAtTime(freq * 1.62, t);
+            osc1.frequency.setValueAtTime(fundamentalFreq, t);
 
-            gain.gain.setValueAtTime(gainVal * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(fundamentalFreq * 2.02, t);
+
+            gain.gain.setValueAtTime(gainAmt * vol, t);
+            gain.gain.linearRampToValueAtTime(0.0001, t + durationSec);
 
             osc1.connect(gain);
             osc2.connect(gain);
@@ -2191,174 +2236,167 @@
 
             osc1.start(t);
             osc2.start(t);
-            osc1.stop(t + duration);
-            osc2.stop(t + duration);
+            osc1.stop(t + durationSec + 0.02);
+            osc2.stop(t + durationSec + 0.02);
           } catch (e) { }
         };
 
         switch (instrumentId) {
           case 'surdo1': {
             const isMuted = articulationId === 'abafado' || articulationId === 'mao';
-            const dur = isMuted ? 0.12 : 0.60;
-            const osc = ctx.createOscillator();
-            const oscHarm = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(95, t);
-            osc.frequency.exponentialRampToValueAtTime(58, t + 0.05);
-
-            oscHarm.type = 'triangle';
-            oscHarm.frequency.setValueAtTime(190, t);
-            oscHarm.frequency.exponentialRampToValueAtTime(116, t + 0.05);
-
-            gain.gain.setValueAtTime(0.9 * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-            osc.connect(gain);
-            oscHarm.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t);
-            oscHarm.start(t);
-            osc.stop(t + dur);
-            oscHarm.stop(t + dur);
-            playNoiseBurst(300, 0.02, 1.0, 'lowpass', 0.4);
+            const dur = isMuted ? 0.14 : 0.65;
+            playTone(95, 58, dur, 1.0, 'sine');
+            playTone(190, 116, dur * 0.7, 0.5, 'triangle');
+            playNoise(250, 0.03, 0.4, 'lowpass', 1.0);
             break;
           }
+
           case 'surdo2': {
             const isMuted = articulationId === 'abafado' || articulationId === 'mao';
-            const dur = isMuted ? 0.12 : 0.55;
-            const osc = ctx.createOscillator();
-            const oscHarm = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(130, t);
-            osc.frequency.exponentialRampToValueAtTime(82, t + 0.05);
-
-            oscHarm.type = 'triangle';
-            oscHarm.frequency.setValueAtTime(260, t);
-            oscHarm.frequency.exponentialRampToValueAtTime(164, t + 0.05);
-
-            gain.gain.setValueAtTime(0.85 * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-
-            osc.connect(gain);
-            oscHarm.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t);
-            oscHarm.start(t);
-            osc.stop(t + dur);
-            oscHarm.stop(t + dur);
-            playNoiseBurst(400, 0.02, 1.0, 'lowpass', 0.35);
+            const dur = isMuted ? 0.14 : 0.55;
+            playTone(135, 82, dur, 0.95, 'sine');
+            playTone(270, 164, dur * 0.7, 0.45, 'triangle');
+            playNoise(320, 0.03, 0.35, 'lowpass', 1.0);
             break;
           }
+
           case 'surdo3': {
             const isCut = articulationId === 'corte';
             const isAro = articulationId === 'aro';
             if (isAro) {
-              playMetalPing(1200, 0.08, 0.7);
-              playNoiseBurst(2500, 0.04, 2.0, 'bandpass', 0.5);
+              playTone(1100, 950, 0.08, 0.85, 'square');
+              playNoise(2800, 0.04, 0.5, 'bandpass', 2.0);
               return;
             }
-            const dur = isCut ? 0.07 : (articulationId === 'abafado' ? 0.14 : 0.45);
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(170, t);
-            osc.frequency.exponentialRampToValueAtTime(115, t + 0.04);
-            gain.gain.setValueAtTime(0.9 * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t);
-            osc.stop(t + dur);
-            playNoiseBurst(600, 0.025, 1.0, 'lowpass', 0.45);
+            const dur = isCut ? 0.08 : (articulationId === 'abafado' ? 0.15 : 0.45);
+            playTone(175, 115, dur, 0.95, 'sine');
+            playTone(350, 230, dur * 0.6, 0.4, 'triangle');
+            playNoise(450, 0.03, 0.4, 'lowpass', 1.0);
             break;
           }
+
           case 'caixa': {
             const isRim = articulationId === 'ringshot';
             const isGhost = articulationId === 'fraco';
-            const dur = isGhost ? 0.06 : (isRim ? 0.18 : 0.14);
-            playNoiseBurst(2800, dur, 1.8, 'bandpass', isGhost ? 0.35 : (isRim ? 0.95 : 0.75));
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(isRim ? 320 : 210, t);
-            osc.frequency.exponentialRampToValueAtTime(130, t + 0.03);
-            gain.gain.setValueAtTime((isGhost ? 0.25 : 0.7) * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t + (isGhost ? 0.04 : 0.08));
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.08);
+            const isRufado = articulationId === 'rufado';
+            const dur = isGhost ? 0.07 : (isRim ? 0.20 : 0.15);
+            const amt = isGhost ? 0.35 : (isRim ? 1.1 : 0.85);
+
+            // 1. Corpo / Afinação de pele da caixa (220Hz -> 140Hz)
+            playTone(isRim ? 320 : 220, 140, dur * 0.6, amt * 0.6, 'triangle');
+            // 2. Ruído metálico da esteira de resposta (2600Hz a 4000Hz)
+            playNoise(isRim ? 3400 : 2800, dur, amt * 0.9, 'bandpass', 1.4);
+            if (isRim) {
+              playTone(1250, 900, 0.06, 0.7, 'sine'); // estalo do aro
+            }
             break;
           }
+
           case 'repique': {
             const isRim = articulationId === 'ringshot' || articulationId === 'flam';
             const isOpenMao = articulationId === 'open';
             const isSlap = articulationId === 'slap';
+
             if (isSlap) {
-              playNoiseBurst(2200, 0.05, 1.5, 'highpass', 0.85);
-              playMetalPing(480, 0.04, 0.7);
+              // Tapa de mão seco e estalado
+              playNoise(3000, 0.06, 0.95, 'highpass', 1.2);
+              playTone(480, 250, 0.05, 0.7, 'triangle');
             } else if (isOpenMao) {
-              playMetalPing(390, 0.28, 0.8);
+              // Toque de mão aberta ressonante
+              playTone(410, 360, 0.32, 0.9, 'sine');
+              playTone(820, 720, 0.20, 0.4, 'triangle');
             } else if (isRim) {
-              playMetalPing(1450, 0.12, 0.95);
-              playNoiseBurst(3500, 0.06, 2.0, 'bandpass', 0.8);
+              // Estalo de rimshot na borda
+              playTone(1500, 1200, 0.12, 1.0, 'triangle');
+              playTone(460, 380, 0.15, 0.7, 'sine');
+              playNoise(3800, 0.08, 0.8, 'bandpass', 2.0);
             } else {
-              playMetalPing(440, 0.15, 0.7);
-              playNoiseBurst(1800, 0.03, 1.0, 'bandpass', 0.4);
+              // Baquetada no centro
+              playTone(450, 370, 0.18, 0.85, 'triangle');
+              playTone(900, 740, 0.10, 0.4, 'sine');
+              playNoise(2200, 0.04, 0.45, 'bandpass', 1.2);
             }
             break;
           }
+
           case 'tamborim': {
             const isAro = articulationId === 'aro';
             if (isAro) {
-              playMetalPing(2400, 0.05, 0.7);
+              playTone(2200, 1800, 0.05, 0.85, 'square');
               return;
             }
             const isForte = articulationId === 'forte';
             const isFraco = articulationId === 'fraco';
-            const dur = isFraco ? 0.035 : (isForte ? 0.065 : 0.05);
-            playMetalPing(1050, dur, isFraco ? 0.38 : (isForte ? 0.92 : 0.65));
-            playNoiseBurst(3200, 0.025, 2.0, 'highpass', isFraco ? 0.2 : 0.5);
+            const dur = isFraco ? 0.04 : (isForte ? 0.08 : 0.06);
+            const amt = isFraco ? 0.4 : (isForte ? 1.0 : 0.75);
+
+            // Toque cortante característico do tamborim
+            playTone(1080, 920, dur, amt, 'triangle');
+            playTone(2160, 1840, dur * 0.5, amt * 0.5, 'sine');
+            playNoise(3800, 0.025, amt * 0.6, 'highpass', 1.8);
             break;
           }
+
           case 'agogo': {
-            const pitches = { boca1: 520, boca2: 660, boca3: 820, boca4: 1040 };
-            const freq = pitches[articulationId] || 660;
-            playMetalPing(freq, 0.28, 0.85);
+            const agogoFreqs = {
+              boca1: 523,  // Boca 1 (Mais Grave) ~ Dó5
+              boca2: 659,  // Boca 2 (Médio-Grave) ~ Mi5
+              boca3: 830,  // Boca 3 (Médio-Aguda) ~ Sol#5
+              boca4: 1046  // Boca 4 (Mais Aguda) ~ Dó6
+            };
+            const f = agogoFreqs[articulationId] || 659;
+            playBell(f, 0.35, 0.85);
             break;
           }
+
           case 'ganza': {
             const isForte = articulationId === 'forte' || articulationId === 'frente';
-            const dur = isForte ? 0.09 : 0.06;
-            playNoiseBurst(5500, dur, 1.2, 'highpass', isForte ? 0.75 : 0.45);
+            const dur = isForte ? 0.09 : 0.055;
+            const amt = isForte ? 0.85 : 0.5;
+            playNoise(5200, dur, amt, 'highpass', 1.2);
             break;
           }
+
           case 'apito': {
             const isTrinado = articulationId === 'trinado';
             const isLongo = articulationId === 'longo';
-            const dur = isLongo ? 0.5 : (isTrinado ? 0.45 : 0.15);
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(2200, t);
-            if (isTrinado) {
-              const lfo = ctx.createOscillator();
-              const lfoGain = ctx.createGain();
-              lfo.frequency.setValueAtTime(16, t);
-              lfoGain.gain.setValueAtTime(180, t);
-              lfo.connect(lfoGain);
-              lfoGain.connect(osc.frequency);
-              lfo.start(t);
-              lfo.stop(t + dur);
-            }
-            gain.gain.setValueAtTime(0.75 * vol, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t);
-            osc.stop(t + dur);
+            const dur = isLongo ? 0.55 : (isTrinado ? 0.45 : 0.16);
+
+            try {
+              const osc1 = ctx.createOscillator();
+              const osc2 = ctx.createOscillator();
+              const gain = ctx.createGain();
+
+              osc1.type = 'triangle';
+              osc1.frequency.setValueAtTime(2150, t);
+
+              osc2.type = 'sine';
+              osc2.frequency.setValueAtTime(2450, t);
+
+              if (isTrinado) {
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                lfo.frequency.setValueAtTime(18, t);
+                lfoGain.gain.setValueAtTime(140, t);
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc1.frequency);
+                lfoGain.connect(osc2.frequency);
+                lfo.start(t);
+                lfo.stop(t + dur + 0.02);
+              }
+
+              gain.gain.setValueAtTime(0.8 * vol, t);
+              gain.gain.linearRampToValueAtTime(0.0001, t + dur);
+
+              osc1.connect(gain);
+              osc2.connect(gain);
+              gain.connect(ctx.destination);
+
+              osc1.start(t);
+              osc2.start(t);
+              osc1.stop(t + dur + 0.02);
+              osc2.stop(t + dur + 0.02);
+            } catch (e) { }
             break;
           }
         }
@@ -2366,17 +2404,20 @@
 
       playMetronome(isDownbeat, startTime = null) {
         this.init();
-        const t = startTime !== null ? startTime : this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
+        const ctx = this.ctx;
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const t = startTime !== null ? Math.max(now, startTime) : now;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(isDownbeat ? 1200 : 800, t);
-        gain.gain.setValueAtTime(0.32, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        gain.gain.setValueAtTime(0.35, t);
+        gain.gain.linearRampToValueAtTime(0.001, t + 0.04);
 
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(t);
         osc.stop(t + 0.05);
       }
@@ -2386,12 +2427,13 @@
         const key = `${instrumentId}:${articulationId}`;
         const cfg = this.sampleConfig[key];
 
+        // Se o sample real já estiver carregado, toca o sample de estúdio
         if (cfg && this.playSample(cfg, volMult, this.ctx, startTime)) {
           return;
         }
 
-        // Se o sample real ainda estiver carregando/decodificando ou falhou (ex: file:/// sem CORS),
-        // a síntese procedural fiel dispara instantaneamente para garantir áudio sem atraso nem silêncio!
+        // Caso o sample ainda não tenha terminado de decodificar ou falhe,
+        // dispara imediatamente a síntese procedural fiel para nunca haver atraso ou silêncio!
         this.playFallbackInstrument(instrumentId, articulationId, volMult, startTime);
       }
 
