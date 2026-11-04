@@ -980,7 +980,7 @@
       </div>
     </div>
 
-    <!-- Navegação de Abas -->
+    <!-- Navegação de Abas (Desktop) -->
     <div class="app-tabs-nav">
       <button class="tab-btn active" id="tabBtnBeatbox" data-target="tab-beatbox">
         Studio Multitrack
@@ -989,14 +989,23 @@
         Sequenciador de Breques
       </button>
     </div>
+
+    <!-- Ações Rápidas & Status Mobile -->
+    <div class="header-mobile-actions">
+      <button id="mobHeaderInstall" class="mob-install-pill" style="display: none;" title="Instalar aplicativo no celular">
+        <span>⬇</span> Instalar App
+      </button>
+      <div class="mob-status-pill" id="mobStatusPill" title="Compasso e BPM atuais">
+        <span id="mobStatusBpm">120 BPM</span>
+      </div>
+    </div>
   </header>
 
-  <!-- Banner de Orientação para Celular (Modo Retrato -> Paisagem) -->
+  <!-- Banner de Orientação para Celular (Toast Flutuante com auto-dismiss) -->
   <div id="mobileOrientHint" class="mobile-orient-banner" style="display: none;">
     <div class="orient-content">
       <span class="orient-icon">↻</span>
-      <span class="orient-text"><strong>Dica:</strong> Gire o celular na <strong>horizontal</strong> para visualizar os
-        compassos e a timeline completa.</span>
+      <span class="orient-text">Gire o celular na <strong>horizontal</strong> para visualizar toda a timeline.</span>
     </div>
     <button id="btnDismissOrient" class="btn-orient-close" title="Fechar dica">&times;</button>
   </div>
@@ -1223,11 +1232,11 @@
     <div class="studio-toolbar">
       <div class="controls-panel">
         <!-- Playback Controls -->
-        <button id="btnPlay" class="btn btn-primary">
+        <button id="btnPlay" class="btn btn-primary btn-play-desktop">
           <span id="playIcon">▶</span> <span id="playText">Reproduzir Breque</span>
         </button>
 
-        <button id="btnStop" class="btn">
+        <button id="btnStop" class="btn btn-stop-desktop">
           <span>⏹</span> Parar
         </button>
 
@@ -1244,7 +1253,7 @@
         <div class="control-group">
           <label for="meterSelect">Compasso</label>
           <select id="meterSelect">
-            <option value="2/4" selected>2/4 (Samba Binário)</option>
+            <option value="2/4" selected>2/4 (Samba)</option>
             <option value="4/4">4/4 (Quatro Tempos)</option>
           </select>
         </div>
@@ -1253,15 +1262,15 @@
         <div class="control-group">
           <label for="subdivSelect">Resolução</label>
           <select id="subdivSelect">
-            <option value="semicolcheia" selected>8 div/compasso (Semicolcheia)</option>
-            <option value="fusa">16 div/compasso (Fusa)</option>
+            <option value="semicolcheia" selected>8 div (Semicolcheia)</option>
+            <option value="fusa">16 div (Fusa)</option>
           </select>
         </div>
 
         <!-- Compassos / Medidas -->
         <div class="control-group">
           <button id="btnRemoveMeasure" class="btn-step" title="Remover compasso">−</button>
-          <span id="measureCountDisplay" style="font-weight: 600; font-size: 12.5px; padding: 0 4px;">2 Compassos</span>
+          <span id="measureCountDisplay" style="font-weight: 600; font-size: 12px; padding: 0 4px;">2 Comp</span>
           <button id="btnAddMeasure" class="btn-step" title="Adicionar compasso">+</button>
         </div>
 
@@ -1272,9 +1281,9 @@
 
         <!-- Presets de Bateria Completa / Breques -->
         <div class="control-group">
-          <label for="bateriaPresetSelect">Arranjo / Breque</label>
+          <label for="bateriaPresetSelect">Arranjo</label>
           <select id="bateriaPresetSelect" title="Carregar levada ou breque completo na bateria">
-            <option value="" disabled selected hidden>⚡ Carregar Preset...</option>
+            <option value="" disabled selected hidden>⚡ Preset...</option>
             <option value="batucada_completa">🥁 Batucada Completa (Levada Base)</option>
             <option value="subida_entrada">🔥 Chamada de Repique + Subida</option>
             <option value="breque_parada_retomada">✋ Breque Parada Seca + Retomada</option>
@@ -1289,19 +1298,19 @@
         </button>
       </div>
 
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <div class="sequencer-actions-group">
         <button id="btnSendToStudio" class="btn btn-primary"
           title="Renderizar este breque/levada em áudio WAV e abrir como faixa no Studio Multitrack">
-          ↪ Enviar p/ Studio Multitrack
+          ↪ <span class="send-label">Enviar p/ Studio</span>
         </button>
         <button id="btnExportJSON" class="btn btn-success">
-          Salvar (.json)
+          Salvar
         </button>
         <button id="btnImportJSON" class="btn">
           Abrir
         </button>
         <input type="file" id="fileInput" accept=".json" style="display: none;">
-        <button id="btnPrint" class="btn">
+        <button id="btnPrint" class="btn btn-print-desktop">
           Imprimir
         </button>
       </div>
@@ -1481,26 +1490,28 @@
     <div>Estúdio Multitrack & Sequenciador de Breques</div>
   </footer>
 
-  <!-- Barra de Ações & Navegação Inferior Móvel (Bottom Action Bar) -->
+  <!-- Barra de Ações & Navegação Inferior Móvel (Symmetric Bottom Navigation Bar) -->
   <nav class="mobile-bottom-bar" id="mobileBottomBar">
     <button class="mob-bar-btn active" id="mobNavBeatbox" data-target="tab-beatbox" title="Studio Multitrack">
       <span class="mob-icon">🎛</span>
-      <span class="mob-label">Studio</span>
+      <span class="mob-label">Faixas</span>
     </button>
     <button class="mob-bar-btn" id="mobNavSequencer" data-target="tab-sequencer" title="Sequenciador de Breques">
       <span class="mob-icon">🥁</span>
       <span class="mob-label">Breques</span>
     </button>
-    <button class="mob-bar-play" id="mobGlobalPlay" title="Tocar / Parar">
-      <span id="mobGlobalPlayIcon">▶</span>
+    <div class="mob-bar-play-wrap">
+      <button class="mob-bar-play" id="mobGlobalPlay" title="Tocar / Parar [Espaço]">
+        <span id="mobGlobalPlayIcon">▶</span>
+      </button>
+    </div>
+    <button class="mob-bar-btn" id="mobNavMosaic" title="Visualizar Grade de Vídeos (Mosaico)">
+      <span class="mob-icon">🎬</span>
+      <span class="mob-label">Mosaico</span>
     </button>
     <button class="mob-bar-btn" id="mobGlobalRecord" title="Gravar Faixa de Áudio/Vídeo">
       <span class="mob-icon rec-icon">●</span>
       <span class="mob-label">Gravar</span>
-    </button>
-    <button class="mob-bar-btn" id="mobInstallBtn" style="display: none;" title="Instalar Aplicativo no Celular">
-      <span class="mob-icon">⬇</span>
-      <span class="mob-label">Instalar</span>
     </button>
   </nav>
 
@@ -3346,10 +3357,12 @@
 
     const mobNavBeatbox = document.getElementById('mobNavBeatbox');
     const mobNavSequencer = document.getElementById('mobNavSequencer');
+    const mobNavMosaic = document.getElementById('mobNavMosaic');
     const mobGlobalPlay = document.getElementById('mobGlobalPlay');
     const mobGlobalPlayIcon = document.getElementById('mobGlobalPlayIcon');
     const mobGlobalRecord = document.getElementById('mobGlobalRecord');
-    const mobInstallBtn = document.getElementById('mobInstallBtn');
+    const mobHeaderInstall = document.getElementById('mobHeaderInstall');
+    const mobStatusPill = document.getElementById('mobStatusPill');
 
     const mobileOrientHint = document.getElementById('mobileOrientHint');
     const btnDismissOrient = document.getElementById('btnDismissOrient');
@@ -3365,6 +3378,7 @@
         tabBtnSequencer.classList.remove('active');
         if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
         if (mobNavSequencer) mobNavSequencer.classList.remove('active');
+        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
         tabBeatbox.classList.add('active');
         tabSequencer.classList.remove('active');
         stopPlayback(); // Para o sequenciador se estiver tocando
@@ -3373,6 +3387,7 @@
         tabBtnBeatbox.classList.remove('active');
         if (mobNavSequencer) mobNavSequencer.classList.add('active');
         if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
+        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
         tabSequencer.classList.add('active');
         tabBeatbox.classList.remove('active');
         if (window.BeatboxStudio) {
@@ -3384,28 +3399,59 @@
 
     tabBtnBeatbox.onclick = () => switchTab('tab-beatbox');
     tabBtnSequencer.onclick = () => switchTab('tab-sequencer');
-    if (mobNavBeatbox) mobNavBeatbox.onclick = () => switchTab('tab-beatbox');
-    if (mobNavSequencer) mobNavSequencer.onclick = () => switchTab('tab-sequencer');
+
+    if (mobNavBeatbox) {
+      mobNavBeatbox.onclick = () => {
+        if (currentActiveTab !== 'tab-beatbox') {
+          switchTab('tab-beatbox');
+        }
+        if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
+        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
+        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
+          window.BeatboxStudio.switchViewMode('timeline');
+        } else {
+          const btnViewTimeline = document.getElementById('btnViewTimeline');
+          if (btnViewTimeline) btnViewTimeline.click();
+        }
+      };
+    }
+
+    if (mobNavSequencer) {
+      mobNavSequencer.onclick = () => switchTab('tab-sequencer');
+    }
+
+    if (mobNavMosaic) {
+      mobNavMosaic.onclick = () => {
+        if (currentActiveTab !== 'tab-beatbox') {
+          switchTab('tab-beatbox');
+        }
+        if (mobNavMosaic) mobNavMosaic.classList.add('active');
+        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
+        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
+          window.BeatboxStudio.switchViewMode('mosaic');
+        } else {
+          const btnViewMosaic = document.getElementById('btnViewMosaic');
+          if (btnViewMosaic) btnViewMosaic.click();
+        }
+      };
+    }
 
     // Botão Play Global da Barra Móvel
     function syncGlobalPlayButton() {
-      if (!mobGlobalPlayIcon) return;
+      if (!mobGlobalPlayIcon || !mobGlobalPlay) return;
+      let isPlaying = false;
       if (currentActiveTab === 'tab-beatbox') {
         const studioBtnPlay = document.getElementById('btnStudioPlay');
-        const isStudioPlaying = studioBtnPlay && studioBtnPlay.classList.contains('playing');
-        mobGlobalPlayIcon.textContent = isStudioPlaying ? '⏹' : '▶';
-        if (mobGlobalPlay) {
-          mobGlobalPlay.style.background = isStudioPlaying ? '#145D91' : '#E8C31B';
-          mobGlobalPlay.style.color = isStudioPlaying ? '#FFFFFF' : '#0A090C';
-        }
+        isPlaying = studioBtnPlay && studioBtnPlay.classList.contains('playing');
       } else {
-        mobGlobalPlayIcon.textContent = state.isPlaying ? '⏹' : '▶';
-        if (mobGlobalPlay) {
-          mobGlobalPlay.style.background = state.isPlaying ? '#145D91' : '#E8C31B';
-          mobGlobalPlay.style.color = state.isPlaying ? '#FFFFFF' : '#0A090C';
-        }
+        isPlaying = !!state.isPlaying;
       }
+      mobGlobalPlayIcon.textContent = isPlaying ? '⏹' : '▶';
+      mobGlobalPlay.classList.toggle('is-playing', isPlaying);
     }
+    window.syncGlobalPlayButton = syncGlobalPlayButton;
 
     if (mobGlobalPlay) {
       mobGlobalPlay.onclick = () => {
@@ -3419,7 +3465,7 @@
           const btnPlay = document.getElementById('btnPlay');
           if (btnPlay) btnPlay.click();
         }
-        setTimeout(syncGlobalPlayButton, 50);
+        setTimeout(syncGlobalPlayButton, 60);
       };
     }
 
@@ -3442,13 +3488,36 @@
       };
     }
 
+    // Clique no status pill do topo para ajuste rápido de BPM
+    if (mobStatusPill) {
+      mobStatusPill.onclick = () => {
+        const newBpm = prompt('Defina o andamento (BPM):', currentActiveTab === 'tab-beatbox' ? (window.BeatboxStudio ? 120 : 120) : state.bpm);
+        if (newBpm && !isNaN(newBpm)) {
+          const parsed = Math.min(220, Math.max(60, parseInt(newBpm, 10)));
+          if (currentActiveTab === 'tab-beatbox') {
+            const studioBpmInput = document.getElementById('studioBpm');
+            if (studioBpmInput) {
+              studioBpmInput.value = parsed;
+              studioBpmInput.dispatchEvent(new Event('input'));
+            }
+          } else {
+            const bpmSlider = document.getElementById('bpmSlider');
+            if (bpmSlider) {
+              bpmSlider.value = parsed;
+              bpmSlider.dispatchEvent(new Event('input'));
+            }
+          }
+        }
+      };
+    }
+
     // Notificação de Fones de Ouvido ao Gravar
     function showHeadphonesToast() {
       if (!mobileHeadphonesToast) return;
       mobileHeadphonesToast.style.display = 'flex';
       setTimeout(() => {
         if (mobileHeadphonesToast) mobileHeadphonesToast.style.display = 'none';
-      }, 7000);
+      }, 5000);
     }
     if (btnDismissHp) {
       btnDismissHp.onclick = () => {
@@ -3456,7 +3525,8 @@
       };
     }
 
-    // Banner de Orientação de Tela (Dica Retrato -> Paisagem)
+    // Banner de Orientação de Tela (Toast Flutuante com auto-dismiss)
+    let orientTimer = null;
     function checkOrientation() {
       if (!mobileOrientHint) return;
       const isMobile = window.innerWidth <= 768;
@@ -3465,6 +3535,10 @@
 
       if (isMobile && isPortrait && !dismissed) {
         mobileOrientHint.style.display = 'flex';
+        clearTimeout(orientTimer);
+        orientTimer = setTimeout(() => {
+          if (mobileOrientHint) mobileOrientHint.style.display = 'none';
+        }, 5000);
       } else {
         mobileOrientHint.style.display = 'none';
       }
@@ -3500,19 +3574,19 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      if (mobInstallBtn) {
-        mobInstallBtn.style.display = 'flex';
+      if (mobHeaderInstall) {
+        mobHeaderInstall.style.display = 'inline-flex';
       }
     });
 
-    if (mobInstallBtn) {
-      mobInstallBtn.onclick = async () => {
+    if (mobHeaderInstall) {
+      mobHeaderInstall.onclick = async () => {
         if (deferredPrompt) {
           deferredPrompt.prompt();
           const { outcome } = await deferredPrompt.userChoice;
           console.log('Resultado da instalação PWA:', outcome);
           deferredPrompt = null;
-          mobInstallBtn.style.display = 'none';
+          mobHeaderInstall.style.display = 'none';
         } else {
           alert('Para instalar no celular: toque no menu de 3 pontinhos do navegador e selecione "Adicionar à tela de início" ou "Instalar aplicativo".');
         }

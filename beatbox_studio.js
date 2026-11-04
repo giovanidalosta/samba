@@ -307,6 +307,13 @@
     if (dom.btnViewMosaic) {
       dom.btnViewMosaic.classList.toggle('active', state.viewMode === 'mosaic');
     }
+    const mobNavBeatbox = document.getElementById('mobNavBeatbox');
+    const mobNavMosaic = document.getElementById('mobNavMosaic');
+    const isSequencer = document.getElementById('tab-sequencer')?.classList.contains('active');
+    if (mobNavBeatbox && mobNavMosaic && !isSequencer) {
+      mobNavBeatbox.classList.toggle('active', state.viewMode === 'timeline');
+      mobNavMosaic.classList.toggle('active', state.viewMode === 'mosaic');
+    }
     if (dom.timelineWorkspace) {
       dom.timelineWorkspace.style.display = state.viewMode === 'timeline' ? 'flex' : 'none';
     }
@@ -1938,6 +1945,9 @@
     state.isPlaying = true;
     dom.btnMasterPlay.classList.add('playing');
     dom.btnMasterPlay.innerHTML = `<span>⏸</span> Pausar`;
+    if (typeof window.syncGlobalPlayButton === 'function') {
+      window.syncGlobalPlayButton();
+    }
 
     updateAudioMixRouting();
 
@@ -2012,6 +2022,9 @@
     if (dom.btnMasterPlay) {
       dom.btnMasterPlay.classList.remove('playing');
       dom.btnMasterPlay.innerHTML = `<span>▶</span> Reproduzir`;
+    }
+    if (typeof window.syncGlobalPlayButton === 'function') {
+      window.syncGlobalPlayButton();
     }
 
     // Reseta Playhead e Visor Digital LCD
@@ -2446,6 +2459,8 @@
   function syncToolbarControls() {
     if (dom.bpmInput) dom.bpmInput.value = state.bpm;
     if (dom.bpmVal) dom.bpmVal.textContent = state.bpm;
+    const mobStatusBpm = document.getElementById('mobStatusBpm');
+    if (mobStatusBpm) mobStatusBpm.textContent = `${state.bpm} BPM`;
     if (dom.meterSelect) dom.meterSelect.value = state.meter;
     if (dom.modeSelect) dom.modeSelect.value = state.mode;
     if (dom.measuresSelect) dom.measuresSelect.value = state.measures;
@@ -2871,9 +2886,11 @@
   // Exporta init para ser chamado pelo orquestrador
   window.BeatboxStudio = {
     init,
+    startStudioPlayback,
     stopStudioPlayback,
     openQuickRecord,
-    importSequencerBounce
+    importSequencerBounce,
+    switchViewMode
   };
 
 })();

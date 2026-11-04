@@ -2084,124 +2084,324 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   color: var(--text-main);
 }
 
+.header-mobile-actions {
+  display: none;
+}
+
 .mobile-bottom-bar {
   display: none;
 }
 
 @media (max-width: 768px) {
   body {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: 0 !important;
   }
 
-  .mobile-bottom-bar {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 62px;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: rgba(10, 9, 12, 0.96);
-    backdrop-filter: blur(14px);
-    border-top: 1px solid var(--border-color);
-    z-index: 999;
-    align-items: center;
-    justify-content: space-around;
-  }
-
-  .mob-bar-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    flex: 1;
-    height: 100%;
-    cursor: pointer;
-  }
-
-  .mob-bar-btn.active {
-    color: var(--naum-gold);
-  }
-
-  .mob-icon {
-    font-size: 17px;
-    line-height: 1;
-  }
-
-  .mob-icon.rec-icon {
-    color: #C84B4B;
-  }
-
-  .mob-label {
-    font-family: var(--font-ui);
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-  }
-
-  .mob-bar-play {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--naum-gold);
-    border: 2px solid #0A090C;
-    color: #0A090C;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    margin: -14px 6px 0 6px;
-    flex-shrink: 0;
-  }
-
+  /* -------------------------------------------------------------
+     1. TOPO COMPACTO & HEADER MOBILE UNIFICADO (ALTURA 48px)
+     ------------------------------------------------------------- */
   header {
-    padding: 8px 14px !important;
+    height: 48px;
+    padding: env(safe-area-inset-top, 6px) 12px 6px 12px !important;
+    background: rgba(10, 9, 13, 0.96) !important;
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 60;
   }
 
-  .brand h1 {
-    font-size: 17px !important;
+  .brand {
+    gap: 8px !important;
   }
 
   .brand-logo {
-    width: 32px !important;
-    height: 32px !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .brand h1 {
+    font-size: 14px !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .brand-subtitle {
+    display: none !important;
   }
 
   .app-tabs-nav {
     display: none !important;
   }
 
-  .studio-toolbar {
-    top: 50px;
-    padding: 8px 12px !important;
-    overflow-x: auto;
-    flex-wrap: nowrap !important;
-    gap: 8px !important;
-    -webkit-overflow-scrolling: touch;
+  .header-mobile-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
   }
 
-  .studio-toolbar-group,
-  .studio-toolbar .controls-panel {
-    flex-shrink: 0;
+  .mob-install-pill {
+    background: rgba(232, 195, 27, 0.16);
+    border: 1px solid var(--naum-gold);
+    color: var(--naum-gold);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.12s ease;
+  }
+
+  .mob-install-pill:active {
+    background: rgba(232, 195, 27, 0.3);
+  }
+
+  .mob-status-pill {
+    background: #181720;
+    border: 1px solid #2B2A36;
+    color: var(--naum-gold);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  /* -------------------------------------------------------------
+     2. AVISOS FLUTUANTES (NUNCA EMPURRAM A TELA)
+     ------------------------------------------------------------- */
+  .mobile-orient-banner {
+    position: fixed !important;
+    top: 54px !important;
+    left: 12px !important;
+    right: 12px !important;
+    background: rgba(18, 17, 23, 0.95) !important;
+    backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(232, 195, 27, 0.4) !important;
+    border-radius: 10px !important;
+    padding: 8px 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+    z-index: 1000 !important;
+    animation: popoverFade 0.2s ease-out;
+  }
+
+  .mobile-headphones-toast {
+    top: 54px !important;
+    left: 12px !important;
+    right: 12px !important;
+    border-radius: 10px !important;
+    padding: 8px 12px !important;
+    z-index: 1000 !important;
+  }
+
+  /* -------------------------------------------------------------
+     3. TOOLBARS SLIM DE LINHA ÚNICA (ALTURA 44px)
+     ------------------------------------------------------------- */
+  .studio-toolbar {
+    top: 48px !important;
+    padding: 6px 10px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    background: rgba(12, 11, 16, 0.95) !important;
+    backdrop-filter: blur(14px) !important;
+    border-bottom: 1px solid var(--border-color);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
     flex-wrap: nowrap !important;
-    gap: 8px !important;
+    gap: 6px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    z-index: 45;
+  }
+
+  .studio-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .studio-toolbar-group {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    flex-shrink: 0;
+  }
+
+  /* Oculta controles redundantes que já estão no rodapé móvel */
+  #btnStudioPlay,
+  #btnStudioStop,
+  .studio-view-switch,
+  .btn-play-desktop,
+  .btn-stop-desktop,
+  .btn-print-desktop {
+    display: none !important;
+  }
+
+  .reaper-lcd-rack {
+    padding: 2px 6px !important;
+    height: 30px !important;
+    gap: 6px !important;
+  }
+
+  .reaper-lcd-cell {
+    min-width: 0 !important;
+  }
+
+  .lcd-cell-mode {
+    display: none !important;
+  }
+
+  .lcd-cell-value {
+    font-size: 11px !important;
+  }
+
+  .bpm-compact-group {
+    padding: 2px 6px !important;
+    height: 30px !important;
+    gap: 4px !important;
+  }
+
+  .bpm-compact-group input[type="range"] {
+    width: 44px !important;
+  }
+
+  .metronome-box {
+    height: 30px !important;
+    padding: 0 6px !important;
+  }
+
+  .btn-metro-toggle {
+    font-size: 11px !important;
+  }
+
+  .studio-toolbar .btn {
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
+    height: 30px !important;
+    border-radius: 5px !important;
+    flex-shrink: 0;
+  }
+
+  /* Sequencer toolbar mobile */
+  .studio-toolbar .controls-panel {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    flex-shrink: 0;
+  }
+
+  .sequencer-actions-group {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    flex-shrink: 0;
+  }
+
+  .controls-panel .control-group {
+    padding: 2px 6px !important;
+    height: 30px !important;
+    font-size: 11px !important;
+    flex-shrink: 0;
+  }
+
+  .controls-panel select {
+    padding: 2px 4px !important;
+    font-size: 11px !important;
+  }
+
+  /* -------------------------------------------------------------
+     4. POPOVERS COMO BOTTOM SHEET MODAL (NÃO CORTAM NO SCROLL)
+     ------------------------------------------------------------- */
+  .studio-popover-menu {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 68px !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-height: 72vh !important;
+    overflow-y: auto !important;
+    border-radius: 14px !important;
+    background: rgba(18, 17, 24, 0.98) !important;
+    backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(232, 195, 27, 0.3) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85) !important;
+    padding: 14px 16px !important;
+    z-index: 1050 !important;
+  }
+
+  /* -------------------------------------------------------------
+     5. WORKSPACES & ESPAÇAMENTO OTIMIZADO
+     ------------------------------------------------------------- */
+  .timeline-workspace {
+    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
+  }
+
+  .mosaic-workspace {
+    padding: 8px 8px calc(76px + env(safe-area-inset-bottom, 0px)) 8px !important;
+  }
+
+  main {
+    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
+  }
+
+  .grid-container {
+    padding: 8px 6px !important;
+  }
+
+  footer {
+    display: none !important;
+  }
+
+  /* -------------------------------------------------------------
+     6. CABEÇALHOS DE PISTAS STICKY (NÃO PERDE OS NOMES AO ROLAR)
+     ------------------------------------------------------------- */
+  .reaper-tcp-corner,
+  .reaper-tcp {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 25 !important;
+    width: 145px !important;
+    min-width: 145px !important;
+    padding: 6px 8px !important;
+    background: #121116 !important;
+    box-shadow: 3px 0 10px rgba(0, 0, 0, 0.45);
+  }
+
+  .tcp-name-input {
+    font-size: 11.5px !important;
+  }
+
+  .tcp-controls-row .btn-tcp-icon {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 9.5px !important;
   }
 
   .track-header {
     position: sticky !important;
     left: 0 !important;
-    z-index: 15 !important;
-    width: 180px !important;
-    min-width: 180px !important;
-    padding: 6px 8px !important;
+    z-index: 25 !important;
+    width: 130px !important;
+    min-width: 130px !important;
+    padding: 6px 6px !important;
     gap: 4px !important;
     background: #121116 !important;
+    box-shadow: 3px 0 10px rgba(0, 0, 0, 0.45);
   }
 
   .track-header .track-sub {
@@ -2209,7 +2409,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .track-header .track-name {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
   }
 
   .track-header .btn-icon-mini {
@@ -2233,27 +2433,40 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .track-header-bottom {
-    gap: 4px !important;
+    gap: 3px !important;
   }
 
   .inst-groove-select {
-    font-size: 10px !important;
-    padding: 2px 4px !important;
+    font-size: 9.5px !important;
+    padding: 2px 3px !important;
   }
 
   .btn-save-groove {
-    font-size: 9px !important;
-    padding: 2px 5px !important;
+    font-size: 8.5px !important;
+    padding: 2px 4px !important;
   }
 
   .inst-vol-box {
-    width: 42px !important;
+    width: 38px !important;
   }
 
   .ruler-row {
-    margin-left: 180px !important;
+    margin-left: 130px !important;
   }
 
+  .step-cell {
+    min-height: 52px !important;
+  }
+
+  .step-node {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 9px !important;
+  }
+
+  /* -------------------------------------------------------------
+     7. MODAIS (GRAVAÇÃO E EXPORTAÇÃO)
+     ------------------------------------------------------------- */
   .record-modal-header {
     flex-wrap: wrap;
     gap: 8px;
@@ -2295,10 +2508,113 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     justify-content: center;
   }
 
-  .reaper-tcp-corner,
-  .reaper-tcp {
-    width: 165px !important;
-    min-width: 165px !important;
-    padding: 6px 8px !important;
+  /* -------------------------------------------------------------
+     8. BARRA INFERIOR MOBILE 100% SIMÉTRICA (5 COLUNAS CSS GRID)
+     ------------------------------------------------------------- */
+  .mobile-bottom-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 58px 1fr 1fr !important;
+    align-items: center !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 58px !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    background: rgba(10, 9, 13, 0.96) !important;
+    backdrop-filter: blur(20px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    z-index: 999 !important;
   }
+
+  .mob-bar-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.1s ease;
+    padding: 0;
+    user-select: none;
+  }
+
+  .mob-bar-btn:active {
+    transform: scale(0.92);
+  }
+
+  .mob-bar-btn.active {
+    color: var(--naum-gold);
+  }
+
+  .mob-bar-btn.active .mob-icon {
+    transform: translateY(-1px);
+  }
+
+  .mob-icon {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .mob-icon.rec-icon {
+    color: #E55353;
+    font-size: 18px;
+  }
+
+  .mob-label {
+    font-family: var(--font-ui);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .mob-bar-play-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .mob-bar-play {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--naum-gold), #D4843E);
+    border: 2px solid #0A090C;
+    color: #0A090C;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: -16px auto 0 auto;
+    box-shadow: 0 6px 18px rgba(232, 195, 27, 0.45);
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .mob-bar-play:active {
+    transform: scale(0.88);
+  }
+
+  .mob-bar-play.is-playing {
+    background: linear-gradient(135deg, #145D91, #247BB8) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 6px 20px rgba(36, 123, 184, 0.65) !important;
+    animation: mobPlayPulse 1.6s infinite ease-in-out;
+  }
+}
+
+@keyframes mobPlayPulse {
+  0% { box-shadow: 0 0 0 0 rgba(36, 123, 184, 0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(36, 123, 184, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(36, 123, 184, 0); }
 }
