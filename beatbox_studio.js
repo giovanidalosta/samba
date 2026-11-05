@@ -340,14 +340,10 @@
     }
 
     const mobNavBeatbox = document.getElementById('mobNavBeatbox');
-    const mobNavMosaic = document.getElementById('mobNavMosaic');
-    const mobGlobalRecord = document.getElementById('mobGlobalRecord');
-    const isSequencer = document.getElementById('tab-sequencer')?.classList.contains('active');
+    const isBeatboxActive = document.getElementById('tab-beatbox')?.classList.contains('active');
 
-    if (!isSequencer) {
-      if (mobNavBeatbox) mobNavBeatbox.classList.toggle('active', state.viewMode === 'timeline');
-      if (mobNavMosaic) mobNavMosaic.classList.toggle('active', state.viewMode === 'mosaic');
-      if (mobGlobalRecord) mobGlobalRecord.classList.toggle('active', state.viewMode === 'record');
+    if (isBeatboxActive && mobNavBeatbox) {
+      mobNavBeatbox.classList.add('active');
     }
 
     if (dom.timelineWorkspace) {
@@ -1636,6 +1632,14 @@
       sampleRate: { ideal: 48000 }
     };
 
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      console.warn('navigator.mediaDevices.getUserMedia indisponível neste contexto.');
+      if (typeof alert === 'function') {
+        alert('O acesso ao microfone/câmera requer conexão segura (HTTPS ou localhost).');
+      }
+      return;
+    }
+
     try {
       if (mode === 'audio') {
         // MODO APENAS MICROFONE (não pede câmera)
@@ -1682,10 +1686,15 @@
               audio: audioConstraints
             });
           } catch (e2) {
-            combinedStream = await navigator.mediaDevices.getUserMedia({
-              video: true,
-              audio: true
-            });
+            try {
+              combinedStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+              });
+            } catch (e3) {
+              console.warn('Câmera não encontrada ou sem permissão, alternando para modo Só Microfone:', e3);
+              return await setRecordingMode('audio');
+            }
           }
         }
 
@@ -1757,11 +1766,14 @@
   }
 
   // Contagem regressiva antes da gravação (1 compasso de pré-roll)
-  function startPreRollCountdown() {
+  async function startPreRollCountdown() {
     if (recordingContext.isCountingDown || recordingContext.isRecording) return;
     if (!recordingContext.stream) {
-      alert('Microfone não detectado ou sem permissão ativa.');
-      return;
+      await setRecordingMode(recordingContext.captureMode || 'audio');
+      if (!recordingContext.stream) {
+        alert('Microfone não detectado ou sem permissão ativa.');
+        return;
+      }
     }
 
     getAudioContext();

@@ -4726,53 +4726,13 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         .replace(/'/g, '&#39;');
     }
 
-    // Botão Play Global da Barra Móvel
+    // Sincronização de estado de reprodução (atualiza ícones da Home quando ativo)
     function syncGlobalPlayButton() {
-      if (!mobGlobalPlayIcon || !mobGlobalPlay) return;
-      let isPlaying = false;
-      if (currentActiveTab === 'tab-beatbox') {
-        const studioBtnPlay = document.getElementById('btnStudioPlay');
-        isPlaying = studioBtnPlay && studioBtnPlay.classList.contains('playing');
-      } else {
-        isPlaying = !!state.isPlaying;
+      if (currentActiveTab === 'tab-home') {
+        renderHomeBrequesList();
       }
-      mobGlobalPlayIcon.textContent = isPlaying ? '⏹' : '▶';
-      mobGlobalPlay.classList.toggle('is-playing', isPlaying);
     }
     window.syncGlobalPlayButton = syncGlobalPlayButton;
-
-    if (mobGlobalPlay) {
-      mobGlobalPlay.onclick = () => {
-        // Desbloqueia Web Audio no toque
-        if (typeof audio !== 'undefined' && audio && !audio.isInitialized) audio.init();
-
-        if (currentActiveTab === 'tab-beatbox') {
-          const btnStudioPlay = document.getElementById('btnStudioPlay');
-          if (btnStudioPlay) btnStudioPlay.click();
-        } else {
-          const btnPlay = document.getElementById('btnPlay');
-          if (btnPlay) btnPlay.click();
-        }
-        setTimeout(syncGlobalPlayButton, 60);
-      };
-    }
-
-    // Botão Gravar da Barra Móvel (Aba Completa)
-    if (mobGlobalRecord) {
-      mobGlobalRecord.onclick = () => {
-        if (currentActiveTab !== 'tab-beatbox') {
-          switchTab('tab-beatbox');
-        }
-        if (mobGlobalRecord) mobGlobalRecord.classList.add('active');
-        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
-        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
-        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
-        showHeadphonesToast();
-        if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
-          window.BeatboxStudio.switchViewMode('record');
-        }
-      };
-    }
 
     // Clique no status pill do topo para ajuste rápido de BPM
     if (mobStatusPill) {
