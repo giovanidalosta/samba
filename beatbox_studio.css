@@ -2658,21 +2658,21 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   /* -------------------------------------------------------------
-     8. BARRA INFERIOR MOBILE 100% SIMÉTRICA (5 COLUNAS CSS GRID)
+     8. BARRA INFERIOR MOBILE MODERNA E LIMPA (3 COLUNAS SEM CARA DE PLAYER)
      ------------------------------------------------------------- */
   .mobile-bottom-bar {
     display: grid !important;
-    grid-template-columns: 1fr 1fr 58px 1fr 1fr !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     align-items: center !important;
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 58px !important;
+    height: 56px !important;
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-    background: rgba(10, 9, 13, 0.96) !important;
+    background: rgba(10, 9, 13, 0.98) !important;
     backdrop-filter: blur(20px) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
     z-index: 999 !important;
   }
 
@@ -2684,7 +2684,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     height: 100%;
     width: 100%;
     cursor: pointer;
@@ -2703,10 +2703,11 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .mob-bar-btn.active .mob-icon {
     transform: translateY(-1px);
+    filter: drop-shadow(0 2px 8px rgba(232, 195, 27, 0.4));
   }
 
   .mob-icon {
-    font-size: 17px;
+    font-size: 20px;
     line-height: 1;
   }
 
@@ -2717,37 +2718,19 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .mob-label {
     font-family: var(--font-ui);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.3px;
     text-transform: uppercase;
   }
 
   .mob-bar-play-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
+    display: none !important;
   }
 
   .mob-bar-play {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--naum-gold), #D4843E);
-    border: 2px solid #0A090C;
-    color: #0A090C;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    margin: -16px auto 0 auto;
-    box-shadow: 0 6px 18px rgba(232, 195, 27, 0.45);
-    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background 0.15s ease;
-    flex-shrink: 0;
+    display: none !important;
+  }
   }
 
   .mob-bar-play:active {
@@ -3194,4 +3177,511 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* =========================================================================
+   ESTILOS DA HOME / HUB DO RITMISTA & MODAL DE CRIAÇÃO GUIADA
+   ========================================================================= */
+.home-hub-wrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 16px 80px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.home-hero-card {
+  background: linear-gradient(145deg, rgba(232, 195, 27, 0.08) 0%, rgba(20, 93, 145, 0.09) 100%), var(--bg-card);
+  border: 1px solid rgba(232, 195, 27, 0.25);
+  border-radius: 20px;
+  padding: 32px 20px 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--naum-gold), var(--naum-blue-light));
+}
+
+.home-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(232, 195, 27, 0.14);
+  color: var(--naum-gold);
+  border: 1px solid rgba(232, 195, 27, 0.35);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.home-hero-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.home-hero-desc {
+  color: var(--text-silver);
+  font-size: 14px;
+  max-width: 480px;
+  line-height: 1.45;
+  margin-bottom: 24px;
+}
+
+.btn-home-cta-create {
+  background: linear-gradient(135deg, var(--naum-gold) 0%, #D4843E 100%);
+  color: #0A090C !important;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  padding: 16px 32px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(232, 195, 27, 0.38);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  width: 100%;
+  max-width: 360px;
+  justify-content: center;
+  user-select: none;
+}
+
+.btn-home-cta-create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(232, 195, 27, 0.5);
+  filter: brightness(1.04);
+}
+
+.btn-home-cta-create:active {
+  transform: scale(0.97);
+}
+
+.btn-home-cta-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.home-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.home-section-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-section-count {
+  font-size: 12px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+}
+
+.home-breques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.home-breque-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.home-breque-card:hover {
+  border-color: rgba(232, 195, 27, 0.45);
+  transform: translateY(-2px);
+}
+
+.home-breque-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-breque-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-breque-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.home-breque-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.home-badge-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-silver);
+  font-family: var(--font-mono);
+}
+
+.home-badge-pill.pill-native {
+  border-color: rgba(36, 123, 184, 0.4);
+  color: var(--naum-blue-light);
+}
+
+.home-breque-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.btn-card-action {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card-subtle);
+  color: var(--text-silver);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-ui);
+}
+
+.btn-card-action:hover {
+  background: rgba(232, 195, 27, 0.15);
+  border-color: var(--naum-gold);
+  color: var(--naum-gold);
+}
+
+.btn-card-action.btn-card-play {
+  background: rgba(232, 195, 27, 0.12);
+  border-color: rgba(232, 195, 27, 0.35);
+  color: var(--naum-gold);
+  flex: 0 0 34px;
+  font-size: 13px;
+}
+
+.btn-card-action.btn-card-delete {
+  flex: 0 0 34px;
+  color: #E55353;
+  font-size: 13px;
+}
+.btn-card-action.btn-card-delete:hover {
+  background: rgba(229, 83, 83, 0.15);
+  border-color: #E55353;
+}
+
+.home-empty-state {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  padding: 32px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-empty-icon {
+  font-size: 36px;
+  opacity: 0.7;
+}
+
+.home-empty-text {
+  color: var(--text-silver);
+  font-size: 14px;
+  max-width: 360px;
+  line-height: 1.4;
+}
+
+.btn-empty-starter {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--naum-gold);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-empty-starter:hover {
+  border-color: var(--naum-gold);
+  background: rgba(232, 195, 27, 0.12);
+}
+
+/* Modal Novo Breque */
+.modal-overlay-naum {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 9, 12, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 2000;
+  animation: fadeInModal 0.2s ease;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-content-naum {
+  background: #121117;
+  border: 1px solid rgba(232, 195, 27, 0.25);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header-naum {
+  padding: 18px 20px 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header-naum h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 26px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.15s ease;
+}
+.modal-close-btn:hover {
+  color: #FFFFFF;
+}
+
+.modal-body-naum {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-choice-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-choice-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.modal-choice-card:hover {
+  border-color: var(--naum-gold);
+  background: rgba(232, 195, 27, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.modal-choice-card:active {
+  transform: scale(0.98);
+}
+
+.modal-choice-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-subtle);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.modal-choice-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.modal-choice-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.modal-choice-desc {
+  font-size: 12px;
+  color: var(--text-silver);
+  line-height: 1.35;
+}
+
+.modal-choice-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(232, 195, 27, 0.15);
+  color: var(--naum-gold);
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* Step 2 Form do Pad */
+.modal-pad-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeInModal 0.2s ease;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setup-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-silver);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.setup-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: #FFFFFF;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--font-ui);
+  outline: none;
+}
+.setup-input:focus {
+  border-color: var(--naum-gold);
+}
+
+.setup-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.setup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-setup-back {
+  flex: 1;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-silver);
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-setup-confirm {
+  flex: 2;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--naum-gold), #D4843E);
+  color: #0A090C !important;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 14px;
+  cursor: pointer;
 }

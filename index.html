@@ -1108,11 +1108,14 @@
 
     <!-- Navegação de Abas (Desktop) -->
     <div class="app-tabs-nav">
-      <button class="tab-btn active" id="tabBtnBeatbox" data-target="tab-beatbox">
-        Studio Multitrack
+      <button class="tab-btn active" id="tabBtnHome" data-target="tab-home">
+        🏠 Início
       </button>
       <button class="tab-btn" id="tabBtnSequencer" data-target="tab-sequencer">
-        Sequenciador de Breques
+        🥁 Pad / Sequenciador
+      </button>
+      <button class="tab-btn" id="tabBtnBeatbox" data-target="tab-beatbox">
+        🎛️ Studio Multitrack
       </button>
     </div>
 
@@ -1148,9 +1151,98 @@
   </div>
 
   <!-- =========================================================================
+       ABA 0: HOME / HUB DO RITMISTA
+       ========================================================================= -->
+  <div id="tab-home" class="app-tab-content active">
+    <div class="home-hub-wrap">
+      <!-- Card Hero de Destaque -->
+      <div class="home-hero-card">
+        <div class="home-badge-tag">⭐ Bateria Naumteria • UNESP Bauru</div>
+        <h2 class="home-hero-title">Estúdio de Breques</h2>
+        <p class="home-hero-desc">
+          Crie levadas, grave seus naipes com contagem de baquetas e monte seus breques com a bateria.
+        </p>
+        <button id="btnHomeCreateBreque" class="btn-home-cta-create" title="Criar um novo breque agora">
+          <span class="btn-home-cta-icon">➕</span>
+          <span>Criar Novo Breque</span>
+        </button>
+      </div>
+
+      <!-- Seção: Meus Breques & Repertório -->
+      <div class="home-section-header">
+        <h3 class="home-section-title">
+          <span>🥁</span> Meus Breques & Repertório
+        </h3>
+        <span id="homeBrequesCount" class="home-section-count">0 breques</span>
+      </div>
+
+      <div id="homeBrequeList" class="home-breques-grid">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Interativo: Criar Novo Breque -->
+  <div id="modalNewBreque" class="modal-overlay-naum" style="display: none;">
+    <div class="modal-content-naum">
+      <div class="modal-header-naum">
+        <h3 id="modalNewBrequeTitle">Criar Novo Breque</h3>
+        <button id="btnCloseModalNewBreque" class="modal-close-btn" title="Fechar">&times;</button>
+      </div>
+      <div class="modal-body-naum">
+        <!-- Passo 1: Escolha do Método -->
+        <div id="stepModalChoice" class="modal-choice-cards">
+          <div id="cardChoiceRecord" class="modal-choice-card">
+            <div class="modal-choice-icon">🎙️</div>
+            <div class="modal-choice-texts">
+              <span class="modal-choice-title">Gravar ao Vivo</span>
+              <span class="modal-choice-desc">Grave áudio ou vídeo com metrônomo e contagem 1-2-3-4 direto para o Multitrack.</span>
+              <span class="modal-choice-badge">Gravação Direta</span>
+            </div>
+          </div>
+          <div id="cardChoicePad" class="modal-choice-card">
+            <div class="modal-choice-icon">🥁</div>
+            <div class="modal-choice-texts">
+              <span class="modal-choice-title">Montar no Pad / Sequenciador</span>
+              <span class="modal-choice-desc">Programe as células e notas na grade tátil de surdos, caixa, repique, tamborim e agogô.</span>
+              <span class="modal-choice-badge">Composição Tátil</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Passo 2: Configuração Rápida do Pad (Nome & BPM) -->
+        <div id="stepModalPadSetup" class="modal-pad-setup" style="display: none;">
+          <div class="setup-field">
+            <label for="inputNewBrequeName">Nome do Breque</label>
+            <input type="text" id="inputNewBrequeName" class="setup-input" placeholder="Ex: Breque 1, Entrada da Bateria..." value="Novo Breque">
+          </div>
+          <div class="setup-row-2">
+            <div class="setup-field">
+              <label for="inputNewBrequeBpm">Andamento (BPM)</label>
+              <input type="number" id="inputNewBrequeBpm" class="setup-input" min="60" max="220" value="142">
+            </div>
+            <div class="setup-field">
+              <label for="selectNewBrequeMeasures">Compassos</label>
+              <select id="selectNewBrequeMeasures" class="setup-input">
+                <option value="2" selected>2 Compassos (Samba)</option>
+                <option value="4">4 Compassos</option>
+                <option value="1">1 Compasso</option>
+              </select>
+            </div>
+          </div>
+          <div class="setup-actions">
+            <button id="btnBackToChoice" class="btn-setup-back">Voltar</button>
+            <button id="btnConfirmPadSetup" class="btn-setup-confirm">🚀 Começar no Pad</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
        ABA 1: NAUMTERIA STUDIO MULTITRACK & MOSAIC
        ========================================================================= -->
-  <div id="tab-beatbox" class="app-tab-content active">
+  <div id="tab-beatbox" class="app-tab-content">
     <!-- Barra Unificada de Transporte & Ações Rápidas (Minimalist DAW Bar) -->
     <div class="studio-toolbar">
       <!-- Esquerda: Transporte, Timecode LCD, BPM e Metrônomo -->
@@ -1561,15 +1653,6 @@
           </select>
         </div>
 
-        <!-- Kit de som do Tamborim -->
-        <div class="control-group">
-          <label for="tamborimKitSelect">Kit Tamborim</label>
-          <select id="tamborimKitSelect" title="Escolha o som usado nos toques Forte / Médio / Fraco do tamborim">
-            <option value="thalita" selected>Thalita Santos (padrão)</option>
-            <option value="estacio">Estácio (agudo)</option>
-          </select>
-        </div>
-
         <!-- Limpar Grid -->
         <button id="btnClear" class="btn btn-danger" title="Limpar todas as notas">
           Limpar
@@ -1775,28 +1858,19 @@
     <div>Estúdio Multitrack & Sequenciador de Breques</div>
   </footer>
 
-  <!-- Barra de Ações & Navegação Inferior Móvel (Symmetric Bottom Navigation Bar) -->
+  <!-- Barra de Ações & Navegação Inferior Móvel (3 Abas Limpas) -->
   <nav class="mobile-bottom-bar" id="mobileBottomBar">
-    <button class="mob-bar-btn active" id="mobNavBeatbox" data-target="tab-beatbox" title="Studio Multitrack">
-      <span class="mob-icon">🎛</span>
-      <span class="mob-label">Faixas</span>
+    <button class="mob-bar-btn active" id="mobNavHome" data-target="tab-home" title="Início">
+      <span class="mob-icon">🏠</span>
+      <span class="mob-label">Início</span>
     </button>
-    <button class="mob-bar-btn" id="mobNavSequencer" data-target="tab-sequencer" title="Sequenciador de Breques">
+    <button class="mob-bar-btn" id="mobNavSequencer" data-target="tab-sequencer" title="Pad / Sequenciador">
       <span class="mob-icon">🥁</span>
-      <span class="mob-label">Breques</span>
+      <span class="mob-label">Pad</span>
     </button>
-    <div class="mob-bar-play-wrap">
-      <button class="mob-bar-play" id="mobGlobalPlay" title="Tocar / Parar [Espaço]">
-        <span id="mobGlobalPlayIcon">▶</span>
-      </button>
-    </div>
-    <button class="mob-bar-btn" id="mobNavMosaic" title="Visualizar Grade de Vídeos (Mosaico)">
-      <span class="mob-icon">🎬</span>
-      <span class="mob-label">Mosaico</span>
-    </button>
-    <button class="mob-bar-btn" id="mobGlobalRecord" title="Gravar Faixa de Áudio/Vídeo">
-      <span class="mob-icon rec-icon">●</span>
-      <span class="mob-label">Gravar</span>
+    <button class="mob-bar-btn" id="mobNavBeatbox" data-target="tab-beatbox" title="Studio Multitrack">
+      <span class="mob-icon">🎛</span>
+      <span class="mob-label">Multitrack</span>
     </button>
   </nav>
 
@@ -2134,12 +2208,12 @@
           'caixa:ringshot': { url: 'assets/audio/sn_72.mp3', vol: 1.12, rate: 1.0 },
           'caixa:rufado': { url: 'assets/audio/sn_66.mp3', vol: 0.98, rate: 1.0 },
 
-          // Repique / Repinique: Centro (_58), Fraco (_2e), Rimshot (_72), Mão Aberta (re_open_mao), Slap (re_slap_mao), Flam composto Mão+Baqueta (re_flam_real), Rufada (re_66)
-          'repique:meio': { url: 'assets/audio/re_58.mp3', vol: 1.0, rate: 1.04 },
-          'repique:intermedio': { url: 'assets/audio/re_2e.mp3', vol: 0.60, rate: 1.04 },
-          'repique:ringshot': { url: 'assets/audio/re_72.mp3', vol: 1.15, rate: 1.02 },
-          'repique:open': { url: 'assets/audio/re_open_mao.wav', vol: 1.0, rate: 1.0 },
-          'repique:slap': { url: 'assets/audio/re_slap_mao.wav', vol: 1.10, rate: 1.0 },
+          // Repique / Repinique: Kit Oficial Gabriel Policarpo (Meio, Intermediário, Rimshot, Mão Aberta, Slap + Flam real e Rulo)
+          'repique:meio': { url: 'assets/audio/re_policarpo_meio.wav', vol: 1.0, rate: 1.0 },
+          'repique:intermedio': { url: 'assets/audio/re_policarpo_intermedio.wav', vol: 0.60, rate: 1.0 },
+          'repique:ringshot': { url: 'assets/audio/re_policarpo_ringshot.wav', vol: 1.15, rate: 1.0 },
+          'repique:open': { url: 'assets/audio/re_policarpo_open.wav', vol: 1.0, rate: 1.0 },
+          'repique:slap': { url: 'assets/audio/re_policarpo_slap.wav', vol: 1.10, rate: 1.0 },
           'repique:flam': { url: 'assets/audio/re_flam_real.wav', vol: 1.08, rate: 1.0 },
           'repique:rulo': { url: 'assets/audio/re_66.mp3', vol: 1.02, rate: 1.0 },
 
@@ -2170,40 +2244,14 @@
           'apito:trinado': { url: 'assets/audio/ot_d4.mp3', vol: 0.92, rate: 1.0 }
         };
 
-        // Kits do tamborim: 'thalita' é o kit padrão oficial substituindo o original, 'estacio' como opção alternativa.
-        this.tamborimKits = {
-          thalita: {
-            label: 'Thalita Santos (padrão)',
-            map: {
-              forte: { url: 'assets/audio/ta_thalita_grave_forte.wav', vol: 0.86, rate: 1.0, chokeGroup: 'tamborim' },
-              medio: { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.50, rate: 1.0, chokeGroup: 'tamborim' },
-              intermedio: { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.50, rate: 1.0, chokeGroup: 'tamborim' },
-              fraco: { url: 'assets/audio/ta_thalita_grave_fraco.wav', vol: 0.34, rate: 1.0, chokeGroup: 'tamborim' }
-            }
-          },
-          estacio: {
-            label: 'Estácio (agudo)',
-            map: {
-              forte: { url: 'assets/audio/ta_estacio_forte.wav', vol: 1.0, rate: 1.32, chokeGroup: 'tamborim' },
-              medio: { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
-              intermedio: { url: 'assets/audio/ta_estacio_medio.wav', vol: 0.76, rate: 1.32, chokeGroup: 'tamborim' },
-              fraco: { url: 'assets/audio/ta_estacio_fraco.wav', vol: 0.50, rate: 1.32, chokeGroup: 'tamborim' }
-            }
-          }
-        };
+        // Kits únicos oficiais fixos: Tamborim (Thalita Santos) e Repique (Gabriel Policarpo)
         this.tamborimKit = 'thalita';
+        this.repiqueKit = 'policarpo';
       }
 
-      setTamborimKit(kitId) {
-        const kit = this.tamborimKits[kitId];
-        if (!kit) return false;
-        for (const [art, cfg] of Object.entries(kit.map)) {
-          this.sampleConfig[`tamborim:${art}`] = { ...cfg };
-          this.loadSample(cfg.url);
-        }
-        this.tamborimKit = kitId;
-        return true;
-      }
+      // Compatibilidade retroativa
+      setRepiqueKit(kitId) { return true; }
+      setTamborimKit(kitId) { return true; }
 
       getDecoderContext() {
         if (!this.decoderCtx) {
@@ -2745,17 +2793,6 @@
        3. ESTADO DA APLICAÇÃO E SEQUENCIADOR
        ========================================================================= */
     const audio = new SambaAudioEngine();
-    const TAMBORIM_KIT_STORAGE_KEY = 'naumteria_tamborim_kit';
-    try {
-      const savedKit = localStorage.getItem(TAMBORIM_KIT_STORAGE_KEY);
-      // Se não houver seleção salva, ou se for o antigo padrão 'estacio', atualiza para 'thalita'
-      if (!savedKit || savedKit === 'estacio') {
-        audio.setTamborimKit('thalita');
-        localStorage.setItem(TAMBORIM_KIT_STORAGE_KEY, 'thalita');
-      } else if (savedKit && audio.tamborimKits[savedKit]) {
-        audio.setTamborimKit(savedKit);
-      }
-    } catch (e) { }
     audio.preloadSamples();
 
     const state = {
@@ -4269,14 +4306,6 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       e.target.value = '';
     };
 
-    const tamborimKitSelect = document.getElementById('tamborimKitSelect');
-    tamborimKitSelect.value = audio.tamborimKit;
-    tamborimKitSelect.onchange = (e) => {
-      if (!audio.setTamborimKit(e.target.value)) return;
-      try { localStorage.setItem(TAMBORIM_KIT_STORAGE_KEY, e.target.value); } catch (err) { }
-      audio.triggerInstrument('tamborim', 'forte'); // prévia do novo som
-    };
-
     document.getElementById('btnSendToStudio').onclick = sendSequenceToMultitrackStudio;
 
     document.getElementById('btnClear').onclick = () => {
@@ -4345,99 +4374,356 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
 
 
-    // Gerenciador de Abas (Tabs) - Desktop & Mobile
-    const tabBtnBeatbox = document.getElementById('tabBtnBeatbox');
+    // =========================================================================
+    // GERENCIADOR DE ABAS (TABS) - INÍCIO, PAD & MULTITRACK
+    // =========================================================================
+    const tabBtnHome = document.getElementById('tabBtnHome');
     const tabBtnSequencer = document.getElementById('tabBtnSequencer');
-    const tabBeatbox = document.getElementById('tab-beatbox');
-    const tabSequencer = document.getElementById('tab-sequencer');
+    const tabBtnBeatbox = document.getElementById('tabBtnBeatbox');
 
-    const mobNavBeatbox = document.getElementById('mobNavBeatbox');
+    const tabHome = document.getElementById('tab-home');
+    const tabSequencer = document.getElementById('tab-sequencer');
+    const tabBeatbox = document.getElementById('tab-beatbox');
+
+    const mobNavHome = document.getElementById('mobNavHome');
     const mobNavSequencer = document.getElementById('mobNavSequencer');
-    const mobNavMosaic = document.getElementById('mobNavMosaic');
-    const mobGlobalPlay = document.getElementById('mobGlobalPlay');
-    const mobGlobalPlayIcon = document.getElementById('mobGlobalPlayIcon');
-    const mobGlobalRecord = document.getElementById('mobGlobalRecord');
+    const mobNavBeatbox = document.getElementById('mobNavBeatbox');
+
     const mobHeaderInstall = document.getElementById('mobHeaderInstall');
     const mobStatusPill = document.getElementById('mobStatusPill');
-
     const mobileOrientHint = document.getElementById('mobileOrientHint');
     const btnDismissOrient = document.getElementById('btnDismissOrient');
     const mobileHeadphonesToast = document.getElementById('mobileHeadphonesToast');
     const btnDismissHp = document.getElementById('btnDismissHp');
 
-    let currentActiveTab = 'tab-beatbox';
+    let currentActiveTab = 'tab-home';
 
     function switchTab(target) {
       currentActiveTab = target;
-      if (target === 'tab-beatbox') {
-        tabBtnBeatbox.classList.add('active');
-        tabBtnSequencer.classList.remove('active');
-        if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
-        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
-        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
-        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
-        tabBeatbox.classList.add('active');
-        tabSequencer.classList.remove('active');
-        stopPlayback(); // Para o sequenciador se estiver tocando
-      } else {
-        tabBtnSequencer.classList.add('active');
-        tabBtnBeatbox.classList.remove('active');
-        if (mobNavSequencer) mobNavSequencer.classList.add('active');
-        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
-        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
-        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
-        tabSequencer.classList.add('active');
-        tabBeatbox.classList.remove('active');
-        if (window.BeatboxStudio) {
-          window.BeatboxStudio.stopStudioPlayback(); // Para o beatbox se estiver tocando
+
+      // Interrompe reproduções ao trocar de contexto
+      if (target !== 'tab-sequencer' && typeof stopPlayback === 'function') {
+        stopPlayback();
+      }
+      if (target !== 'tab-beatbox' && window.BeatboxStudio && typeof window.BeatboxStudio.stopStudioPlayback === 'function') {
+        window.BeatboxStudio.stopStudioPlayback();
+      }
+
+      // Alterna visibilidade dos painéis
+      if (tabHome) tabHome.classList.toggle('active', target === 'tab-home');
+      if (tabSequencer) tabSequencer.classList.toggle('active', target === 'tab-sequencer');
+      if (tabBeatbox) tabBeatbox.classList.toggle('active', target === 'tab-beatbox');
+
+      // Atualiza botões Desktop
+      if (tabBtnHome) tabBtnHome.classList.toggle('active', target === 'tab-home');
+      if (tabBtnSequencer) tabBtnSequencer.classList.toggle('active', target === 'tab-sequencer');
+      if (tabBtnBeatbox) tabBtnBeatbox.classList.toggle('active', target === 'tab-beatbox');
+
+      // Atualiza botões Mobile
+      if (mobNavHome) mobNavHome.classList.toggle('active', target === 'tab-home');
+      if (mobNavSequencer) mobNavSequencer.classList.toggle('active', target === 'tab-sequencer');
+      if (mobNavBeatbox) mobNavBeatbox.classList.toggle('active', target === 'tab-beatbox');
+
+      // Ações específicas ao abrir cada aba
+      if (target === 'tab-home') {
+        renderHomeBrequesList();
+      } else if (target === 'tab-sequencer') {
+        renderStudio();
+      } else if (target === 'tab-beatbox') {
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.renderTimelineView === 'function') {
+          window.BeatboxStudio.renderTimelineView();
         }
       }
-      syncGlobalPlayButton();
     }
 
-    tabBtnBeatbox.onclick = () => switchTab('tab-beatbox');
-    tabBtnSequencer.onclick = () => switchTab('tab-sequencer');
+    if (tabBtnHome) tabBtnHome.onclick = () => switchTab('tab-home');
+    if (tabBtnSequencer) tabBtnSequencer.onclick = () => switchTab('tab-sequencer');
+    if (tabBtnBeatbox) tabBtnBeatbox.onclick = () => switchTab('tab-beatbox');
 
+    if (mobNavHome) mobNavHome.onclick = () => switchTab('tab-home');
+    if (mobNavSequencer) mobNavSequencer.onclick = () => switchTab('tab-sequencer');
     if (mobNavBeatbox) {
       mobNavBeatbox.onclick = () => {
-        if (currentActiveTab !== 'tab-beatbox') switchTab('tab-beatbox');
-        if (mobNavBeatbox) mobNavBeatbox.classList.add('active');
-        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
-        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
-        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
+        switchTab('tab-beatbox');
         if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
           window.BeatboxStudio.switchViewMode('timeline');
-        } else {
-          const btnViewTimeline = document.getElementById('btnViewTimeline');
-          if (btnViewTimeline) btnViewTimeline.click();
         }
       };
     }
 
-    if (mobNavSequencer) {
-      mobNavSequencer.onclick = () => {
-        switchTab('tab-sequencer');
-        if (mobNavSequencer) mobNavSequencer.classList.add('active');
-        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
-        if (mobNavMosaic) mobNavMosaic.classList.remove('active');
-        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
+    // =========================================================================
+    // MODAL DE CRIAÇÃO GUIADA: "CRIAR NOVO BREQUE"
+    // =========================================================================
+    const modalNewBreque = document.getElementById('modalNewBreque');
+    const btnHomeCreateBreque = document.getElementById('btnHomeCreateBreque');
+    const btnCloseModalNewBreque = document.getElementById('btnCloseModalNewBreque');
+    const modalNewBrequeTitle = document.getElementById('modalNewBrequeTitle');
+    const stepModalChoice = document.getElementById('stepModalChoice');
+    const stepModalPadSetup = document.getElementById('stepModalPadSetup');
+    const cardChoiceRecord = document.getElementById('cardChoiceRecord');
+    const cardChoicePad = document.getElementById('cardChoicePad');
+    const btnBackToChoice = document.getElementById('btnBackToChoice');
+    const btnConfirmPadSetup = document.getElementById('btnConfirmPadSetup');
+    const inputNewBrequeName = document.getElementById('inputNewBrequeName');
+    const inputNewBrequeBpm = document.getElementById('inputNewBrequeBpm');
+    const selectNewBrequeMeasures = document.getElementById('selectNewBrequeMeasures');
+
+    function openModalNewBreque() {
+      if (!modalNewBreque) return;
+      if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Criar Novo Breque';
+      if (stepModalChoice) stepModalChoice.style.display = 'flex';
+      if (stepModalPadSetup) stepModalPadSetup.style.display = 'none';
+
+      // Gera nome sugerido sequencial
+      const existingCount = Object.keys(customBateriaPresets || {}).length;
+      if (inputNewBrequeName) {
+        inputNewBrequeName.value = `Breque ${existingCount + 1}`;
+      }
+      if (inputNewBrequeBpm) {
+        inputNewBrequeBpm.value = state.bpm || 142;
+      }
+      modalNewBreque.style.display = 'flex';
+    }
+
+    function closeModalNewBreque() {
+      if (modalNewBreque) modalNewBreque.style.display = 'none';
+    }
+
+    if (btnHomeCreateBreque) btnHomeCreateBreque.onclick = openModalNewBreque;
+    if (btnCloseModalNewBreque) btnCloseModalNewBreque.onclick = closeModalNewBreque;
+
+    if (modalNewBreque) {
+      modalNewBreque.onclick = (e) => {
+        if (e.target === modalNewBreque) closeModalNewBreque();
       };
     }
 
-    if (mobNavMosaic) {
-      mobNavMosaic.onclick = () => {
-        if (currentActiveTab !== 'tab-beatbox') switchTab('tab-beatbox');
-        if (mobNavMosaic) mobNavMosaic.classList.add('active');
-        if (mobNavBeatbox) mobNavBeatbox.classList.remove('active');
-        if (mobNavSequencer) mobNavSequencer.classList.remove('active');
-        if (mobGlobalRecord) mobGlobalRecord.classList.remove('active');
+    // Opção 1: Gravar ao Vivo
+    if (cardChoiceRecord) {
+      cardChoiceRecord.onclick = () => {
+        closeModalNewBreque();
+        switchTab('tab-beatbox');
+        showHeadphonesToast();
         if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
-          window.BeatboxStudio.switchViewMode('mosaic');
-        } else {
-          const btnViewMosaic = document.getElementById('btnViewMosaic');
-          if (btnViewMosaic) btnViewMosaic.click();
+          window.BeatboxStudio.switchViewMode('record');
         }
       };
+    }
+
+    // Opção 2: Montar no Pad / Sequenciador
+    if (cardChoicePad) {
+      cardChoicePad.onclick = () => {
+        if (stepModalChoice) stepModalChoice.style.display = 'none';
+        if (stepModalPadSetup) stepModalPadSetup.style.display = 'flex';
+        if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Configurar Breque no Pad';
+        if (inputNewBrequeName) {
+          inputNewBrequeName.focus();
+          inputNewBrequeName.select();
+        }
+      };
+    }
+
+    if (btnBackToChoice) {
+      btnBackToChoice.onclick = () => {
+        if (stepModalChoice) stepModalChoice.style.display = 'flex';
+        if (stepModalPadSetup) stepModalPadSetup.style.display = 'none';
+        if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Criar Novo Breque';
+      };
+    }
+
+    if (btnConfirmPadSetup) {
+      btnConfirmPadSetup.onclick = () => {
+        const name = (inputNewBrequeName && inputNewBrequeName.value.trim()) || 'Novo Breque';
+        const bpm = parseInt(inputNewBrequeBpm ? inputNewBrequeBpm.value : '142', 10) || 142;
+        const measures = parseInt(selectNewBrequeMeasures ? selectNewBrequeMeasures.value : '2', 10) || 2;
+
+        // Limpa grade e aplica novos parâmetros
+        state.gridData = {};
+        state.stepMeta = {};
+        state.loopGridData = {};
+        state.selectedGroove = {};
+        state.bpm = Math.min(220, Math.max(60, bpm));
+        state.measures = measures;
+        state.activeBrequeName = name;
+
+        const bpmSlider = document.getElementById('bpmSlider');
+        if (bpmSlider) bpmSlider.value = state.bpm;
+        const bpmDisplay = document.getElementById('bpmDisplay');
+        if (bpmDisplay) bpmDisplay.textContent = state.bpm;
+        const measureCountDisplay = document.getElementById('measureCountDisplay');
+        if (measureCountDisplay) measureCountDisplay.textContent = `${state.measures} Compassos`;
+
+        closeModalNewBreque();
+        switchTab('tab-sequencer');
+      };
+    }
+
+    // =========================================================================
+    // LISTA DE MEUS BREQUES & REPERTÓRIO NA HOME
+    // =========================================================================
+    let activePreviewPresetId = null;
+
+    function renderHomeBrequesList() {
+      const container = document.getElementById('homeBrequeList');
+      const countDisplay = document.getElementById('homeBrequesCount');
+      if (!container) return;
+
+      container.innerHTML = '';
+      customBateriaPresets = loadCustomBateriaPresets();
+
+      const customKeys = Object.keys(customBateriaPresets || {});
+      const nativeKeys = Object.keys(BATERIA_PRESETS || {});
+      const totalCount = customKeys.length + nativeKeys.length;
+
+      if (countDisplay) {
+        countDisplay.textContent = `${totalCount} ${totalCount === 1 ? 'breque' : 'breques'}`;
+      }
+
+      if (totalCount === 0) {
+        container.innerHTML = `
+          <div class="home-empty-state" style="grid-column: 1 / -1;">
+            <span class="home-empty-icon">🥁</span>
+            <p class="home-empty-text">Nenhum breque cadastrado ainda. Comece criando seu primeiro breque agora!</p>
+            <button class="btn-empty-starter" onclick="openModalNewBreque()">➕ Criar Primeiro Breque</button>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Renderiza Breques Personalizados do Usuário
+      customKeys.forEach(key => {
+        const p = customBateriaPresets[key];
+        const card = createBrequeCardElement({
+          id: 'custom:' + key,
+          name: p.name || key,
+          bpm: p.bpm || 142,
+          measures: p.measures || 2,
+          isCustom: true,
+          presetObj: p
+        });
+        container.appendChild(card);
+      });
+
+      // 2. Renderiza Repertório Nativo da Bateria
+      nativeKeys.forEach(key => {
+        const p = BATERIA_PRESETS[key];
+        const card = createBrequeCardElement({
+          id: key,
+          name: p.name || key,
+          bpm: p.bpm || 142,
+          measures: p.measures || 4,
+          isCustom: false,
+          presetObj: p
+        });
+        container.appendChild(card);
+      });
+    }
+
+    function createBrequeCardElement({ id, name, bpm, measures, isCustom, presetObj }) {
+      const card = document.createElement('div');
+      card.className = 'home-breque-card';
+
+      const isPlayingThis = (activePreviewPresetId === id) && state.isPlaying;
+
+      card.innerHTML = `
+        <div class="home-breque-card-top">
+          <div class="home-breque-title-wrap">
+            <span class="home-breque-name">${escapeHtml(name)}</span>
+            <div class="home-breque-badges">
+              <span class="home-badge-pill">${bpm} BPM</span>
+              <span class="home-badge-pill">${measures} Comp</span>
+              <span class="home-badge-pill ${isCustom ? '' : 'pill-native'}">
+                ${isCustom ? '⭐ Meu Breque' : '🏛️ Repertório Naumteria'}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="home-breque-actions">
+          <button class="btn-card-action btn-card-play" title="${isPlayingThis ? 'Parar preview' : 'Ouvir breque'}">
+            <span>${isPlayingThis ? '⏹' : '▶'}</span>
+          </button>
+          <button class="btn-card-action btn-card-pad" title="Abrir no Pad / Sequenciador">
+            <span>🥁 Pad</span>
+          </button>
+          <button class="btn-card-action btn-card-multitrack" title="Abrir no Estúdio Multitrack">
+            <span>🎛️ Multitrack</span>
+          </button>
+          ${isCustom ? `
+            <button class="btn-card-action btn-card-delete" title="Excluir este breque">
+              <span>🗑</span>
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      // Evento Preview Play / Stop
+      const btnPlay = card.querySelector('.btn-card-play');
+      if (btnPlay) {
+        btnPlay.onclick = () => {
+          if (activePreviewPresetId === id && state.isPlaying) {
+            stopPlayback();
+            activePreviewPresetId = null;
+            renderHomeBrequesList();
+          } else {
+            stopPlayback();
+            activePreviewPresetId = id;
+            applyBateriaPresetObject(presetObj);
+            startPlayback();
+            renderHomeBrequesList();
+          }
+        };
+      }
+
+      // Evento Abrir no Pad
+      const btnPad = card.querySelector('.btn-card-pad');
+      if (btnPad) {
+        btnPad.onclick = () => {
+          stopPlayback();
+          activePreviewPresetId = null;
+          applyBateriaPresetObject(presetObj);
+          switchTab('tab-sequencer');
+        };
+      }
+
+      // Evento Abrir no Multitrack
+      const btnMulti = card.querySelector('.btn-card-multitrack');
+      if (btnMulti) {
+        btnMulti.onclick = () => {
+          stopPlayback();
+          activePreviewPresetId = null;
+          applyBateriaPresetObject(presetObj);
+          if (typeof sendSequenceToMultitrackStudio === 'function') {
+            sendSequenceToMultitrackStudio();
+          }
+          switchTab('tab-beatbox');
+        };
+      }
+
+      // Evento Excluir (apenas para custom)
+      const btnDel = card.querySelector('.btn-card-delete');
+      if (btnDel) {
+        btnDel.onclick = () => {
+          if (confirm(`Deseja realmente excluir o breque "${name}"?`)) {
+            const rawKey = id.replace('custom:', '');
+            delete customBateriaPresets[rawKey];
+            saveCustomBateriaPresetsToStorage(customBateriaPresets);
+            updateBateriaPresetSelect();
+            renderHomeBrequesList();
+          }
+        };
+      }
+
+      return card;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     // Botão Play Global da Barra Móvel
@@ -4613,6 +4899,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       if (window.BeatboxStudio) {
         window.BeatboxStudio.init();
       }
+      switchTab('tab-home');
     });
   </script>
   <script src="beatbox_studio.js"></script>
