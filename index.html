@@ -1589,10 +1589,10 @@
             <div class="rec-progress-bar" id="recProgressBar"></div>
           </div>
 
-          <!-- Contagem Regressiva Pré-Roll (1 Compasso) -->
+          <!-- Contagem Pré-Roll (Sempre 1, 2, 3, 4) -->
           <div class="countdown-overlay" id="countdownOverlay">
-            <div class="countdown-number" id="countdownNumber">4</div>
-            <div class="countdown-subtext" id="countdownSubtext">Prepare-se...</div>
+            <div class="countdown-number" id="countdownNumber">1</div>
+            <div class="countdown-subtext" id="countdownSubtext">Contagem: 1, 2, 3, 4...</div>
           </div>
         </div>
 
@@ -1761,8 +1761,8 @@
     <!-- Overlay de Contagem Pré-Roll no Sequenciador -->
     <div id="seqPreRollOverlay" class="sequencer-countdown-overlay" style="display: none;">
       <div class="seq-countdown-box">
-        <div class="seq-countdown-number" id="seqPreRollNum">4</div>
-        <div class="seq-countdown-label">Prepare-se...</div>
+        <div class="seq-countdown-number" id="seqPreRollNum">1</div>
+        <div class="seq-countdown-label">Contagem: 1, 2, 3, 4...</div>
       </div>
     </div>
   </div>
@@ -3864,7 +3864,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       const numDisplay = document.getElementById('seqPreRollNum');
       if (!overlay || !numDisplay) return onFinished();
 
-      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+      const totalBeats = 4;
       const beatDurMs = (60 / state.bpm) * 1000;
       let currentBeat = 1;
 
@@ -3875,7 +3875,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
       const countTimer = setInterval(() => {
         currentBeat++;
-        if (currentBeat <= beatsPerMeasure) {
+        if (currentBeat <= totalBeats) {
           numDisplay.textContent = currentBeat;
           audio.playPreRollClick(currentBeat, false);
           if (navigator.vibrate) navigator.vibrate(15);
@@ -4582,7 +4582,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         const instrumentName = selectRecordInstrument ? selectRecordInstrument.value : 'Gravação Ao Vivo';
         const mode = selectRecordCaptureMode ? selectRecordCaptureMode.value : 'audio';
         const bpm = parseInt(inputRecordBpm ? inputRecordBpm.value : '120', 10) || 120;
-        const metronome = selectRecordMetronome ? selectRecordMetronome.value === 'on' : true;
+        const metronome = selectRecordMetronome ? selectRecordMetronome.value !== 'false' : true;
 
         closeModalNewBreque();
         switchTab('tab-beatbox');

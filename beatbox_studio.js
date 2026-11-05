@@ -1775,7 +1775,7 @@
     switchViewMode('timeline');
   }
 
-  // Contagem regressiva antes da gravação (1 compasso de pré-roll)
+  // Contagem antes da gravação (sempre 1, 2, 3, 4)
   async function startPreRollCountdown() {
     if (recordingContext.isCountingDown || recordingContext.isRecording) return;
     if (!recordingContext.stream) {
@@ -1790,16 +1790,16 @@
     recordingContext.isCountingDown = true;
     recordingContext.aborted = false;
 
-    const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+    const totalBeats = 4;
     const beatIntervalMs = (60 / state.bpm) * 1000;
-    let count = beatsPerMeasure;
+    let currentBeat = 1;
 
     dom.btnStartRecord.textContent = '⏹ Cancelar Contagem';
     dom.btnStartRecord.classList.add('is-recording');
 
     dom.countdownOverlay.classList.add('active');
-    dom.countdownNumber.textContent = count;
-    dom.countdownSubtext.textContent = 'Prepare o instrumento da boca...';
+    dom.countdownNumber.textContent = currentBeat;
+    dom.countdownSubtext.textContent = 'Contagem: 1, 2, 3, 4...';
     playMetronomeClick(true);
 
     if (recordingContext.countdownTimer) {
@@ -1807,9 +1807,9 @@
     }
 
     recordingContext.countdownTimer = setInterval(() => {
-      count--;
-      if (count > 0) {
-        dom.countdownNumber.textContent = count;
+      currentBeat++;
+      if (currentBeat <= totalBeats) {
+        dom.countdownNumber.textContent = currentBeat;
         playMetronomeClick(false);
       } else {
         clearInterval(recordingContext.countdownTimer);
