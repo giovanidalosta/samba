@@ -2344,14 +2344,19 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     flex-shrink: 0;
   }
 
-  /* Oculta controles redundantes que já estão no rodapé móvel */
-  #btnStudioPlay,
-  #btnStudioStop,
-  .studio-view-switch,
-  .btn-play-desktop,
-  .btn-stop-desktop,
+  /* Oculta apenas impressão no mobile; mantém Play, Stop e alternador Faixas/Mosaico/Gravar visíveis */
   .btn-print-desktop {
     display: none !important;
+  }
+
+  .studio-view-switch {
+    display: inline-flex !important;
+    flex-shrink: 0;
+  }
+
+  .studio-view-switch .view-switch-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
   }
 
   .reaper-lcd-rack {

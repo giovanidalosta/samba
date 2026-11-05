@@ -139,9 +139,12 @@
 
   // --- Objeto da Faixa (Track) ---
   function createTrack(name, initialIndex) {
+    const safeName = (typeof name === 'string' && name.trim() && !name.startsWith('[object'))
+      ? name.trim()
+      : (INSTRUMENT_PRESETS[initialIndex] || `Instrumento ${(initialIndex || 0) + 1}`);
     return {
       id: 'track_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-      name: name || (INSTRUMENT_PRESETS[initialIndex] || `Instrumento ${initialIndex + 1}`),
+      name: safeName,
       mediaBlob: null,
       mediaUrl: null,
       mediaType: 'video', // 'video' | 'audio'
@@ -664,8 +667,8 @@
   }
 
   function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    if (str === null || str === undefined || typeof str === 'object') return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // --- Eventos das Faixas ---
@@ -824,6 +827,10 @@
         addTrack(INSTRUMENT_PRESETS[idx]);
       };
     });
+    const recNowBtn = container.querySelector('.btn-hero-record-now');
+    if (recNowBtn) {
+      recNowBtn.onclick = () => switchViewMode('record', null, 'audio');
+    }
     const addBtn = container.querySelector('.btn-hero-add-track');
     if (addBtn) addBtn.onclick = () => addTrack();
     const newProjBtn = container.querySelector('.btn-hero-new-project');
@@ -870,7 +877,7 @@
         <div class="empty-hero-icon">🥁</div>
         <h3 class="empty-hero-title">Projeto Zerado • Monte sua Bateria</h3>
         <p class="empty-hero-desc">
-          O projeto não possui nenhuma faixa. Adicione as pistas de instrumentos ou vozes que deseja gravar:
+          O projeto não possui nenhuma faixa. Escolha um instrumento para adicionar ou grave agora mesmo:
         </p>
         <div class="empty-hero-presets">
           ${INSTRUMENT_PRESETS.map((preset, idx) => `
@@ -881,7 +888,10 @@
           `).join('')}
         </div>
         <div class="empty-hero-actions">
-          <button class="btn btn-gold btn-hero-add-track" title="Adicionar faixa em branco">
+          <button class="btn btn-gold btn-hero-record-now" title="Abrir gravador de áudio/vídeo agora">
+            <span>🎙️</span> Gravar Faixa Agora
+          </button>
+          <button class="btn btn-secondary btn-hero-add-track" title="Adicionar faixa em branco">
             <span>➕</span> Adicionar Faixa em Branco
           </button>
           <button class="btn btn-secondary btn-hero-new-project" title="Configurar e montar novo projeto">
@@ -1046,7 +1056,7 @@
     const addLaneBtn = document.createElement('div');
     addLaneBtn.className = 'reaper-add-track-lane';
     addLaneBtn.innerHTML = `<span>➕</span> Inserir Nova Pista de Instrumento / Breque Vocal (Track)`;
-    addLaneBtn.onclick = addTrack;
+    addLaneBtn.onclick = () => addTrack();
     dom.reaperTracksStack.appendChild(addLaneBtn);
 
     bindReaperEvents();
@@ -1433,11 +1443,11 @@
   function addTrack(name) {
     if (state.tracks.length >= 9) {
       alert('Limite de 9 faixas no projeto atingido.');
-      return;
+      return null;
     }
-    let trackName = name;
+    let trackName = (typeof name === 'string' && name.trim() && !name.startsWith('[object')) ? name.trim() : null;
     if (!trackName) {
-      const usedNames = state.tracks.map(t => t.name.toLowerCase());
+      const usedNames = state.tracks.map(t => (typeof t.name === 'string' ? t.name.toLowerCase() : ''));
       const nextPreset = INSTRUMENT_PRESETS.find(p => !usedNames.includes(p.toLowerCase()));
       trackName = nextPreset || `Faixa ${state.tracks.length + 1}`;
     }
@@ -2093,8 +2103,8 @@
     updateRecTrackPicker();
     renderStudioViews();
     saveCurrentSession();
-    // Restaura o visor para novo take na mesma faixa ou outra faixa escolhida
-    setRecordingMode(recordingContext.captureMode);
+    // Envia direto para a timeline Multitrack após salvar o take
+    switchViewMode('timeline');
   }
 
   function discardAndRetry() {
@@ -2721,11 +2731,11 @@
       measures: state.measures,
       looping: state.looping,
       metronomeEnabled: state.metronomeEnabled,
-      viewMode: state.viewMode,
+      viewMode: state.viewMode === 'record' ? 'timeline' : state.viewMode,
       zoomLevel: state.zoomLevel,
-      tracks: state.tracks.map(t => ({
+      tracks: state.tracks.map((t, i) => ({
         id: t.id,
-        name: t.name,
+        name: (typeof t.name === 'string' && !t.name.startsWith('[object')) ? t.name : `Faixa ${i + 1}`,
         mediaType: t.mediaType || 'video',
         volume: t.volume,
         muted: t.muted,
@@ -2737,21 +2747,26 @@
       }))
     };
     await saveProjectToDB(serializable);
+    if (typeof window.syncGlobalPlayButton === 'function') {
+      window.syncGlobalPlayButton();
+    }
   }
 
   async function restoreSession() {
     const saved = await loadProjectFromDB();
+    const userAlreadyInRecord = state.viewMode === 'record';
+
     if (saved && Array.isArray(saved.tracks)) {
       // Se continha apenas os 4 dummies originais sem nenhuma gravação, zera:
       const isLegacyDummyTracks = saved.tracks.length === 4 &&
         saved.tracks.every(t => !t.mediaBlob && !t.duration && !t.mediaDataUrl) &&
-        saved.tracks[0].name.startsWith('Surdo 1ª') &&
-        saved.tracks[1].name.startsWith('Surdo 2ª') &&
-        saved.tracks[2].name.startsWith('Caixa') &&
-        saved.tracks[3].name.startsWith('Tamborim');
+        typeof saved.tracks[0].name === 'string' && saved.tracks[0].name.startsWith('Surdo 1ª') &&
+        typeof saved.tracks[1].name === 'string' && saved.tracks[1].name.startsWith('Surdo 2ª') &&
+        typeof saved.tracks[2].name === 'string' && saved.tracks[2].name.startsWith('Caixa') &&
+        typeof saved.tracks[3].name === 'string' && saved.tracks[3].name.startsWith('Tamborim');
 
       if (isLegacyDummyTracks) {
-        state.tracks = [];
+        if (!userAlreadyInRecord) state.tracks = [];
       } else {
         state.bpm = saved.bpm || 120;
         state.meter = saved.meter || '2/4';
@@ -2759,10 +2774,12 @@
         state.measures = saved.measures || 4;
         state.looping = !!saved.looping;
         state.metronomeEnabled = saved.metronomeEnabled !== undefined ? saved.metronomeEnabled : true;
-        state.viewMode = saved.viewMode || 'timeline';
+        if (!userAlreadyInRecord) {
+          state.viewMode = (saved.viewMode === 'mosaic') ? 'mosaic' : 'timeline';
+        }
         state.zoomLevel = saved.zoomLevel || 100;
 
-        state.tracks = saved.tracks.map((st, i) => {
+        const restoredTracks = saved.tracks.map((st, i) => {
           const tr = createTrack(st.name, i);
           tr.id = st.id || tr.id;
           tr.volume = st.volume !== undefined ? st.volume : 1.0;
@@ -2780,8 +2797,12 @@
           }
           return tr;
         });
+
+        if (!userAlreadyInRecord || state.tracks.length === 0) {
+          state.tracks = restoredTracks;
+        }
       }
-    } else {
+    } else if (!userAlreadyInRecord) {
       // Primeiro acesso: o projeto abre ZERADO, sem nenhuma faixa
       state.tracks = [];
     }
@@ -2789,8 +2810,13 @@
     if (dom.zoomLevelVal) dom.zoomLevelVal.textContent = `${state.zoomLevel}%`;
     syncToolbarControls();
     updateLoopUi();
-    switchViewMode(state.viewMode);
+    if (!userAlreadyInRecord) {
+      switchViewMode(state.viewMode);
+    }
     renderStudioViews();
+    if (typeof window.syncGlobalPlayButton === 'function') {
+      window.syncGlobalPlayButton();
+    }
   }
 
   function syncToolbarControls() {
@@ -3014,7 +3040,7 @@
 
     // Botão Adicionar Pista no Header DAW
     if (dom.btnTimelineAddTrack) {
-      dom.btnTimelineAddTrack.onclick = addTrack;
+      dom.btnTimelineAddTrack.onclick = () => addTrack();
     }
 
     // Clique na Régua da Linha de Tempo para Seek / Reposicionar Cursor
@@ -3237,7 +3263,9 @@
     }
 
     // Adicionar Faixa
-    dom.btnAddTrack.onclick = addTrack;
+    if (dom.btnAddTrack) {
+      dom.btnAddTrack.onclick = () => addTrack();
+    }
 
     // Exportações
     dom.btnExportVideo.onclick = exportMosaicVideo;
@@ -3473,12 +3501,70 @@
     await saveCurrentSession();
   }
 
+  // Inicia gravação guiada configurando instrumento, BPM, metrônomo e modo de captura
+  async function startGuidedRecording({ instrumentName, mode = 'audio', bpm = 142, metronome = true } = {}) {
+    stopStudioPlayback();
+
+    if (bpm && !isNaN(bpm)) {
+      state.bpm = Math.min(200, Math.max(60, parseInt(bpm, 10)));
+    }
+    if (typeof metronome === 'boolean') {
+      state.metronomeEnabled = metronome;
+    }
+    syncToolbarControls();
+
+    let targetTrack = null;
+    if (instrumentName) {
+      // Procura faixa vazia com o mesmo instrumento ou reutiliza uma faixa vazia sem mídia
+      targetTrack = state.tracks.find(t => !t.mediaUrl && t.name === instrumentName);
+      if (!targetTrack) {
+        const emptyFirst = state.tracks.find(t => !t.mediaUrl);
+        if (emptyFirst && state.tracks.length === 1) {
+          emptyFirst.name = instrumentName;
+          targetTrack = emptyFirst;
+        } else {
+          targetTrack = addTrack(instrumentName);
+        }
+      }
+    }
+    if (!targetTrack) {
+      if (state.tracks.length === 0) {
+        targetTrack = addTrack(instrumentName || INSTRUMENT_PRESETS[0]);
+      } else {
+        targetTrack = state.tracks.find(t => !t.mediaUrl) || state.tracks[0];
+      }
+    }
+
+    if (targetTrack) {
+      recordingContext.activeTrackId = targetTrack.id;
+    }
+
+    renderStudioViews();
+    await switchViewMode('record', targetTrack ? targetTrack.id : null, mode);
+  }
+
+  function getProjectSummary() {
+    const recordedTracks = state.tracks.filter(t => !!t.mediaUrl || !!t.mediaBlob);
+    return {
+      totalTracks: state.tracks.length,
+      recordedCount: recordedTracks.length,
+      bpm: state.bpm,
+      meter: state.meter,
+      isPlaying: state.isPlaying,
+      trackNames: state.tracks.map(t => t.name)
+    };
+  }
+
   // Exporta init para ser chamado pelo orquestrador
   window.BeatboxStudio = {
     init,
     startStudioPlayback,
     stopStudioPlayback,
+    stopRecordingView,
     openQuickRecord,
+    startGuidedRecording,
+    getProjectSummary,
+    renderStudioViews,
     importSequencerBounce,
     switchViewMode,
     openNewProjectModal,
