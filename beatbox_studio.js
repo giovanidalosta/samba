@@ -84,25 +84,26 @@
     return audioCtx;
   }
 
-  // Som do metrônomo sintético (Web Audio puro)
-  function playMetronomeClick(isAccent = false) {
+  // Som do metrônomo sintético (Web Audio puro com suporte a agendamento preciso)
+  function playMetronomeClick(isAccent = false, targetTime = null) {
     try {
       const ctx = getAudioContext();
+      const t = (targetTime !== null && isFinite(targetTime)) ? Math.max(ctx.currentTime, targetTime) : ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = isAccent ? 'triangle' : 'sine';
-      osc.frequency.setValueAtTime(isAccent ? 1200 : 800, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.04);
+      osc.frequency.setValueAtTime(isAccent ? 1200 : 800, t);
+      osc.frequency.exponentialRampToValueAtTime(100, t + 0.04);
 
-      gain.gain.setValueAtTime(isAccent ? 0.8 : 0.45, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.045);
+      gain.gain.setValueAtTime(isAccent ? 0.8 : 0.45, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start();
-      osc.stop(ctx.currentTime + 0.05);
+      osc.start(t);
+      osc.stop(t + 0.05);
     } catch (e) {
       console.warn('Metrônomo áudio error:', e);
     }
@@ -153,6 +154,7 @@
     selectedAudioDeviceId: localStorage.getItem('samba_selected_audio_dev') || '',
     selectedVideoDeviceId: localStorage.getItem('samba_selected_video_dev') || '',
     audioProfile: localStorage.getItem('samba_audio_profile') || 'raw', // 'raw' (estúdio/beatbox sem corte de frequências) ou 'filtered' (ruído/eco)
+    latencyCompensationMs: parseInt(localStorage.getItem('samba_latency_compensation') || '80', 10), // Compensação de atraso round-trip (fones/mic)
     tracks: []
   };
 
@@ -289,6 +291,8 @@
     dom.recVideoDevice = document.getElementById('recVideoDevice');
     dom.recVideoDeviceGroup = document.getElementById('recVideoDeviceGroup');
     dom.recAudioProfile = document.getElementById('recAudioProfile');
+    dom.recLatencyCompensation = document.getElementById('recLatencyCompensation');
+    dom.studioLatencyCompensation = document.getElementById('studioLatencyCompensation');
     dom.viewfinderVideo = document.getElementById('viewfinderVideo');
     dom.recModeVideoBtn = document.getElementById('recModeVideoBtn');
     dom.recModeAudioBtn = document.getElementById('recModeAudioBtn');
@@ -386,7 +390,13 @@
     if (maxDur > 0) {
       const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
       const measureDurationSec = (beatsPerMeasure * 60) / state.bpm;
-      const totalMeasures = Math.max(2, Math.ceil(maxDur / measureDurationSec));
+      const rawMeasures = maxDur / measureDurationSec;
+      const fraction = rawMeasures - Math.floor(rawMeasures);
+      // Se a folga após o compasso for pequena (< 35% de um compasso, ex: tempo de reação para clicar em Parar),
+      // faz o snap para o compasso completado em vez de criar um compasso inteiro vazio!
+      const totalMeasures = (fraction > 0 && fraction < 0.35)
+        ? Math.max(2, Math.floor(rawMeasures))
+        : Math.max(2, Math.ceil(rawMeasures));
       return totalMeasures * measureDurationSec;
     }
 
@@ -685,11 +695,11 @@
         <div class="mixer-row-secondary">
           <div class="nudge-controls">
             <span style="font-weight: 600; color: var(--text-muted);">Sync:</span>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="-20" title="Adiantar 20ms">-20</button>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="-5" title="Adiantar 5ms">-5</button>
+            <button class="btn-nudge" data-id="${track.id}" data-delta="-50" title="Adiantar 50ms">-50</button>
+            <button class="btn-nudge" data-id="${track.id}" data-delta="-10" title="Adiantar 10ms">-10</button>
             <span class="nudge-val-display" title="Ajuste fino de sincronia">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="5" title="Atrasar 5ms">+5</button>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="20" title="Atrasar 20ms">+20</button>
+            <button class="btn-nudge" data-id="${track.id}" data-delta="10" title="Atrasar 10ms">+10</button>
+            <button class="btn-nudge" data-id="${track.id}" data-delta="50" title="Atrasar 50ms">+50</button>
           </div>
 
           <div class="track-extra-actions">
@@ -1033,9 +1043,11 @@
         <!-- Linha 4: Sincronia Fina e Ações Rápidas -->
         <div class="tcp-footer-row">
           <div class="tcp-sync-box" title="Ajuste fino de sincronismo temporal (offset milissegundos)">
-            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="-10">-10</button>
+            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="-50" title="Adiantar 50ms">-50</button>
+            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="-10" title="Adiantar 10ms">-10</button>
             <span class="tcp-sync-display">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
-            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="10">+10</button>
+            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="10" title="Atrasar 10ms">+10</button>
+            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="50" title="Atrasar 50ms">+50</button>
           </div>
           <div class="tcp-actions-box">
             <button class="tcp-action-btn btn-tcp-rec" data-id="${track.id}" data-mode="video" title="Gravar com Câmera e Microfone">📹</button>
@@ -1250,7 +1262,8 @@
         const normFactor = maxPeak > 0.02 ? (1 / Math.max(0.25, maxPeak)) : 1;
 
         const rawDur = track.duration > 0 ? track.duration : 1;
-        const startRatio = Math.max(0, Math.min(0.98, (track.trimStart || 0) / rawDur));
+        const skipSec = Math.max(0, -(track.offsetMs || 0) / 1000);
+        const startRatio = Math.max(0, Math.min(0.98, ((track.trimStart || 0) + skipSec) / rawDur));
         const endRatio = Math.max(startRatio + 0.02, Math.min(1, getTrackEndMediaTime(track) / rawDur));
 
         for (let i = 0; i < barsCount; i++) {
@@ -2001,7 +2014,7 @@
     switchViewMode('timeline');
   }
 
-  // Contagem antes da gravação (sempre 1, 2, 3, 4)
+  // Contagem antes da gravação (sempre 1, 2, 3, 4 com agendamento Web Audio de alta precisão)
   async function startPreRollCountdown() {
     if (recordingContext.isCountingDown || recordingContext.isRecording) return;
     if (!recordingContext.stream) {
@@ -2012,12 +2025,12 @@
       }
     }
 
-    getAudioContext();
+    const ctx = getAudioContext();
     recordingContext.isCountingDown = true;
     recordingContext.aborted = false;
 
     const totalBeats = 4;
-    const beatIntervalMs = (60 / state.bpm) * 1000;
+    const secondsPerBeat = 60 / state.bpm;
     let currentBeat = 1;
 
     dom.btnStartRecord.textContent = '⏹ Cancelar Contagem';
@@ -2026,17 +2039,27 @@
     dom.countdownOverlay.classList.add('active');
     dom.countdownNumber.textContent = currentBeat;
     dom.countdownSubtext.textContent = 'Contagem: 1, 2, 3, 4...';
-    playMetronomeClick(true);
+
+    // Agenda os 4 cliques da contagem com precisão de microsegundo via Web Audio
+    const startAudioTime = ctx.currentTime + 0.01;
+    for (let b = 0; b < totalBeats; b++) {
+      playMetronomeClick(b === 0, startAudioTime + b * secondsPerBeat);
+    }
 
     if (recordingContext.countdownTimer) {
       clearInterval(recordingContext.countdownTimer);
     }
 
+    const startPerfTime = performance.now();
     recordingContext.countdownTimer = setInterval(() => {
-      currentBeat++;
-      if (currentBeat <= totalBeats) {
-        dom.countdownNumber.textContent = currentBeat;
-        playMetronomeClick(false);
+      const elapsedSec = (performance.now() - startPerfTime) / 1000;
+      const beatIdx = Math.floor(elapsedSec / secondsPerBeat) + 1;
+
+      if (beatIdx <= totalBeats) {
+        if (beatIdx !== currentBeat) {
+          currentBeat = beatIdx;
+          dom.countdownNumber.textContent = currentBeat;
+        }
       } else {
         clearInterval(recordingContext.countdownTimer);
         recordingContext.countdownTimer = null;
@@ -2044,7 +2067,7 @@
         dom.countdownOverlay.classList.remove('active');
         startActualRecording();
       }
-    }, beatIntervalMs);
+    }, 20);
   }
 
   // Início oficial da gravação com overdub nos fones
@@ -2368,6 +2391,11 @@
       track.trimEnd = 0;
       track.waveformPeaks = null;
 
+      // COMPENSAÇÃO DE LATÊNCIA AUTOMÁTICA:
+      // Puxa o áudio gravado para trás (-offsetMs), eliminando o atraso de round-trip (hardware + fones + microfone)
+      const compMs = parseInt(state.latencyCompensationMs, 10) || 80;
+      track.offsetMs = -compMs;
+
       // Decodifica picos reais e duração precisa em background
       extractWaveformPeaks(track).then(() => {
         renderStudioViews();
@@ -2403,22 +2431,18 @@
     setRecordingMode(recordingContext.captureMode);
   }
 
-  // --- Sistema de Metrônomo do Studio ---
+  // --- Sistema de Metrônomo do Studio com Web Audio Scheduler (Lookahead de Alta Precisão) ---
   let metroClock = {
     timer: null,
-    beatCount: 0
+    beatCount: 0,
+    nextBeatAudioTime: 0,
+    activeTimeouts: []
   };
 
-  function triggerMetronomeBeat(beatsPerMeasure) {
-    const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
-    const isAccent = beatInMeasure === 1;
-
-    if (state.metronomeEnabled) {
-      playMetronomeClick(isAccent);
-    }
-
-    // Pisca os LEDs no cabeçalho
-    if (dom.led1 && dom.led2) {
+  function scheduleLedPulse(isAccent, delayMs) {
+    if (!dom.led1 || !dom.led2) return;
+    const to = setTimeout(() => {
+      if (!metroClock.timer && !state.isPlaying && !recordingContext.isRecording && !recordingContext.isCountingDown) return;
       if (isAccent) {
         dom.led1.classList.add('beat-1');
         dom.led2.classList.remove('beat-sub');
@@ -2428,29 +2452,82 @@
         dom.led1.classList.remove('beat-1');
         setTimeout(() => { if (dom.led2) dom.led2.classList.remove('beat-sub'); }, 120);
       }
+    }, Math.max(0, delayMs));
+    metroClock.activeTimeouts.push(to);
+    if (metroClock.activeTimeouts.length > 40) {
+      metroClock.activeTimeouts = metroClock.activeTimeouts.slice(-20);
     }
-
-    metroClock.beatCount++;
   }
 
-  function startMetronomeClock() {
+  function startMetronomeClock(customStartAudioTime = null) {
     stopMetronomeClock();
-    metroClock.beatCount = 0;
+    const ctx = getAudioContext();
     const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
-    const beatIntervalMs = (60 / state.bpm) * 1000;
+    const secondsPerBeat = 60 / state.bpm;
 
-    // Toca o Tempo 1 IMEDIATAMENTE em t = 0 para sincronismo perfeito com gravação e playback
-    triggerMetronomeBeat(beatsPerMeasure);
+    metroClock.beatCount = 0;
+    const baseTime = (customStartAudioTime !== null && isFinite(customStartAudioTime))
+      ? customStartAudioTime
+      : ctx.currentTime + 0.005;
 
-    metroClock.timer = setInterval(() => {
-      triggerMetronomeBeat(beatsPerMeasure);
-    }, beatIntervalMs);
+    metroClock.nextBeatAudioTime = baseTime;
+    metroClock.activeTimeouts = [];
+
+    const scheduleBeats = () => {
+      const scheduleAheadSec = 0.12;
+      const now = ctx.currentTime;
+      while (metroClock.nextBeatAudioTime < now + scheduleAheadSec) {
+        const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
+        const isAccent = beatInMeasure === 1;
+
+        if (state.metronomeEnabled) {
+          playMetronomeClick(isAccent, metroClock.nextBeatAudioTime);
+        }
+
+        const delayMs = (metroClock.nextBeatAudioTime - now) * 1000;
+        scheduleLedPulse(isAccent, delayMs);
+
+        metroClock.nextBeatAudioTime += secondsPerBeat;
+        metroClock.beatCount++;
+      }
+    };
+
+    scheduleBeats();
+    metroClock.timer = setInterval(scheduleBeats, 25);
+  }
+
+  function resyncMetronomeToLoop() {
+    const ctx = getAudioContext();
+    metroClock.beatCount = 0;
+    metroClock.nextBeatAudioTime = ctx.currentTime + 0.005;
+    if (metroClock.activeTimeouts) {
+      metroClock.activeTimeouts.forEach(t => clearTimeout(t));
+      metroClock.activeTimeouts = [];
+    }
+    const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+    const secondsPerBeat = 60 / state.bpm;
+    const now = ctx.currentTime;
+    while (metroClock.nextBeatAudioTime < now + 0.12) {
+      const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
+      const isAccent = beatInMeasure === 1;
+      if (state.metronomeEnabled) {
+        playMetronomeClick(isAccent, metroClock.nextBeatAudioTime);
+      }
+      const delayMs = (metroClock.nextBeatAudioTime - now) * 1000;
+      scheduleLedPulse(isAccent, delayMs);
+      metroClock.nextBeatAudioTime += secondsPerBeat;
+      metroClock.beatCount++;
+    }
   }
 
   function stopMetronomeClock() {
     if (metroClock.timer) {
       clearInterval(metroClock.timer);
       metroClock.timer = null;
+    }
+    if (metroClock.activeTimeouts && metroClock.activeTimeouts.length > 0) {
+      metroClock.activeTimeouts.forEach(t => clearTimeout(t));
+      metroClock.activeTimeouts = [];
     }
     if (dom.led1) dom.led1.classList.remove('beat-1');
     if (dom.led2) dom.led2.classList.remove('beat-sub');
@@ -2536,6 +2613,9 @@
             triggerTrackAtTimelineOffset(track, 0);
           }
         });
+        if (state.metronomeEnabled) {
+          resyncMetronomeToLoop();
+        }
       }
     }, 30);
   }
@@ -4098,6 +4178,28 @@
         localStorage.setItem('samba_audio_profile', state.audioProfile);
         if (state.viewMode === 'record') {
           setRecordingMode(recordingContext.captureMode);
+        }
+      };
+    }
+
+    // Seletores de Compensação de Latência
+    if (dom.recLatencyCompensation) {
+      dom.recLatencyCompensation.value = String(state.latencyCompensationMs || 80);
+      dom.recLatencyCompensation.onchange = (e) => {
+        state.latencyCompensationMs = parseInt(e.target.value, 10) || 0;
+        localStorage.setItem('samba_latency_compensation', state.latencyCompensationMs);
+        if (dom.studioLatencyCompensation) {
+          dom.studioLatencyCompensation.value = String(state.latencyCompensationMs);
+        }
+      };
+    }
+    if (dom.studioLatencyCompensation) {
+      dom.studioLatencyCompensation.value = String(state.latencyCompensationMs || 80);
+      dom.studioLatencyCompensation.onchange = (e) => {
+        state.latencyCompensationMs = parseInt(e.target.value, 10) || 0;
+        localStorage.setItem('samba_latency_compensation', state.latencyCompensationMs);
+        if (dom.recLatencyCompensation) {
+          dom.recLatencyCompensation.value = String(state.latencyCompensationMs);
         }
       };
     }
