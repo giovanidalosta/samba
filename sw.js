@@ -1,5 +1,5 @@
 // Naumteria Studio - Service Worker
-const CACHE_NAME = 'naumteria-studio-v23';
+const CACHE_NAME = 'naumteria-studio-v24';
 const CORE_ASSETS = [
   './',
   'index.html',
@@ -7,9 +7,10 @@ const CORE_ASSETS = [
   'beatbox_studio.js',
   'assets/soundbank.js',
   'manifest.json',
-  'assets/logo-naumteria.png',
+  'assets/icon.svg',
   'assets/icon-192.png',
   'assets/icon-512.png',
+  'assets/logo-naumteria.png',
   'assets/fonts/Diamante-ExtraBold.ttf',
   'assets/fonts/Arboria-Book.otf',
   'assets/fonts/MyriadPro-Bold.otf',
