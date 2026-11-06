@@ -24,12 +24,12 @@
     });
   }
 
-  async function saveProjectToDB(data) {
+  async function saveProjectToDB(data, projectId = 'current_project') {
     try {
       const db = await openDB();
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      store.put({ id: 'current_project', data, updatedAt: Date.now() });
+      store.put({ id: projectId || 'current_project', data, updatedAt: Date.now() });
       await new Promise((res, rej) => {
         tx.oncomplete = res;
         tx.onerror = rej;
@@ -39,12 +39,12 @@
     }
   }
 
-  async function loadProjectFromDB() {
+  async function loadProjectFromDB(projectId = 'current_project') {
     try {
       const db = await openDB();
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
-      const req = store.get('current_project');
+      const req = store.get(projectId || 'current_project');
       return new Promise((resolve) => {
         req.onsuccess = () => resolve(req.result ? req.result.data : null);
         req.onerror = () => resolve(null);
@@ -52,6 +52,22 @@
     } catch (err) {
       console.warn('Erro ao carregar do IndexedDB:', err);
       return null;
+    }
+  }
+
+  async function deleteProjectFromDB(projectId) {
+    if (!projectId) return;
+    try {
+      const db = await openDB();
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.delete(projectId);
+      await new Promise((res, rej) => {
+        tx.oncomplete = res;
+        tx.onerror = rej;
+      });
+    } catch (err) {
+      console.warn('Erro ao remover projeto do IndexedDB:', err);
     }
   }
 
@@ -119,6 +135,7 @@
 
   // --- Estado do Beatbox Studio ---
   const state = {
+    projectId: 'current_project',
     bpm: 120,
     meter: '2/4', // 2/4 ou 4/4
     mode: 'free', // 'free' (tamanho baseado na gravação) ou 'fixed' (compassos fixos)
@@ -831,6 +848,14 @@
     if (recNowBtn) {
       recNowBtn.onclick = () => switchViewMode('record', null, 'audio');
     }
+    const importPadBtn = container.querySelector('.btn-hero-import-pad');
+    if (importPadBtn) {
+      importPadBtn.onclick = () => {
+        if (typeof window.importPadToCurrentStudio === 'function') {
+          window.importPadToCurrentStudio();
+        }
+      };
+    }
     const addBtn = container.querySelector('.btn-hero-add-track');
     if (addBtn) addBtn.onclick = () => addTrack();
     const newProjBtn = container.querySelector('.btn-hero-new-project');
@@ -874,11 +899,22 @@
       const emptyProjectHero = document.createElement('div');
       emptyProjectHero.className = 'studio-empty-project-hero';
       emptyProjectHero.innerHTML = `
-        <div class="empty-hero-icon">🥁</div>
-        <h3 class="empty-hero-title">Projeto Zerado • Monte sua Bateria</h3>
+        <div class="empty-hero-icon">🎛️</div>
+        <h3 class="empty-hero-title">Estúdio Multitrack deste Breque</h3>
         <p class="empty-hero-desc">
-          O projeto não possui nenhuma faixa. Escolha um instrumento para adicionar ou grave agora mesmo:
+          Grave faixas ao vivo com microfone/câmera ou importe a levada montada no Pad deste breque:
         </p>
+        <div class="empty-hero-actions" style="margin-bottom: 14px;">
+          <button class="btn btn-gold btn-hero-record-now" title="Abrir gravador de áudio/vídeo agora">
+            <span>🎙️</span> Gravar Faixa Agora
+          </button>
+          <button class="btn btn-primary btn-hero-import-pad" title="Trazer a bateria desenhada no Pad deste breque como faixa de áudio">
+            <span>🥁</span> Importar do Pad
+          </button>
+          <button class="btn btn-secondary btn-hero-add-track" title="Adicionar faixa em branco">
+            <span>➕</span> Nova Faixa Vazia
+          </button>
+        </div>
         <div class="empty-hero-presets">
           ${INSTRUMENT_PRESETS.map((preset, idx) => `
             <button class="btn-preset-add" data-preset="${idx}" title="Adicionar faixa de ${escapeHtml(preset)}">
@@ -886,17 +922,6 @@
               ${escapeHtml(preset)}
             </button>
           `).join('')}
-        </div>
-        <div class="empty-hero-actions">
-          <button class="btn btn-gold btn-hero-record-now" title="Abrir gravador de áudio/vídeo agora">
-            <span>🎙️</span> Gravar Faixa Agora
-          </button>
-          <button class="btn btn-secondary btn-hero-add-track" title="Adicionar faixa em branco">
-            <span>➕</span> Adicionar Faixa em Branco
-          </button>
-          <button class="btn btn-secondary btn-hero-new-project" title="Configurar e montar novo projeto">
-            <span>✨</span> Montar Projeto (Opções)
-          </button>
         </div>
       `;
       dom.reaperTracksStack.appendChild(emptyProjectHero);
@@ -2746,15 +2771,28 @@
         mediaBlob: t.mediaBlob
       }))
     };
-    await saveProjectToDB(serializable);
+    await saveProjectToDB(serializable, state.projectId);
+    if (typeof window.onStudioSessionUpdated === 'function') {
+      window.onStudioSessionUpdated(getProjectSummary());
+    }
     if (typeof window.syncGlobalPlayButton === 'function') {
       window.syncGlobalPlayButton();
     }
   }
 
-  async function restoreSession() {
-    const saved = await loadProjectFromDB();
+  async function restoreSession(projectIdOverride, fallbackBpm) {
+    if (projectIdOverride) {
+      state.projectId = projectIdOverride;
+    }
+    const saved = await loadProjectFromDB(state.projectId);
     const userAlreadyInRecord = state.viewMode === 'record';
+
+    // Revoga URLs antigas se estiver trocando de projeto
+    if (!userAlreadyInRecord && state.tracks.length > 0) {
+      state.tracks.forEach(t => {
+        if (t.mediaUrl) URL.revokeObjectURL(t.mediaUrl);
+      });
+    }
 
     if (saved && Array.isArray(saved.tracks)) {
       // Se continha apenas os 4 dummies originais sem nenhuma gravação, zera:
@@ -2767,8 +2805,9 @@
 
       if (isLegacyDummyTracks) {
         if (!userAlreadyInRecord) state.tracks = [];
+        if (fallbackBpm) state.bpm = fallbackBpm;
       } else {
-        state.bpm = saved.bpm || 120;
+        state.bpm = saved.bpm || fallbackBpm || 142;
         state.meter = saved.meter || '2/4';
         state.mode = saved.mode || 'free';
         state.measures = saved.measures || 4;
@@ -2803,8 +2842,10 @@
         }
       }
     } else if (!userAlreadyInRecord) {
-      // Primeiro acesso: o projeto abre ZERADO, sem nenhuma faixa
+      // Primeiro acesso deste Breque no Estúdio: abre ZERADO com o BPM do Breque
       state.tracks = [];
+      if (fallbackBpm) state.bpm = fallbackBpm;
+      state.viewMode = 'timeline';
     }
 
     if (dom.zoomLevelVal) dom.zoomLevelVal.textContent = `${state.zoomLevel}%`;
@@ -2814,9 +2855,19 @@
       switchViewMode(state.viewMode);
     }
     renderStudioViews();
+    if (typeof window.onStudioSessionUpdated === 'function') {
+      window.onStudioSessionUpdated(getProjectSummary());
+    }
     if (typeof window.syncGlobalPlayButton === 'function') {
       window.syncGlobalPlayButton();
     }
+  }
+
+  async function loadBrequeProject(projectId, fallbackBpm = 142) {
+    stopStudioPlayback();
+    stopRecordingView();
+    state.viewMode = 'timeline';
+    await restoreSession(projectId || 'current_project', fallbackBpm);
   }
 
   function syncToolbarControls() {
@@ -3563,6 +3614,8 @@
     stopRecordingView,
     openQuickRecord,
     startGuidedRecording,
+    loadBrequeProject,
+    deleteProjectFromDB,
     getProjectSummary,
     renderStudioViews,
     importSequencerBounce,

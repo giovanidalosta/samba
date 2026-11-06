@@ -3690,3 +3690,163 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   font-size: 14px;
   cursor: pointer;
 }
+
+/* =========================================================================
+   CABEÇALHO CONTEXTUAL DO BREQUE ABERTO ([← Voltar] + Nome + [Pad | Estúdio])
+   ========================================================================= */
+.project-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
+  max-width: 720px;
+  margin: 0 12px;
+}
+
+.btn-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-back-home:hover {
+  border-color: var(--naum-gold);
+  color: var(--naum-gold);
+  background: rgba(232, 195, 27, 0.08);
+}
+
+.project-title-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(18, 17, 24, 0.85);
+  border: 1px solid rgba(232, 195, 27, 0.28);
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.project-title-pill:hover {
+  border-color: var(--naum-gold);
+  background: rgba(232, 195, 27, 0.1);
+}
+
+.project-title-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-title-edit {
+  font-size: 11px;
+  color: var(--naum-gold);
+  opacity: 0.85;
+}
+
+.project-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  background: #0B0A0F;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.mode-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: var(--text-silver);
+  padding: 6px 13px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-switch-btn:hover {
+  color: #FFFFFF;
+}
+
+.mode-switch-btn.active {
+  background: linear-gradient(135deg, var(--naum-gold), #D4843E);
+  color: #0A090C;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(232, 195, 27, 0.25);
+}
+
+.home-breque-card-clickable {
+  cursor: pointer;
+}
+
+.home-open-hint {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--naum-gold);
+  background: rgba(232, 195, 27, 0.12);
+  border: 1px solid rgba(232, 195, 27, 0.28);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 12px !important;
+  }
+  header.project-open .brand {
+    display: none !important;
+  }
+  header.project-open .project-header-bar {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    gap: 6px;
+  }
+  .btn-back-home {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+  .btn-back-home .back-text {
+    display: none;
+  }
+  .project-title-pill {
+    flex: 1;
+    max-width: none;
+    justify-content: center;
+    padding: 5px 8px;
+    font-size: 13px;
+  }
+  .mode-switch-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+}

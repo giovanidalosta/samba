@@ -1076,8 +1076,8 @@
 
 <body>
 
-  <header>
-    <div class="brand">
+  <header id="appMainHeader">
+    <div class="brand" id="headerBrandLogo" style="cursor: pointer;" title="Voltar para a Tela Inicial">
       <img src="assets/logo-naumteria.png" alt="Logo Bateria Naumteria" class="brand-logo">
       <div class="brand-text-wrap">
         <h1>NAUMTERIA <span class="brand-gold">STUDIO</span></h1>
@@ -1085,17 +1085,26 @@
       </div>
     </div>
 
-    <!-- Navegação de Abas (Desktop) -->
-    <div class="app-tabs-nav">
-      <button class="tab-btn active" id="tabBtnHome" data-target="tab-home">
-        🏠 Início
+    <!-- Barra Contextual do Breque Aberto (Oculta na Home) -->
+    <div class="project-header-bar" id="projectHeaderBar" style="display: none;">
+      <button class="btn-back-home" id="btnBackToHome" title="Voltar para a lista de Breques">
+        <span class="back-arrow">←</span>
+        <span class="back-text">Voltar</span>
       </button>
-      <button class="tab-btn" id="tabBtnSequencer" data-target="tab-sequencer">
-        🥁 Pad / Sequenciador
+
+      <button class="project-title-pill" id="btnEditBrequeTitle" title="Clique para renomear este breque">
+        <span class="project-title-name" id="activeBrequeTitleText">Novo Breque</span>
+        <span class="project-title-edit">✎</span>
       </button>
-      <button class="tab-btn" id="tabBtnBeatbox" data-target="tab-beatbox">
-        🎛️ Studio Multitrack
-      </button>
+
+      <div class="project-mode-switch" id="projectModeSwitch" title="Alternar entre Pad e Estúdio dentro deste Breque">
+        <button class="mode-switch-btn active" id="btnSwitchToPad">
+          <span>🥁</span> <span>Pad</span>
+        </button>
+        <button class="mode-switch-btn" id="btnSwitchToStudio">
+          <span>🎛️</span> <span>Estúdio</span>
+        </button>
+      </div>
     </div>
 
     <!-- Ações Rápidas & Status Mobile -->
@@ -1104,8 +1113,8 @@
         title="Instalar aplicativo no celular">
         <span>⬇</span> Instalar App
       </button>
-      <div class="mob-status-pill" id="mobStatusPill" title="Compasso e BPM atuais">
-        <span id="mobStatusBpm">120 BPM</span>
+      <div class="mob-status-pill" id="mobStatusPill" style="display: none;" title="Compasso e BPM atuais">
+        <span id="mobStatusBpm">142 BPM</span>
       </div>
     </div>
   </header>
@@ -1192,7 +1201,11 @@
         <!-- Passo 2A: Configuração Rápida da Gravação ao Vivo -->
         <div id="stepModalRecordSetup" class="modal-pad-setup" style="display: none;">
           <div class="setup-field">
-            <label for="selectRecordInstrument">Qual instrumento ou voz você vai gravar?</label>
+            <label for="inputRecordBrequeName">Nome do Breque</label>
+            <input type="text" id="inputRecordBrequeName" class="setup-input" placeholder="Ex: Breque 1, Virada de Caixa..." value="Novo Breque">
+          </div>
+          <div class="setup-field">
+            <label for="selectRecordInstrument">Qual instrumento ou voz você vai gravar primeiro?</label>
             <select id="selectRecordInstrument" class="setup-input">
               <option value="Surdo 1ª (Tum)">🥁 Surdo de 1ª (Marcação)</option>
               <option value="Surdo 2ª (Tump)">🥁 Surdo de 2ª (Resposta)</option>
@@ -1334,8 +1347,8 @@
           </button>
         </div>
 
-        <button id="btnToolbarNewProject" class="btn btn-secondary" title="Montar um novo projeto do zero">
-          <span>✨</span> Montar Projeto
+        <button id="btnImportFromPad" class="btn btn-secondary" title="Trazer a bateria desenhada no Pad deste Breque como faixa no Estúdio">
+          <span>🥁</span> Importar do Pad
         </button>
 
         <button id="btnAddTrack" class="btn" title="Adicionar nova faixa ao estúdio">
@@ -1881,22 +1894,6 @@
     </div>
     <div>Estúdio Multitrack & Sequenciador de Breques</div>
   </footer>
-
-  <!-- Barra de Ações & Navegação Inferior Móvel (3 Abas Limpas) -->
-  <nav class="mobile-bottom-bar" id="mobileBottomBar">
-    <button class="mob-bar-btn active" id="mobNavHome" data-target="tab-home" title="Início">
-      <span class="mob-icon">🏠</span>
-      <span class="mob-label">Início</span>
-    </button>
-    <button class="mob-bar-btn" id="mobNavSequencer" data-target="tab-sequencer" title="Pad / Sequenciador">
-      <span class="mob-icon">🥁</span>
-      <span class="mob-label">Pad</span>
-    </button>
-    <button class="mob-bar-btn" id="mobNavBeatbox" data-target="tab-beatbox" title="Studio Multitrack">
-      <span class="mob-icon">🎛</span>
-      <span class="mob-label">Multitrack</span>
-    </button>
-  </nav>
 
   <!-- Soundbank embutido para compatibilidade total offline e file:/// sem CORS -->
   <script src="assets/soundbank.js"></script>
@@ -4116,15 +4113,29 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         (state.gridData[inst.id] || []).some(n => n !== null)
       );
       if (!hasAnyNote) {
-        alert('Desenhe algumas notas ou escolha um Preset / Levada antes de enviar para o Studio Multitrack.');
+        if (currentActiveTab === 'tab-beatbox') {
+          if (confirm('O Pad deste breque ainda não tem notas desenhadas. Deseja ir para o Pad agora para montar a levada?')) {
+            switchTab('tab-sequencer');
+          }
+        } else {
+          alert('Desenhe algumas notas ou escolha uma Levada no Pad antes de importar para o Estúdio.');
+        }
         return;
       }
 
       const btn = document.getElementById('btnSendToStudio');
-      const originalText = btn.textContent;
+      const btnImport = document.getElementById('btnImportFromPad');
+      const originalText = btn ? btn.innerHTML : '';
+      const originalImportText = btnImport ? btnImport.innerHTML : '';
       try {
-        btn.disabled = true;
-        btn.textContent = '⏳ Renderizando Bateria...';
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = '⏳ Renderizando...';
+        }
+        if (btnImport) {
+          btnImport.disabled = true;
+          btnImport.textContent = '⏳ Importando Pad...';
+        }
         stopPlayback();
 
         const totalSteps = getTotalSteps();
@@ -4144,16 +4155,26 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
             state.meter,
             state.measures
           );
+          if (typeof saveActiveBrequeState === 'function') {
+            saveActiveBrequeState('studio');
+          }
           switchTab('tab-beatbox');
         }
       } catch (err) {
         console.error('Erro ao enviar breque para o Studio Multitrack:', err);
         alert('Não foi possível renderizar o breque: ' + err.message);
       } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+        if (btnImport) {
+          btnImport.disabled = false;
+          btnImport.innerHTML = originalImportText;
+        }
       }
     }
+    window.importPadToCurrentStudio = sendSequenceToMultitrackStudio;
 
     function updatePrintDetails() {
       const printDetails = document.getElementById('printDetails');
@@ -4326,19 +4347,21 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
 
     // =========================================================================
-    // GERENCIADOR DE ABAS (TABS) - INÍCIO, PAD & MULTITRACK
+    // NAVEGAÇÃO POR PROJETO (HOME -> BREQUE ABERTO [PAD | ESTÚDIO])
     // =========================================================================
-    const tabBtnHome = document.getElementById('tabBtnHome');
-    const tabBtnSequencer = document.getElementById('tabBtnSequencer');
-    const tabBtnBeatbox = document.getElementById('tabBtnBeatbox');
+    const appMainHeader = document.getElementById('appMainHeader');
+    const headerBrandLogo = document.getElementById('headerBrandLogo');
+    const projectHeaderBar = document.getElementById('projectHeaderBar');
+    const btnBackToHome = document.getElementById('btnBackToHome');
+    const btnEditBrequeTitle = document.getElementById('btnEditBrequeTitle');
+    const activeBrequeTitleText = document.getElementById('activeBrequeTitleText');
+    const btnSwitchToPad = document.getElementById('btnSwitchToPad');
+    const btnSwitchToStudio = document.getElementById('btnSwitchToStudio');
+    const btnImportFromPad = document.getElementById('btnImportFromPad');
 
     const tabHome = document.getElementById('tab-home');
     const tabSequencer = document.getElementById('tab-sequencer');
     const tabBeatbox = document.getElementById('tab-beatbox');
-
-    const mobNavHome = document.getElementById('mobNavHome');
-    const mobNavSequencer = document.getElementById('mobNavSequencer');
-    const mobNavBeatbox = document.getElementById('mobNavBeatbox');
 
     const mobHeaderInstall = document.getElementById('mobHeaderInstall');
     const mobStatusPill = document.getElementById('mobStatusPill');
@@ -4348,8 +4371,175 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     const btnDismissHp = document.getElementById('btnDismissHp');
 
     let currentActiveTab = 'tab-home';
+    state.activeBrequeId = null;
+    state.activeBrequeName = 'Novo Breque';
+
+    function hasPadNotesInCurrentGrid() {
+      return INSTRUMENTS.some(inst =>
+        (state.gridData[inst.id] || []).some(n => n !== null)
+      );
+    }
+
+    function updateHeaderBrequeTitle() {
+      if (activeBrequeTitleText) {
+        activeBrequeTitleText.textContent = state.activeBrequeName || 'Novo Breque';
+      }
+    }
+
+    function saveActiveBrequeState(modeOverride) {
+      if (!state.activeBrequeId) return;
+      customBateriaPresets = loadCustomBateriaPresets();
+
+      // Se o usuário editou um preset nativo, mantém salvo apenas se já for custom:
+      if (!state.activeBrequeId.startsWith('custom:')) {
+        return;
+      }
+
+      const rawKey = state.activeBrequeId.replace('custom:', '');
+      const existing = customBateriaPresets[rawKey] || {};
+      const currentMode = modeOverride || (currentActiveTab === 'tab-beatbox' ? 'studio' : (currentActiveTab === 'tab-sequencer' ? 'pad' : (existing.lastMode || 'pad')));
+
+      customBateriaPresets[rawKey] = {
+        ...existing,
+        name: state.activeBrequeName || existing.name || 'Novo Breque',
+        bpm: state.bpm || existing.bpm || 142,
+        measures: state.measures || existing.measures || 2,
+        lastMode: currentMode,
+        hasPadNotes: hasPadNotesInCurrentGrid(),
+        updatedAt: Date.now(),
+        gridData: JSON.parse(JSON.stringify(state.gridData || {})),
+        stepMeta: JSON.parse(JSON.stringify(state.stepMeta || {})),
+        loopMeasures: state.loopMeasures,
+        loopGridData: JSON.parse(JSON.stringify(state.loopGridData || {})),
+        selectedGroove: JSON.parse(JSON.stringify(state.selectedGroove || {})),
+        trackGains: JSON.parse(JSON.stringify(state.trackGains || {}))
+      };
+
+      saveCustomBateriaPresetsToStorage(customBateriaPresets);
+      updateBateriaPresetSelect();
+    }
+
+    window.onStudioSessionUpdated = (summary) => {
+      if (!state.activeBrequeId || !summary) return;
+      if (state.activeBrequeId.startsWith('custom:')) {
+        const rawKey = state.activeBrequeId.replace('custom:', '');
+        customBateriaPresets = loadCustomBateriaPresets();
+        if (customBateriaPresets[rawKey]) {
+          customBateriaPresets[rawKey].studioTrackCount = summary.totalTracks || 0;
+          customBateriaPresets[rawKey].studioRecordedCount = summary.recordedCount || 0;
+          if (summary.bpm) {
+            customBateriaPresets[rawKey].bpm = summary.bpm;
+            state.bpm = summary.bpm;
+          }
+          saveCustomBateriaPresetsToStorage(customBateriaPresets);
+        }
+      }
+    };
+
+    function createNewBrequeProject({ name, bpm = 142, measures = 2, initialMode = 'pad' }) {
+      const cleanName = (name && name.trim()) || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
+      const key = 'breque_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+
+      state.gridData = {};
+      state.stepMeta = {};
+      state.loopGridData = {};
+      state.selectedGroove = {};
+      state.bpm = Math.min(220, Math.max(60, parseInt(bpm, 10) || 142));
+      state.measures = parseInt(measures, 10) || 2;
+      state.activeBrequeName = cleanName;
+      state.activeBrequeId = 'custom:' + key;
+
+      const bpmSlider = document.getElementById('bpmSlider');
+      if (bpmSlider) bpmSlider.value = state.bpm;
+      const bpmDisplay = document.getElementById('bpmDisplay');
+      if (bpmDisplay) bpmDisplay.textContent = state.bpm;
+      const measureCountDisplay = document.getElementById('measureCountDisplay');
+      if (measureCountDisplay) measureCountDisplay.textContent = `${state.measures} Compassos`;
+
+      customBateriaPresets = loadCustomBateriaPresets();
+      customBateriaPresets[key] = {
+        name: cleanName,
+        bpm: state.bpm,
+        measures: state.measures,
+        lastMode: initialMode,
+        hasPadNotes: false,
+        studioTrackCount: 0,
+        studioRecordedCount: 0,
+        updatedAt: Date.now(),
+        gridData: {},
+        stepMeta: {},
+        loopMeasures: state.loopMeasures,
+        loopGridData: {},
+        selectedGroove: {},
+        trackGains: {}
+      };
+      saveCustomBateriaPresetsToStorage(customBateriaPresets);
+      updateBateriaPresetSelect();
+      updateHeaderBrequeTitle();
+      return state.activeBrequeId;
+    }
+
+    async function openBrequeProject(brequeId, modeOverride) {
+      stopPlayback();
+      activePreviewPresetId = null;
+
+      customBateriaPresets = loadCustomBateriaPresets();
+      let presetObj = null;
+      let isCustom = false;
+
+      if (brequeId.startsWith('custom:')) {
+        const rawKey = brequeId.replace('custom:', '');
+        presetObj = customBateriaPresets[rawKey];
+        isCustom = true;
+      } else {
+        presetObj = BATERIA_PRESETS[brequeId];
+      }
+
+      if (!presetObj) return;
+
+      state.activeBrequeId = brequeId;
+      state.activeBrequeName = presetObj.name || brequeId;
+      updateHeaderBrequeTitle();
+
+      const hasSavedGrid = presetObj.gridData && Object.keys(presetObj.gridData).length > 0;
+      const hasSavedTracks = presetObj.tracks && Object.keys(presetObj.tracks).length > 0;
+
+      if (hasSavedGrid || hasSavedTracks) {
+        applyBateriaPresetObject(presetObj);
+      } else {
+        state.gridData = {};
+        state.stepMeta = {};
+        state.loopGridData = {};
+        state.selectedGroove = {};
+        state.bpm = presetObj.bpm || 142;
+        state.measures = presetObj.measures || 2;
+        const bpmSlider = document.getElementById('bpmSlider');
+        if (bpmSlider) bpmSlider.value = state.bpm;
+        const bpmDisplay = document.getElementById('bpmDisplay');
+        if (bpmDisplay) bpmDisplay.textContent = state.bpm;
+        const measureCountDisplay = document.getElementById('measureCountDisplay');
+        if (measureCountDisplay) measureCountDisplay.textContent = `${state.measures} Compassos`;
+        initGridData();
+      }
+
+      if (window.BeatboxStudio && typeof window.BeatboxStudio.loadBrequeProject === 'function') {
+        await window.BeatboxStudio.loadBrequeProject(brequeId, state.bpm);
+      }
+
+      const targetMode = modeOverride || presetObj.lastMode || (isCustom && !hasPadNotesInCurrentGrid() && presetObj.studioTrackCount > 0 ? 'studio' : 'pad');
+      if (isCustom) {
+        saveActiveBrequeState(targetMode);
+      }
+      switchTab(targetMode === 'studio' ? 'tab-beatbox' : 'tab-sequencer');
+    }
 
     function switchTab(target) {
+      // Se estava em um breque aberto e vai trocar de modo ou voltar para Home, salva estado do breque
+      if (currentActiveTab !== 'tab-home' && state.activeBrequeId) {
+        const nextMode = target === 'tab-beatbox' ? 'studio' : (target === 'tab-sequencer' ? 'pad' : undefined);
+        saveActiveBrequeState(nextMode);
+      }
+
       currentActiveTab = target;
 
       // Interrompe reproduções ao trocar de contexto
@@ -4370,18 +4560,24 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       if (tabSequencer) tabSequencer.classList.toggle('active', target === 'tab-sequencer');
       if (tabBeatbox) tabBeatbox.classList.toggle('active', target === 'tab-beatbox');
 
-      // Atualiza botões Desktop
-      if (tabBtnHome) tabBtnHome.classList.toggle('active', target === 'tab-home');
-      if (tabBtnSequencer) tabBtnSequencer.classList.toggle('active', target === 'tab-sequencer');
-      if (tabBtnBeatbox) tabBtnBeatbox.classList.toggle('active', target === 'tab-beatbox');
+      // Exibe/oculta a barra contextual do Breque no Header
+      const isProjectOpen = target !== 'tab-home';
+      if (projectHeaderBar) {
+        projectHeaderBar.style.display = isProjectOpen ? 'flex' : 'none';
+      }
+      if (appMainHeader) {
+        appMainHeader.classList.toggle('project-open', isProjectOpen);
+      }
+      if (btnSwitchToPad) {
+        btnSwitchToPad.classList.toggle('active', target === 'tab-sequencer');
+      }
+      if (btnSwitchToStudio) {
+        btnSwitchToStudio.classList.toggle('active', target === 'tab-beatbox');
+      }
 
-      // Atualiza botões Mobile
-      if (mobNavHome) mobNavHome.classList.toggle('active', target === 'tab-home');
-      if (mobNavSequencer) mobNavSequencer.classList.toggle('active', target === 'tab-sequencer');
-      if (mobNavBeatbox) mobNavBeatbox.classList.toggle('active', target === 'tab-beatbox');
-
-      // Ações específicas ao abrir cada aba
+      // Ações específicas ao abrir cada visão
       if (target === 'tab-home') {
+        state.activeBrequeId = null;
         renderHomeBrequesList();
       } else if (target === 'tab-sequencer') {
         renderStudio();
@@ -4392,17 +4588,35 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       }
     }
 
-    if (tabBtnHome) tabBtnHome.onclick = () => switchTab('tab-home');
-    if (tabBtnSequencer) tabBtnSequencer.onclick = () => switchTab('tab-sequencer');
-    if (tabBtnBeatbox) tabBtnBeatbox.onclick = () => switchTab('tab-beatbox');
-
-    if (mobNavHome) mobNavHome.onclick = () => switchTab('tab-home');
-    if (mobNavSequencer) mobNavSequencer.onclick = () => switchTab('tab-sequencer');
-    if (mobNavBeatbox) {
-      mobNavBeatbox.onclick = () => {
+    if (btnBackToHome) {
+      btnBackToHome.onclick = () => switchTab('tab-home');
+    }
+    if (headerBrandLogo) {
+      headerBrandLogo.onclick = () => {
+        if (currentActiveTab !== 'tab-home') switchTab('tab-home');
+      };
+    }
+    if (btnSwitchToPad) {
+      btnSwitchToPad.onclick = () => switchTab('tab-sequencer');
+    }
+    if (btnSwitchToStudio) {
+      btnSwitchToStudio.onclick = () => {
         switchTab('tab-beatbox');
         if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
           window.BeatboxStudio.switchViewMode('timeline');
+        }
+      };
+    }
+    if (btnImportFromPad) {
+      btnImportFromPad.onclick = () => sendSequenceToMultitrackStudio();
+    }
+    if (btnEditBrequeTitle) {
+      btnEditBrequeTitle.onclick = () => {
+        const newName = prompt('Renomear Breque:', state.activeBrequeName || 'Novo Breque');
+        if (newName && newName.trim()) {
+          state.activeBrequeName = newName.trim();
+          updateHeaderBrequeTitle();
+          saveActiveBrequeState();
         }
       };
     }
@@ -4421,6 +4635,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     const cardChoicePad = document.getElementById('cardChoicePad');
     const btnBackFromRecord = document.getElementById('btnBackFromRecord');
     const btnConfirmRecordSetup = document.getElementById('btnConfirmRecordSetup');
+    const inputRecordBrequeName = document.getElementById('inputRecordBrequeName');
     const selectRecordInstrument = document.getElementById('selectRecordInstrument');
     const selectRecordCaptureMode = document.getElementById('selectRecordCaptureMode');
     const inputRecordBpm = document.getElementById('inputRecordBpm');
@@ -4439,16 +4654,13 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       if (stepModalPadSetup) stepModalPadSetup.style.display = 'none';
 
       // Gera nome sugerido sequencial
+      customBateriaPresets = loadCustomBateriaPresets();
       const existingCount = Object.keys(customBateriaPresets || {}).length;
-      if (inputNewBrequeName) {
-        inputNewBrequeName.value = `Breque ${existingCount + 1}`;
-      }
-      if (inputNewBrequeBpm) {
-        inputNewBrequeBpm.value = state.bpm || 142;
-      }
-      if (inputRecordBpm) {
-        inputRecordBpm.value = state.bpm || 120;
-      }
+      const suggestedName = `Breque ${existingCount + 1}`;
+      if (inputNewBrequeName) inputNewBrequeName.value = suggestedName;
+      if (inputRecordBrequeName) inputRecordBrequeName.value = suggestedName;
+      if (inputNewBrequeBpm) inputNewBrequeBpm.value = state.bpm || 142;
+      if (inputRecordBpm) inputRecordBpm.value = state.bpm || 142;
       modalNewBreque.style.display = 'flex';
     }
 
@@ -4471,7 +4683,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         if (stepModalChoice) stepModalChoice.style.display = 'none';
         if (stepModalPadSetup) stepModalPadSetup.style.display = 'none';
         if (stepModalRecordSetup) stepModalRecordSetup.style.display = 'flex';
-        if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Gravar ao Vivo';
+        if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Novo Breque • Gravar ao Vivo';
       };
     }
 
@@ -4485,12 +4697,18 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     if (btnConfirmRecordSetup) {
       btnConfirmRecordSetup.onclick = async () => {
+        const name = (inputRecordBrequeName && inputRecordBrequeName.value.trim()) || 'Novo Breque';
         const instrumentName = selectRecordInstrument ? selectRecordInstrument.value : 'Gravação Ao Vivo';
         const mode = selectRecordCaptureMode ? selectRecordCaptureMode.value : 'audio';
-        const bpm = parseInt(inputRecordBpm ? inputRecordBpm.value : '120', 10) || 120;
+        const bpm = parseInt(inputRecordBpm ? inputRecordBpm.value : '142', 10) || 142;
         const metronome = selectRecordMetronome ? selectRecordMetronome.value !== 'false' : true;
 
+        const brequeId = createNewBrequeProject({ name, bpm, measures: 2, initialMode: 'studio' });
         closeModalNewBreque();
+
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.loadBrequeProject === 'function') {
+          await window.BeatboxStudio.loadBrequeProject(brequeId, bpm);
+        }
         switchTab('tab-beatbox');
         showHeadphonesToast();
         if (window.BeatboxStudio && typeof window.BeatboxStudio.startGuidedRecording === 'function') {
@@ -4507,7 +4725,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         if (stepModalChoice) stepModalChoice.style.display = 'none';
         if (stepModalRecordSetup) stepModalRecordSetup.style.display = 'none';
         if (stepModalPadSetup) stepModalPadSetup.style.display = 'flex';
-        if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Configurar Breque no Pad';
+        if (modalNewBrequeTitle) modalNewBrequeTitle.textContent = 'Novo Breque • Montar no Pad';
         if (inputNewBrequeName) {
           inputNewBrequeName.focus();
           inputNewBrequeName.select();
@@ -4525,58 +4743,37 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
 
     if (btnConfirmPadSetup) {
-      btnConfirmPadSetup.onclick = () => {
+      btnConfirmPadSetup.onclick = async () => {
         const name = (inputNewBrequeName && inputNewBrequeName.value.trim()) || 'Novo Breque';
         const bpm = parseInt(inputNewBrequeBpm ? inputNewBrequeBpm.value : '142', 10) || 142;
         const measures = parseInt(selectNewBrequeMeasures ? selectNewBrequeMeasures.value : '2', 10) || 2;
 
-        // Limpa grade e aplica novos parâmetros
-        state.gridData = {};
-        state.stepMeta = {};
-        state.loopGridData = {};
-        state.selectedGroove = {};
-        state.bpm = Math.min(220, Math.max(60, bpm));
-        state.measures = measures;
-        state.activeBrequeName = name;
-
-        const bpmSlider = document.getElementById('bpmSlider');
-        if (bpmSlider) bpmSlider.value = state.bpm;
-        const bpmDisplay = document.getElementById('bpmDisplay');
-        if (bpmDisplay) bpmDisplay.textContent = state.bpm;
-        const measureCountDisplay = document.getElementById('measureCountDisplay');
-        if (measureCountDisplay) measureCountDisplay.textContent = `${state.measures} Compassos`;
-
+        const brequeId = createNewBrequeProject({ name, bpm, measures, initialMode: 'pad' });
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.loadBrequeProject === 'function') {
+          await window.BeatboxStudio.loadBrequeProject(brequeId, bpm);
+        }
         closeModalNewBreque();
         switchTab('tab-sequencer');
       };
     }
 
-    // Botão Salvar Breque (1 clique para Meus Breques)
+    // Botão Salvar Breque (Salva alterações no breque atual ou cria cópia se for nativo)
     const btnSaveToMyBreques = document.getElementById('btnSaveToMyBreques');
     if (btnSaveToMyBreques) {
       btnSaveToMyBreques.onclick = () => {
-        const defaultName = state.activeBrequeName || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
-        const chosenName = prompt('Nome do breque para salvar em "Meus Breques":', defaultName);
-        if (!chosenName || !chosenName.trim()) return;
-        const cleanName = chosenName.trim();
-        state.activeBrequeName = cleanName;
-        const key = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now().toString(36).slice(-4);
-        customBateriaPresets = loadCustomBateriaPresets();
-        customBateriaPresets[key] = {
-          name: cleanName,
-          bpm: state.bpm,
-          measures: state.measures,
-          gridData: JSON.parse(JSON.stringify(state.gridData || {})),
-          stepMeta: JSON.parse(JSON.stringify(state.stepMeta || {})),
-          loopMeasures: state.loopMeasures,
-          loopGridData: JSON.parse(JSON.stringify(state.loopGridData || {})),
-          selectedGroove: JSON.parse(JSON.stringify(state.selectedGroove || {})),
-          trackGains: JSON.parse(JSON.stringify(state.trackGains || {}))
-        };
-        saveCustomBateriaPresetsToStorage(customBateriaPresets);
-        updateBateriaPresetSelect();
-        const selectEl = document.getElementById('bateriaPresetSelect');
-        if (selectEl) selectEl.value = 'custom:' + key;
+        if (state.activeBrequeId && state.activeBrequeId.startsWith('custom:')) {
+          saveActiveBrequeState('pad');
+        } else {
+          const defaultName = state.activeBrequeName || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
+          const chosenName = prompt('Nome do breque para salvar em "Meus Breques":', defaultName);
+          if (!chosenName || !chosenName.trim()) return;
+          const cleanName = chosenName.trim();
+          state.activeBrequeName = cleanName;
+          const key = 'breque_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+          state.activeBrequeId = 'custom:' + key;
+          updateHeaderBrequeTitle();
+          saveActiveBrequeState('pad');
+        }
         const origHtml = btnSaveToMyBreques.innerHTML;
         btnSaveToMyBreques.innerHTML = '<span>✓</span> <span>Salvo!</span>';
         setTimeout(() => { btnSaveToMyBreques.innerHTML = origHtml; }, 1800);
@@ -4598,14 +4795,10 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
       const customKeys = Object.keys(customBateriaPresets || {});
       const nativeKeys = Object.keys(BATERIA_PRESETS || {});
-      const studioSummary = (window.BeatboxStudio && typeof window.BeatboxStudio.getProjectSummary === 'function')
-        ? window.BeatboxStudio.getProjectSummary()
-        : null;
-      const hasStudioSession = studioSummary && studioSummary.totalTracks > 0;
-      const totalCount = customKeys.length + nativeKeys.length + (hasStudioSession ? 1 : 0);
+      const totalCount = customKeys.length + nativeKeys.length;
 
       if (countDisplay) {
-        countDisplay.textContent = `${totalCount} ${totalCount === 1 ? 'item' : 'itens'}`;
+        countDisplay.textContent = `${totalCount} ${totalCount === 1 ? 'breque' : 'breques'}`;
       }
 
       if (totalCount === 0) {
@@ -4619,52 +4812,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         return;
       }
 
-      // 0. Se houver sessão ativa no Estúdio Multitrack, exibe no topo
-      if (hasStudioSession) {
-        const studioCard = document.createElement('div');
-        studioCard.className = 'home-breque-card';
-        studioCard.style.borderColor = 'rgba(218, 54, 51, 0.45)';
-        studioCard.innerHTML = `
-          <div class="home-breque-card-top">
-            <div class="home-breque-title-wrap">
-              <span class="home-breque-name">🎙️ Sessão Multitrack Ativa</span>
-              <div class="home-breque-badges">
-                <span class="home-badge-pill">${studioSummary.bpm} BPM</span>
-                <span class="home-badge-pill">${studioSummary.recordedTracks}/${studioSummary.totalTracks} Faixas Gravadas</span>
-                <span class="home-badge-pill" style="background:rgba(218,54,51,0.18); color:#ff7b72; border-color:rgba(218,54,51,0.4);">🎛️ Estúdio Multitrack</span>
-              </div>
-            </div>
-          </div>
-          <div class="home-breque-actions">
-            <button class="btn-card-action btn-card-multitrack" id="btnHomeOpenActiveMultitrack" title="Abrir linha do tempo Multitrack">
-              <span>🎛️ Abrir Multitrack</span>
-            </button>
-            <button class="btn-card-action btn-card-pad" id="btnHomeRecordAnotherTrack" title="Gravar nova faixa ao vivo">
-              <span>🎙️ Gravar +1 Faixa</span>
-            </button>
-          </div>
-        `;
-        const btnOpenMulti = studioCard.querySelector('#btnHomeOpenActiveMultitrack');
-        if (btnOpenMulti) {
-          btnOpenMulti.onclick = () => {
-            switchTab('tab-beatbox');
-            if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
-              window.BeatboxStudio.switchViewMode('timeline');
-            }
-          };
-        }
-        const btnRecMore = studioCard.querySelector('#btnHomeRecordAnotherTrack');
-        if (btnRecMore) {
-          btnRecMore.onclick = () => {
-            openModalNewBreque();
-            if (cardChoiceRecord) cardChoiceRecord.click();
-          };
-        }
-        container.appendChild(studioCard);
-      }
-
-      // 1. Renderiza Breques Personalizados do Usuário
-      customKeys.forEach(key => {
+      // 1. Renderiza Breques Personalizados do Usuário (Mais recentes primeiro)
+      customKeys.slice().reverse().forEach(key => {
         const p = customBateriaPresets[key];
         const card = createBrequeCardElement({
           id: 'custom:' + key,
@@ -4694,17 +4843,25 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     function createBrequeCardElement({ id, name, bpm, measures, isCustom, presetObj }) {
       const card = document.createElement('div');
-      card.className = 'home-breque-card';
+      card.className = 'home-breque-card home-breque-card-clickable';
 
       const isPlayingThis = (activePreviewPresetId === id) && state.isPlaying;
+      const lastMode = presetObj.lastMode || 'pad';
+      const hasPad = !isCustom || presetObj.hasPadNotes || (presetObj.gridData && Object.values(presetObj.gridData).some(arr => Array.isArray(arr) && arr.some(n => n !== null)));
+      const studioTracks = presetObj.studioTrackCount || 0;
+      const studioRecorded = presetObj.studioRecordedCount || 0;
 
       card.innerHTML = `
         <div class="home-breque-card-top">
           <div class="home-breque-title-wrap">
-            <span class="home-breque-name">${escapeHtml(name)}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span class="home-breque-name">${escapeHtml(name)}</span>
+              <span class="home-open-hint">${lastMode === 'studio' ? '🎛️ Estúdio →' : '🥁 Pad →'}</span>
+            </div>
             <div class="home-breque-badges">
               <span class="home-badge-pill">${bpm} BPM</span>
-              <span class="home-badge-pill">${measures} Comp</span>
+              ${hasPad ? `<span class="home-badge-pill">🥁 Pad (${measures} Comp)</span>` : ''}
+              ${studioTracks > 0 ? `<span class="home-badge-pill" style="background:rgba(218,54,51,0.16); color:#ff7b72; border-color:rgba(218,54,51,0.35);">🎙️ ${studioRecorded}/${studioTracks} Faixas</span>` : ''}
               <span class="home-badge-pill ${isCustom ? '' : 'pill-native'}">
                 ${isCustom ? '⭐ Meu Breque' : '🏛️ Repertório Naumteria'}
               </span>
@@ -4712,14 +4869,14 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           </div>
         </div>
         <div class="home-breque-actions">
-          <button class="btn-card-action btn-card-play" title="${isPlayingThis ? 'Parar preview' : 'Ouvir breque'}">
+          <button class="btn-card-action btn-card-play" title="${isPlayingThis ? 'Parar preview' : 'Ouvir preview'}">
             <span>${isPlayingThis ? '⏹' : '▶'}</span>
           </button>
-          <button class="btn-card-action btn-card-pad" title="Abrir no Pad / Sequenciador">
+          <button class="btn-card-action btn-card-pad" title="Abrir diretamente no Pad">
             <span>🥁 Pad</span>
           </button>
-          <button class="btn-card-action btn-card-multitrack" title="Abrir no Estúdio Multitrack">
-            <span>🎛️ Multitrack</span>
+          <button class="btn-card-action btn-card-multitrack" title="Abrir diretamente no Estúdio Multitrack">
+            <span>🎛️ Estúdio</span>
           </button>
           ${isCustom ? `
             <button class="btn-card-action btn-card-delete" title="Excluir este breque">
@@ -4729,16 +4886,26 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         </div>
       `;
 
+      // Clique no card abre o Breque no último modo usado (Pad ou Estúdio)
+      card.onclick = () => {
+        openBrequeProject(id, lastMode);
+      };
+
       // Evento Preview Play / Stop
       const btnPlay = card.querySelector('.btn-card-play');
       if (btnPlay) {
-        btnPlay.onclick = () => {
+        btnPlay.onclick = (e) => {
+          e.stopPropagation();
           if (activePreviewPresetId === id && state.isPlaying) {
             stopPlayback();
             activePreviewPresetId = null;
             renderHomeBrequesList();
           } else {
             stopPlayback();
+            if (!hasPad && studioTracks > 0) {
+              openBrequeProject(id, 'studio');
+              return;
+            }
             activePreviewPresetId = id;
             applyBateriaPresetObject(presetObj);
             startPlayback();
@@ -4747,39 +4914,36 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         };
       }
 
-      // Evento Abrir no Pad
+      // Atalho: Abrir direto no Pad
       const btnPad = card.querySelector('.btn-card-pad');
       if (btnPad) {
-        btnPad.onclick = () => {
-          stopPlayback();
-          activePreviewPresetId = null;
-          applyBateriaPresetObject(presetObj);
-          switchTab('tab-sequencer');
+        btnPad.onclick = (e) => {
+          e.stopPropagation();
+          openBrequeProject(id, 'pad');
         };
       }
 
-      // Evento Abrir no Multitrack
+      // Atalho: Abrir direto no Estúdio
       const btnMulti = card.querySelector('.btn-card-multitrack');
       if (btnMulti) {
-        btnMulti.onclick = () => {
-          stopPlayback();
-          activePreviewPresetId = null;
-          applyBateriaPresetObject(presetObj);
-          if (typeof sendSequenceToMultitrackStudio === 'function') {
-            sendSequenceToMultitrackStudio();
-          }
-          switchTab('tab-beatbox');
+        btnMulti.onclick = (e) => {
+          e.stopPropagation();
+          openBrequeProject(id, 'studio');
         };
       }
 
       // Evento Excluir (apenas para custom)
       const btnDel = card.querySelector('.btn-card-delete');
       if (btnDel) {
-        btnDel.onclick = () => {
+        btnDel.onclick = async (e) => {
+          e.stopPropagation();
           if (confirm(`Deseja realmente excluir o breque "${name}"?`)) {
             const rawKey = id.replace('custom:', '');
             delete customBateriaPresets[rawKey];
             saveCustomBateriaPresetsToStorage(customBateriaPresets);
+            if (window.BeatboxStudio && typeof window.BeatboxStudio.deleteProjectFromDB === 'function') {
+              await window.BeatboxStudio.deleteProjectFromDB(id);
+            }
             updateBateriaPresetSelect();
             renderHomeBrequesList();
           }
