@@ -1,5 +1,5 @@
 ﻿// Naumteria Studio - Service Worker
-const CACHE_NAME = 'naumteria-studio-v19';
+const CACHE_NAME = 'naumteria-studio-v20';
 const CORE_ASSETS = [
   './',
   'index.html',
