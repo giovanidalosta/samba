@@ -499,16 +499,20 @@
     .track-header {
       width: 330px;
       min-width: 330px;
+      position: sticky;
+      left: 0;
+      z-index: 20;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       gap: 6px;
       padding: 8px 12px;
-      background: var(--bg-card-subtle);
+      background: #121117;
       border: 1px solid var(--border-color);
       border-radius: 6px 0 0 6px;
       border-left: 3px solid var(--instrument-color, var(--naum-gold));
       user-select: none;
+      box-shadow: 4px 0 12px rgba(0, 0, 0, 0.45);
     }
 
     .track-header-top {
@@ -2090,6 +2094,32 @@
     </div>
   </div>
 
+  <!-- Modal Estilizado de Diálogo / Confirmação / Entrada de Dados (Substitui alert, confirm, prompt) -->
+  <div class="modal-overlay" id="appDialogModal" style="display: none; z-index: 1200;">
+    <div class="project-modal-box app-dialog-box" style="max-width: 420px;">
+      <div class="project-modal-header">
+        <div class="project-modal-title-wrap">
+          <span class="project-modal-icon" id="appDialogIcon">🥁</span>
+          <div>
+            <h3 id="appDialogTitle" style="font-family: var(--font-display); font-size: 18px;">Naumteria Studio</h3>
+            <span class="project-modal-subtitle" id="appDialogSubtitle"></span>
+          </div>
+        </div>
+        <button class="track-delete-btn" id="appDialogCloseBtn" style="font-size: 18px;" title="Fechar">✕</button>
+      </div>
+      <div class="project-modal-body" style="padding: 16px 20px;">
+        <p id="appDialogMessage" style="font-size: 13.5px; line-height: 1.5; color: var(--text-silver); margin-bottom: 12px;"></p>
+        <div id="appDialogInputWrap" style="display: none;">
+          <input type="text" id="appDialogInput" class="setup-input" style="width: 100%;" />
+        </div>
+      </div>
+      <div class="project-modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" id="appDialogCancelBtn" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="appDialogConfirmBtn" class="btn btn-gold">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div style="display: flex; align-items: center; gap: 8px;">
       <img src="assets/logo-naumteria.png" alt="" style="width: 18px; height: 18px; border-radius: 50%;">
@@ -2101,6 +2131,168 @@
   <!-- Soundbank embutido para compatibilidade total offline e file:/// sem CORS -->
   <script src="assets/soundbank.js"></script>
   <script>
+    /* =========================================================================
+       0. DIÁLOGOS E TOASTS ESTILIZADOS NA IDENTIDADE NAUMTERIA (SEM TRAVAMENTO)
+       ========================================================================= */
+    window.appToast = function(msg, type = 'info', durationMs = 3200) {
+      let icon = 'ℹ️';
+      if (type === 'success') icon = '✅';
+      else if (type === 'warn' || type === 'warning') icon = '⚠️';
+      else if (type === 'danger' || type === 'error') icon = '❌';
+
+      let toast = document.getElementById('globalAppToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'globalAppToast';
+        toast.className = 'share-toast';
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML = `<span style="font-size: 16px;">${icon}</span><span>${msg}</span>`;
+      toast.style.display = 'flex';
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.style.display = 'none';
+      }, durationMs);
+    };
+
+    window.appAlert = function(msg, title = 'Aviso') {
+      return new Promise(resolve => {
+        const modal = document.getElementById('appDialogModal');
+        const icon = document.getElementById('appDialogIcon');
+        const titleEl = document.getElementById('appDialogTitle');
+        const msgEl = document.getElementById('appDialogMessage');
+        const inputWrap = document.getElementById('appDialogInputWrap');
+        const cancelBtn = document.getElementById('appDialogCancelBtn');
+        const confirmBtn = document.getElementById('appDialogConfirmBtn');
+        const closeBtn = document.getElementById('appDialogCloseBtn');
+
+        if (!modal) {
+          window.appToast(msg, 'info');
+          resolve();
+          return;
+        }
+
+        icon.textContent = 'ℹ️';
+        titleEl.textContent = title;
+        msgEl.textContent = msg;
+        inputWrap.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        confirmBtn.className = 'btn btn-gold';
+        confirmBtn.textContent = 'OK';
+        modal.style.display = 'flex';
+
+        const done = () => {
+          modal.style.display = 'none';
+          confirmBtn.removeEventListener('click', onConfirm);
+          closeBtn.removeEventListener('click', onConfirm);
+          modal.removeEventListener('click', onBackdrop);
+          resolve();
+        };
+        const onConfirm = () => done();
+        const onBackdrop = (e) => { if (e.target === modal) done(); };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        closeBtn.addEventListener('click', onConfirm);
+        modal.addEventListener('click', onBackdrop);
+      });
+    };
+
+    window.appConfirm = function(msg, title = 'Confirmação', options = {}) {
+      return new Promise(resolve => {
+        const modal = document.getElementById('appDialogModal');
+        const icon = document.getElementById('appDialogIcon');
+        const titleEl = document.getElementById('appDialogTitle');
+        const msgEl = document.getElementById('appDialogMessage');
+        const inputWrap = document.getElementById('appDialogInputWrap');
+        const cancelBtn = document.getElementById('appDialogCancelBtn');
+        const confirmBtn = document.getElementById('appDialogConfirmBtn');
+        const closeBtn = document.getElementById('appDialogCloseBtn');
+
+        if (!modal) {
+          resolve(window.confirm(msg));
+          return;
+        }
+
+        icon.textContent = options.isDanger ? '⚠️' : '🥁';
+        titleEl.textContent = title;
+        msgEl.textContent = msg;
+        inputWrap.style.display = 'none';
+        cancelBtn.style.display = 'inline-flex';
+        cancelBtn.textContent = options.cancelText || 'Cancelar';
+        confirmBtn.className = options.isDanger ? 'btn btn-danger' : 'btn btn-gold';
+        confirmBtn.textContent = options.confirmText || 'Confirmar';
+        modal.style.display = 'flex';
+
+        const cleanup = () => {
+          modal.style.display = 'none';
+          confirmBtn.removeEventListener('click', onConfirm);
+          cancelBtn.removeEventListener('click', onCancel);
+          closeBtn.removeEventListener('click', onCancel);
+          modal.removeEventListener('click', onBackdrop);
+        };
+        const onConfirm = () => { cleanup(); resolve(true); };
+        const onCancel = () => { cleanup(); resolve(false); };
+        const onBackdrop = (e) => { if (e.target === modal) onCancel(); };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+      });
+    };
+
+    window.appPrompt = function(msg, defaultValue = '', title = 'Definir Valor') {
+      return new Promise(resolve => {
+        const modal = document.getElementById('appDialogModal');
+        const icon = document.getElementById('appDialogIcon');
+        const titleEl = document.getElementById('appDialogTitle');
+        const msgEl = document.getElementById('appDialogMessage');
+        const inputWrap = document.getElementById('appDialogInputWrap');
+        const input = document.getElementById('appDialogInput');
+        const cancelBtn = document.getElementById('appDialogCancelBtn');
+        const confirmBtn = document.getElementById('appDialogConfirmBtn');
+        const closeBtn = document.getElementById('appDialogCloseBtn');
+
+        if (!modal) {
+          resolve(window.prompt(msg, defaultValue));
+          return;
+        }
+
+        icon.textContent = '✎';
+        titleEl.textContent = title;
+        msgEl.textContent = msg;
+        inputWrap.style.display = 'block';
+        input.value = defaultValue || '';
+        cancelBtn.style.display = 'inline-flex';
+        confirmBtn.className = 'btn btn-gold';
+        confirmBtn.textContent = 'Salvar';
+        modal.style.display = 'flex';
+        setTimeout(() => { input.focus(); input.select(); }, 50);
+
+        const cleanup = () => {
+          modal.style.display = 'none';
+          confirmBtn.removeEventListener('click', onConfirm);
+          cancelBtn.removeEventListener('click', onCancel);
+          closeBtn.removeEventListener('click', onCancel);
+          input.removeEventListener('keydown', onKey);
+          modal.removeEventListener('click', onBackdrop);
+        };
+        const onConfirm = () => { cleanup(); resolve(input.value); };
+        const onCancel = () => { cleanup(); resolve(null); };
+        const onBackdrop = (e) => { if (e.target === modal) onCancel(); };
+        const onKey = (e) => {
+          if (e.key === 'Enter') onConfirm();
+          else if (e.key === 'Escape') onCancel();
+        };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        input.addEventListener('keydown', onKey);
+        modal.addEventListener('click', onBackdrop);
+      });
+    };
+
     /* =========================================================================
        1. DEFINIÇÃO DE INSTRUMENTOS, ARTICULAÇÕES E CORES (PALETA MATTE NAUMTERIA)
        ========================================================================= */
@@ -4632,7 +4824,45 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       }, beatDurMs);
     }
 
-    function shareBrequeLink() {
+    // --- Screen Wake Lock API (Impede que a tela apague em ensaios e gravações) ---
+    let screenWakeLockSentinel = null;
+    async function requestScreenWakeLock() {
+      try {
+        if ('wakeLock' in navigator && !screenWakeLockSentinel && document.visibilityState === 'visible') {
+          screenWakeLockSentinel = await navigator.wakeLock.request('screen');
+          screenWakeLockSentinel.addEventListener('release', () => {
+            screenWakeLockSentinel = null;
+          });
+        }
+      } catch (err) {
+        console.debug('WakeLock não pôde ser ativado:', err);
+      }
+    }
+
+    async function releaseScreenWakeLock() {
+      try {
+        if (screenWakeLockSentinel) {
+          await screenWakeLockSentinel.release();
+          screenWakeLockSentinel = null;
+        }
+      } catch (err) {
+        console.debug('WakeLock release erro:', err);
+      }
+    }
+
+    window.requestScreenWakeLock = requestScreenWakeLock;
+    window.releaseScreenWakeLock = releaseScreenWakeLock;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        const isStudioPlaying = window.BeatboxStudio && typeof window.BeatboxStudio.getProjectSummary === 'function' && window.BeatboxStudio.getProjectSummary().isPlaying;
+        if (state.isPlaying || isStudioPlaying) {
+          requestScreenWakeLock();
+        }
+      }
+    });
+
+    async function shareBrequeLink() {
       try {
         const payload = {
           v: '2',
@@ -4647,6 +4877,21 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         const jsonStr = JSON.stringify(payload);
         const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
         const shareUrl = `${window.location.origin}${window.location.pathname}#breque=${b64}`;
+        const brequeTitle = state.activeBrequeName || 'Breque de Bateria';
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: `${brequeTitle} — Naumteria Studio`,
+              text: `Ouça e ensaie este breque no Naumteria Studio (${state.bpm} BPM, ${state.meter}):`,
+              url: shareUrl
+            });
+            showShareToast('✅ Breque compartilhado com sucesso!');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+          }
+        }
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(shareUrl).then(() => {
@@ -4786,6 +5031,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     function startPlayback() {
       audio.init();
+      requestScreenWakeLock();
       if (state.timerId) {
         clearInterval(state.timerId);
         state.timerId = null;
@@ -4822,6 +5068,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     function stopPlayback() {
       state.isPlaying = false;
+      releaseScreenWakeLock();
       if (state.timerId) {
         clearInterval(state.timerId);
         state.timerId = null;
@@ -5142,11 +5389,14 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         return;
       }
       if (val === '__clear_custom_bateria__') {
-        if (confirm('Deseja realmente apagar todos os presets de bateria salvos por você?')) {
-          customBateriaPresets = {};
-          saveCustomBateriaPresetsToStorage(customBateriaPresets);
-          updateBateriaPresetSelect();
-        }
+        window.appConfirm('Deseja realmente apagar todos os presets de bateria salvos por você?', 'Excluir Presets', { isDanger: true, confirmText: 'Apagar Todos' }).then(confirmed => {
+          if (confirmed) {
+            customBateriaPresets = {};
+            saveCustomBateriaPresetsToStorage(customBateriaPresets);
+            updateBateriaPresetSelect();
+            window.appToast('Presets excluídos.', 'info');
+          }
+        });
         e.target.value = '';
         return;
       }
@@ -5156,8 +5406,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     document.getElementById('btnSendToStudio').onclick = sendSequenceToMultitrackStudio;
 
-    document.getElementById('btnClear').onclick = () => {
-      if (confirm('Deseja limpar todas as notas marcadas na grade?')) {
+    document.getElementById('btnClear').onclick = async () => {
+      const confirmed = await window.appConfirm('Deseja limpar todas as notas marcadas na grade de bateria?', 'Limpar Grade', { isDanger: true, confirmText: 'Limpar Tudo' });
+      if (confirmed) {
         state.gridData = {};
         state.stepMeta = {};
         state.loopGridData = {};
@@ -5166,6 +5417,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         document.getElementById('bateriaPresetSelect').value = '';
         stopPlayback();
         renderStudio();
+        window.appToast('Grade de notas limpa!', 'info');
       }
     };
 
@@ -5484,12 +5736,13 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       btnImportFromPad.onclick = () => sendSequenceToMultitrackStudio();
     }
     if (btnEditBrequeTitle) {
-      btnEditBrequeTitle.onclick = () => {
-        const newName = prompt('Renomear Breque:', state.activeBrequeName || 'Novo Breque');
+      btnEditBrequeTitle.onclick = async () => {
+        const newName = await window.appPrompt('Digite o novo nome para este breque:', state.activeBrequeName || 'Novo Breque', 'Renomear Breque');
         if (newName && newName.trim()) {
           state.activeBrequeName = newName.trim();
           updateHeaderBrequeTitle();
           saveActiveBrequeState();
+          window.appToast('Breque renomeado!', 'success');
         }
       };
     }
@@ -5807,7 +6060,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       if (btnDel) {
         btnDel.onclick = async (e) => {
           e.stopPropagation();
-          if (confirm(`Deseja realmente excluir o breque "${name}"?`)) {
+          const confirmed = await window.appConfirm(`Deseja realmente excluir o breque "${name}"?`, 'Excluir Breque', { isDanger: true, confirmText: 'Excluir' });
+          if (confirmed) {
             const rawKey = id.replace('custom:', '');
             delete customBateriaPresets[rawKey];
             saveCustomBateriaPresetsToStorage(customBateriaPresets);
@@ -5816,6 +6070,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
             }
             updateBateriaPresetSelect();
             renderHomeBrequesList();
+            window.appToast('Breque excluído com sucesso.', 'info');
           }
         };
       }
@@ -5843,8 +6098,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     // Clique no status pill do topo para ajuste rápido de BPM
     if (mobStatusPill) {
-      mobStatusPill.onclick = () => {
-        const newBpm = prompt('Defina o andamento (BPM):', currentActiveTab === 'tab-beatbox' ? (window.BeatboxStudio ? 120 : 120) : state.bpm);
+      mobStatusPill.onclick = async () => {
+        const curBpm = currentActiveTab === 'tab-beatbox' ? (window.BeatboxStudio ? 120 : 120) : state.bpm;
+        const newBpm = await window.appPrompt('Defina o andamento (BPM):', curBpm, 'Ajustar Andamento (BPM)');
         if (newBpm && !isNaN(newBpm)) {
           const parsed = Math.min(220, Math.max(60, parseInt(newBpm, 10)));
           if (currentActiveTab === 'tab-beatbox') {
@@ -5860,6 +6116,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
               bpmSlider.dispatchEvent(new Event('input'));
             }
           }
+          window.appToast(`BPM ajustado para ${parsed}`, 'info');
         }
       };
     }
@@ -5954,6 +6211,31 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           audio.init();
         }
       }, { once: true, passive: true });
+    });
+
+    // Atalhos Globais de Teclado (Desktop): Espaço para Play/Pause no Sequenciador, Esc para fechar modais
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if (e.code === 'Escape') {
+        const appDialog = document.getElementById('appDialogModal');
+        if (appDialog && appDialog.style.display !== 'none') {
+          e.preventDefault();
+          appDialog.style.display = 'none';
+          return;
+        }
+        if (modalNewBreque && modalNewBreque.style.display !== 'none') {
+          e.preventDefault();
+          closeModalNewBreque();
+        }
+      } else if (e.code === 'Space') {
+        const tabSequencer = document.getElementById('tab-sequencer');
+        if (tabSequencer && tabSequencer.classList.contains('active')) {
+          e.preventDefault();
+          const btnPlay = document.getElementById('btnPlay');
+          if (btnPlay) btnPlay.click();
+        }
+      }
     });
 
     window.addEventListener('DOMContentLoaded', () => {

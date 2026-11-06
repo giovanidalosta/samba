@@ -759,13 +759,17 @@
 
     // Excluir faixa
     dom.mosaicGrid.querySelectorAll('.track-delete-btn').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const id = btn.dataset.id;
         const track = state.tracks.find(t => t.id === id);
         if (track && track.mediaUrl) {
-          if (!confirm(`Deseja remover a faixa "${track.name}" e seu vídeo gravado?`)) return;
+          const ok = window.appConfirm
+            ? await window.appConfirm(`Deseja remover a faixa "${track.name}" e seu vídeo gravado?`, 'Remover Faixa', { isDanger: true, confirmText: 'Remover' })
+            : confirm(`Deseja remover a faixa "${track.name}" e seu vídeo gravado?`);
+          if (!ok) return;
         }
         removeTrack(id);
+        if (window.appToast) window.appToast('Faixa removida.', 'info');
       };
     });
 
@@ -1490,13 +1494,17 @@
 
     // Excluir faixa
     dom.reaperTracksStack.querySelectorAll('.tcp-btn-delete').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const id = btn.dataset.id;
         const track = state.tracks.find(t => t.id === id);
         if (track && track.mediaUrl) {
-          if (!confirm(`Deseja remover a pista "${track.name}" e sua gravação?`)) return;
+          const ok = window.appConfirm
+            ? await window.appConfirm(`Deseja remover a pista "${track.name}" e sua gravação?`, 'Remover Pista', { isDanger: true, confirmText: 'Remover' })
+            : confirm(`Deseja remover a pista "${track.name}" e sua gravação?`);
+          if (!ok) return;
         }
         removeTrack(id);
+        if (window.appToast) window.appToast('Faixa removida.', 'info');
       };
     });
 
@@ -1677,7 +1685,8 @@
 
   function addTrack(name) {
     if (state.tracks.length >= 9) {
-      alert('Limite de 9 faixas no projeto atingido.');
+      if (window.appToast) window.appToast('Limite máximo de 9 faixas atingido.', 'warn');
+      else alert('Limite de 9 faixas no projeto atingido.');
       return null;
     }
     let trackName = (typeof name === 'string' && name.trim() && !name.startsWith('[object')) ? name.trim() : null;
@@ -2147,6 +2156,9 @@
 
     recordingContext.mediaRecorder = recorder;
     recordingContext.recordingStartTime = Date.now();
+    if (typeof window.requestScreenWakeLock === 'function') {
+      window.requestScreenWakeLock();
+    }
     // Fatias de 250ms para garantir flush imediato mesmo em breques curtos
     recorder.start(250);
 
@@ -2270,6 +2282,9 @@
 
   function stopCurrentRecording(hasSuccess) {
     recordingContext.aborted = !hasSuccess;
+    if (typeof window.releaseScreenWakeLock === 'function') {
+      window.releaseScreenWakeLock();
+    }
 
     if (recordingContext.countdownTimer) {
       clearInterval(recordingContext.countdownTimer);
@@ -2536,13 +2551,18 @@
   // --- Sincronização & Playback Master do Mosaico e Linha de Tempo ---
   function startStudioPlayback() {
     getAudioContext();
+    if (typeof window.requestScreenWakeLock === 'function') {
+      window.requestScreenWakeLock();
+    }
     if (state.tracks.length === 0) {
-      alert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
+      if (window.appToast) window.appToast('Seu projeto está zerado. Adicione uma faixa ou importe do Pad!', 'warn');
+      else alert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
       return;
     }
     const hasMedia = state.tracks.some(t => t.videoElement);
     if (!hasMedia && !state.metronomeEnabled) {
-      alert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
+      if (window.appToast) window.appToast('Grave pelo menos um instrumento ou ative o metrônomo para ouvir!', 'info');
+      else alert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
       return;
     }
 
@@ -2622,6 +2642,9 @@
 
   function stopStudioPlayback() {
     state.isPlaying = false;
+    if (typeof window.releaseScreenWakeLock === 'function') {
+      window.releaseScreenWakeLock();
+    }
     clearInterval(state.playbackTimer);
     state.playbackTimer = null;
     stopMetronomeClock();
@@ -3335,10 +3358,12 @@
     });
   }
 
-  function confirmNewProject() {
+  async function confirmNewProject() {
     const hasMedia = state.tracks.some(t => t.mediaUrl || t.mediaBlob);
     if (hasMedia) {
-      const ok = confirm('O projeto atual possui gravações. Deseja iniciar um novo projeto e descartar a sessão atual?');
+      const ok = window.appConfirm
+        ? await window.appConfirm('O projeto atual possui gravações. Deseja iniciar um novo projeto e descartar a sessão atual?', 'Novo Projeto', { isDanger: true, confirmText: 'Descartar e Criar' })
+        : confirm('O projeto atual possui gravações. Deseja iniciar um novo projeto e descartar a sessão atual?');
       if (!ok) return;
     }
 
@@ -3372,14 +3397,22 @@
     renderStudioViews();
     saveCurrentSession();
     closeNewProjectModal();
+    if (window.appToast) window.appToast('Novo projeto montado!', 'success');
   }
 
-  function clearCurrentProjectTracks() {
+  async function clearCurrentProjectTracks() {
+    if (state.tracks.length === 0) {
+      if (window.appToast) window.appToast('O projeto já está sem faixas.', 'info');
+      return;
+    }
     const hasMedia = state.tracks.some(t => t.mediaUrl || t.mediaBlob);
     const msg = hasMedia
       ? 'Deseja zerar todas as faixas e apagar as gravações do projeto atual?'
       : 'Deseja zerar todas as faixas do projeto atual?';
-    if (!confirm(msg)) return;
+    const ok = window.appConfirm
+      ? await window.appConfirm(msg, 'Zerar Projeto', { isDanger: true, confirmText: 'Zerar Projeto' })
+      : confirm(msg);
+    if (!ok) return;
 
     stopStudioPlayback();
     state.tracks.forEach(tr => {
@@ -3389,6 +3422,7 @@
     state.tracks = [];
     saveCurrentSession();
     renderStudioViews();
+    if (window.appToast) window.appToast('Projeto zerado com sucesso.', 'info');
   }
 
   // --- Lógica de Corte, Aparagem (Trim) e Divisão (Split) de Faixas ---
@@ -3685,6 +3719,11 @@
     if (dom.btnCutCancel) dom.btnCutCancel.onclick = closeTrackCutModal;
     if (dom.btnCutApply) dom.btnCutApply.onclick = applyCutModalChanges;
     if (dom.btnCutPreviewPlay) dom.btnCutPreviewPlay.onclick = toggleCutModalPreview;
+    if (dom.trackCutModal) {
+      dom.trackCutModal.onclick = (e) => {
+        if (e.target === dom.trackCutModal) closeTrackCutModal();
+      };
+    }
 
     // Botões de ajuste fino (-50ms / +50ms) para Início e Fim
     if (dom.btnCutStartMinus) {
@@ -3900,12 +3939,37 @@
     // Eventos do Modal de Corte de Faixa
     bindCutModalEvents();
 
-    // Atalhos de Teclado: Barra de Espaço = Play/Pause, Tecla S = Cortar na Agulha
+    // Atalhos de Teclado: Barra de Espaço = Play/Pause, Tecla S = Cortar na Agulha, Esc = Fechar Modais
     window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if (e.code === 'Escape') {
+        if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) {
+          e.preventDefault();
+          closeTrackCutModal();
+          return;
+        }
+        if (dom.newProjectModal && dom.newProjectModal.classList.contains('active')) {
+          e.preventDefault();
+          closeNewProjectModal();
+          return;
+        }
+        if (dom.exportModal && dom.exportModal.classList.contains('active')) {
+          e.preventDefault();
+          dom.exportModal.classList.remove('active');
+          return;
+        }
+        if (dom.studioSettingsPopover && dom.studioSettingsPopover.classList.contains('active')) {
+          dom.studioSettingsPopover.classList.remove('active');
+        }
+        if (dom.studioProjectPopover && dom.studioProjectPopover.classList.contains('active')) {
+          dom.studioProjectPopover.classList.remove('active');
+        }
+      }
+
       const tabBeatbox = document.getElementById('tab-beatbox');
       const isStudioActive = tabBeatbox && tabBeatbox.classList.contains('active');
       if (!isStudioActive) return;
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
       if (e.code === 'Space') {
         e.preventDefault();
@@ -4041,6 +4105,11 @@
     if (dom.newProjectConfirmBtn) {
       dom.newProjectConfirmBtn.onclick = confirmNewProject;
     }
+    if (dom.newProjectModal) {
+      dom.newProjectModal.onclick = (e) => {
+        if (e.target === dom.newProjectModal) closeNewProjectModal();
+      };
+    }
 
     if (dom.newProjectBpm) {
       dom.newProjectBpm.oninput = (e) => {
@@ -4110,6 +4179,11 @@
     dom.btnExportVideo.onclick = exportMosaicVideo;
     dom.btnExportAudio.onclick = exportMixedAudio;
     dom.exportCloseBtn.onclick = () => dom.exportModal.classList.remove('active');
+    if (dom.exportModal) {
+      dom.exportModal.onclick = (e) => {
+        if (e.target === dom.exportModal) dom.exportModal.classList.remove('active');
+      };
+    }
 
     // Gravação (Aba & Controles)
     if (dom.btnViewRecord) {

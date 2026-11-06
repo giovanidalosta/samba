@@ -66,9 +66,8 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  position: sticky;
-  top: 61px;
-  z-index: 45;
+  position: relative;
+  z-index: 20;
   backdrop-filter: blur(10px);
 }
 
@@ -513,9 +512,8 @@
   height: 34px;
   background: #121117;
   border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  position: relative;
+  z-index: 10;
 }
 
 .reaper-tcp-corner {
@@ -2359,7 +2357,8 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
      3. TOOLBARS SLIM DE LINHA ÚNICA (ALTURA 44px)
      ------------------------------------------------------------- */
   .studio-toolbar {
-    top: 48px !important;
+    position: relative !important;
+    top: auto !important;
     padding: 6px 10px !important;
     height: 44px !important;
     min-height: 44px !important;
@@ -2503,15 +2502,15 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
      5. WORKSPACES & ESPAÇAMENTO OTIMIZADO
      ------------------------------------------------------------- */
   .timeline-workspace {
-    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
+    padding: 8px 6px calc(16px + env(safe-area-inset-bottom, 0px)) 6px !important;
   }
 
   .mosaic-workspace {
-    padding: 8px 8px calc(76px + env(safe-area-inset-bottom, 0px)) 8px !important;
+    padding: 8px 8px calc(16px + env(safe-area-inset-bottom, 0px)) 8px !important;
   }
 
   .record-workspace {
-    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
+    padding: 8px 6px calc(16px + env(safe-area-inset-bottom, 0px)) 6px !important;
   }
 
   .record-workspace-inner {
@@ -2554,7 +2553,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   main {
-    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
+    padding: 8px 6px calc(16px + env(safe-area-inset-bottom, 0px)) 6px !important;
   }
 
   .grid-container {
@@ -2585,17 +2584,17 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .tcp-controls-row .btn-tcp-icon {
-    width: 22px !important;
-    height: 22px !important;
-    font-size: 9.5px !important;
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 11px !important;
   }
 
   .track-header {
     position: sticky !important;
     left: 0 !important;
     z-index: 25 !important;
-    width: 130px !important;
-    min-width: 130px !important;
+    width: 140px !important;
+    min-width: 140px !important;
     padding: 6px 6px !important;
     gap: 4px !important;
     background: #121116 !important;
@@ -2607,17 +2606,28 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .track-header .track-name {
-    font-size: 11.5px !important;
+    font-size: 12px !important;
   }
 
   .track-header .btn-icon-mini {
-    width: 20px !important;
-    height: 20px !important;
-    font-size: 9.5px !important;
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 11px !important;
+    position: relative;
+    border-radius: 5px !important;
+  }
+
+  .track-header .btn-icon-mini::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    left: -5px;
+    right: -5px;
   }
 
   .track-art-palette {
-    gap: 3px !important;
+    gap: 4px !important;
     overflow-x: auto;
     flex-wrap: nowrap !important;
     padding-bottom: 2px;
@@ -2625,8 +2635,9 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .art-brush-pill {
-    padding: 2px 5px !important;
-    font-size: 9px !important;
+    padding: 3px 7px !important;
+    font-size: 10.5px !important;
+    min-height: 24px !important;
     flex-shrink: 0;
   }
 
@@ -2635,17 +2646,24 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .inst-groove-select {
-    font-size: 9.5px !important;
-    padding: 2px 3px !important;
+    font-size: 10px !important;
+    padding: 3px 4px !important;
+    height: 26px !important;
   }
 
   .btn-save-groove {
-    font-size: 8.5px !important;
-    padding: 2px 4px !important;
+    font-size: 9.5px !important;
+    padding: 3px 5px !important;
+    height: 26px !important;
   }
 
   .inst-vol-box {
     width: 38px !important;
+  }
+
+  .btn-step {
+    min-width: 30px !important;
+    min-height: 30px !important;
   }
 
   .ruler-row {
