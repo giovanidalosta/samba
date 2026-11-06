@@ -891,27 +891,6 @@
       color: var(--color-ganza);
     }
 
-    /* Apito de Mestre */
-    .note-apito-curto {
-      background: var(--naum-gold);
-      color: #0A090C;
-      font-weight: 800;
-    }
-
-    .note-apito-longo {
-      background: var(--naum-blue);
-      border: 1.5px solid var(--naum-gold);
-      color: #FFFFFF;
-      font-weight: 800;
-    }
-
-    .note-apito-trinado {
-      background: #FFFFFF;
-      border: 1.5px dashed #0A090C;
-      color: #0A090C;
-      font-weight: 800;
-    }
-
     /* Impressão */
     @media print {
       body {
@@ -2029,18 +2008,6 @@
           { id: 'forte', name: 'Toque Forte (Acento)', label: 'FT', css: 'note-forte' },
           { id: 'fraco', name: 'Toque Fraco (Condução)', label: 'FR', css: 'note-fraco' }
         ]
-      },
-      {
-        id: 'apito',
-        name: 'Apito de Mestre',
-        category: 'Direção',
-        sub: 'Comando e Convenções',
-        color: '#D9A520',
-        articulations: [
-          { id: 'curto', name: 'Apito Curto (Pulso / Contagem)', label: 'AP', css: 'note-apito-curto' },
-          { id: 'longo', name: 'Apito Longo (Chamada)', label: 'LG', css: 'note-apito-longo' },
-          { id: 'trinado', name: 'Apito Trinado (Alerta de Breque)', label: 'TR', css: 'note-apito-trinado' }
-        ]
       }
     ];
 
@@ -2140,13 +2107,6 @@
           name: 'Levada Base — Ganzá (Condução)',
           pattern: ['forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco']
         }
-      ],
-      apito: [
-        {
-          id: 'apito_base',
-          name: 'Levada Base — Apito',
-          pattern: ['longo', null, null, null, 'curto', null, 'curto', null]
-        }
       ]
     };
 
@@ -2206,12 +2166,6 @@
             'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco',
             'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco',
             'forte', 'fraco', 'fraco', 'fraco', 'forte', 'fraco', 'fraco', 'fraco'
-          ],
-          apito: [
-            null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null
           ]
         }
       }
@@ -2281,12 +2235,7 @@
           'ganza:forte': { url: 'assets/audio/sh_58.mp3', vol: 0.95, rate: 1.0 },
           'ganza:fraco': { url: 'assets/audio/sh_2e.mp3', vol: 0.58, rate: 1.0 },
           'ganza:frente': { url: 'assets/audio/sh_58.mp3', vol: 0.95, rate: 1.0 },
-          'ganza:tras': { url: 'assets/audio/sh_2e.mp3', vol: 0.58, rate: 1.0 },
-
-          // Apito de Mestre: Curto (ot_d1), Longo (ot_d0), Trinado (ot_d4)
-          'apito:curto': { url: 'assets/audio/ot_d1.mp3', vol: 0.88, rate: 1.0 },
-          'apito:longo': { url: 'assets/audio/ot_d0.mp3', vol: 0.88, rate: 1.0 },
-          'apito:trinado': { url: 'assets/audio/ot_d4.mp3', vol: 0.92, rate: 1.0 }
+          'ganza:tras': { url: 'assets/audio/sh_2e.mp3', vol: 0.58, rate: 1.0 }
         };
 
         // Kits únicos oficiais fixos: Tamborim (Thalita Santos) e Repique (Gabriel Policarpo)
@@ -2647,49 +2596,6 @@
             const dur = isForte ? 0.09 : 0.055;
             const amt = isForte ? 0.85 : 0.5;
             playNoise(5200, dur, amt, 'highpass', 1.2);
-            break;
-          }
-
-          case 'apito': {
-            const isTrinado = articulationId === 'trinado';
-            const isLongo = articulationId === 'longo';
-            const dur = isLongo ? 0.55 : (isTrinado ? 0.45 : 0.16);
-
-            try {
-              const osc1 = ctx.createOscillator();
-              const osc2 = ctx.createOscillator();
-              const gain = ctx.createGain();
-
-              osc1.type = 'triangle';
-              osc1.frequency.setValueAtTime(2150, t);
-
-              osc2.type = 'sine';
-              osc2.frequency.setValueAtTime(2450, t);
-
-              if (isTrinado) {
-                const lfo = ctx.createOscillator();
-                const lfoGain = ctx.createGain();
-                lfo.frequency.setValueAtTime(18, t);
-                lfoGain.gain.setValueAtTime(140, t);
-                lfo.connect(lfoGain);
-                lfoGain.connect(osc1.frequency);
-                lfoGain.connect(osc2.frequency);
-                lfo.start(t);
-                lfo.stop(t + dur + 0.02);
-              }
-
-              gain.gain.setValueAtTime(0.8 * vol, t);
-              gain.gain.linearRampToValueAtTime(0.0001, t + dur);
-
-              osc1.connect(gain);
-              osc2.connect(gain);
-              gain.connect(ctx.destination);
-
-              osc1.start(t);
-              osc2.start(t);
-              osc1.stop(t + dur + 0.02);
-              osc2.stop(t + dur + 0.02);
-            } catch (e) { }
             break;
           }
         }
