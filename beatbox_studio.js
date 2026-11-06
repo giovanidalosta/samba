@@ -139,7 +139,7 @@
     bpm: 120,
     meter: '2/4', // 2/4 ou 4/4
     mode: 'free', // 'free' (tamanho baseado na gravação) ou 'fixed' (compassos fixos)
-    measures: 4, // 2, 4, 8, 16, 32
+    measures: 8, // 2, 4, 8, 16, 32
     looping: false, // false = tocar até o fim da gravação e parar; true = repetir em loop contínuo
     metronomeEnabled: true,
     layout: 'auto',
@@ -148,6 +148,8 @@
     snapToGrid: true,
     isPlaying: false,
     playbackTimer: null,
+    playheadPosSec: 0,
+    selectedTrackId: null,
     selectedAudioDeviceId: localStorage.getItem('samba_selected_audio_dev') || '',
     selectedVideoDeviceId: localStorage.getItem('samba_selected_video_dev') || '',
     audioProfile: localStorage.getItem('samba_audio_profile') || 'raw', // 'raw' (estúdio/beatbox sem corte de frequências) ou 'filtered' (ruído/eco)
@@ -158,7 +160,7 @@
   function createTrack(name, initialIndex) {
     const safeName = (typeof name === 'string' && name.trim() && !name.startsWith('[object'))
       ? name.trim()
-      : (INSTRUMENT_PRESETS[initialIndex] || `Instrumento ${(initialIndex || 0) + 1}`);
+      : `Faixa ${(initialIndex || 0) + 1}`;
     return {
       id: 'track_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       name: safeName,
@@ -168,16 +170,33 @@
       volume: 1.0, // 0.0 a 1.5
       muted: false,
       solo: false,
-      offsetMs: 0, // -500 a 500 ms
-      trimStart: 0,
-      trimEnd: 0,
-      duration: 0, // Duração real da gravação em segundos
+      offsetMs: 0, // deslocamento temporal em ms
+      trimStart: 0, // segundos cortados no início da gravação
+      trimEnd: 0, // segundos cortados no final da gravação
+      duration: 0, // Duração real total da gravação em segundos
       waveformPeaks: null, // Cache dos picos reais decodificados via Web Audio API
       _offsetTimer: null,
+      _trimStopTimer: null,
       videoElement: null,
       audioNode: null,
       gainNode: null
     };
+  }
+
+  function getTrackEffectiveDuration(track) {
+    const rawDur = track && track.duration > 0 ? track.duration : 0;
+    if (rawDur <= 0) return 0;
+    const tStart = Math.max(0, track.trimStart || 0);
+    const tEnd = Math.max(0, track.trimEnd || 0);
+    return Math.max(0.08, rawDur - tStart - tEnd);
+  }
+
+  function getTrackEndMediaTime(track) {
+    const rawDur = track && track.duration > 0 ? track.duration : 0;
+    if (rawDur <= 0) return 0;
+    const tStart = Math.max(0, track.trimStart || 0);
+    const tEnd = Math.max(0, track.trimEnd || 0);
+    return Math.max(tStart + 0.08, rawDur - tEnd);
   }
 
   // --- Elementos do DOM ---
@@ -285,6 +304,7 @@
     dom.btnStartRecord = document.getElementById('btnStartRecord');
     dom.recordTipText = document.getElementById('recordTipText');
     dom.reviewActions = document.getElementById('reviewActions');
+    dom.recTakeNameInput = document.getElementById('recTakeNameInput');
     dom.btnKeepTake = document.getElementById('btnKeepTake');
     dom.btnDiscardTake = document.getElementById('btnDiscardTake');
 
@@ -295,6 +315,36 @@
     dom.exportProgressBar = document.getElementById('exportProgressBar');
     dom.exportCloseBtn = document.getElementById('exportCloseBtn');
     dom.exportRenderCanvas = document.getElementById('exportRenderCanvas');
+
+    // Corte e Divisão de Faixas
+    dom.btnSplitAtPlayhead = document.getElementById('btnSplitAtPlayhead');
+    dom.trackCutModal = document.getElementById('trackCutModal');
+    dom.cutModalTrackTitle = document.getElementById('cutModalTrackTitle');
+    dom.cutModalCloseBtn = document.getElementById('cutModalCloseBtn');
+    dom.cutWaveformStage = document.getElementById('cutWaveformStage');
+    dom.cutWaveformCanvas = document.getElementById('cutWaveformCanvas');
+    dom.cutShadeLeft = document.getElementById('cutShadeLeft');
+    dom.cutShadeRight = document.getElementById('cutShadeRight');
+    dom.cutHandleStart = document.getElementById('cutHandleStart');
+    dom.cutHandleEnd = document.getElementById('cutHandleEnd');
+    dom.cutBadgeStart = document.getElementById('cutBadgeStart');
+    dom.cutBadgeEnd = document.getElementById('cutBadgeEnd');
+    dom.cutCursorLine = document.getElementById('cutCursorLine');
+    dom.cutStatStartVal = document.getElementById('cutStatStartVal');
+    dom.cutStatCursorVal = document.getElementById('cutStatCursorVal');
+    dom.cutStatDurationVal = document.getElementById('cutStatDurationVal');
+    dom.cutStatEndVal = document.getElementById('cutStatEndVal');
+    dom.btnCutStartMinus = document.getElementById('btnCutStartMinus');
+    dom.btnCutStartPlus = document.getElementById('btnCutStartPlus');
+    dom.btnCutEndMinus = document.getElementById('btnCutEndMinus');
+    dom.btnCutEndPlus = document.getElementById('btnCutEndPlus');
+    dom.btnCutPreviewPlay = document.getElementById('btnCutPreviewPlay');
+    dom.btnCutTrimToCursorStart = document.getElementById('btnCutTrimToCursorStart');
+    dom.btnCutTrimToCursorEnd = document.getElementById('btnCutTrimToCursorEnd');
+    dom.btnCutSplitAtCursor = document.getElementById('btnCutSplitAtCursor');
+    dom.btnCutResetFull = document.getElementById('btnCutResetFull');
+    dom.btnCutCancel = document.getElementById('btnCutCancel');
+    dom.btnCutApply = document.getElementById('btnCutApply');
   }
 
   // --- Alternar Modo de Loop (Repetir vs Tocar até o fim) ---
@@ -316,12 +366,13 @@
     }
   }
 
-  // --- Cálculo da Duração Total da Timeline (Baseado no Tamanho Real da Gravação) ---
+  // --- Cálculo da Duração Total da Timeline (Baseado no Tamanho Efetivo da Gravação) ---
   function getTimelineDurationSec() {
     let maxDur = 0;
     state.tracks.forEach(t => {
-      if (t.mediaUrl && t.duration > 0) {
-        const durWithOffset = t.duration + Math.max(0, (t.offsetMs || 0) / 1000);
+      const effDur = getTrackEffectiveDuration(t);
+      if (t.mediaUrl && effDur > 0) {
+        const durWithOffset = effDur + Math.max(0, (t.offsetMs || 0) / 1000);
         if (durWithOffset > maxDur) maxDur = durWithOffset;
       }
     });
@@ -446,6 +497,7 @@
     recordingContext.lastRecordedBlob = null;
 
     if (dom.reviewActions) dom.reviewActions.classList.remove('active');
+    if (dom.recordTipText) dom.recordTipText.style.display = '';
     if (dom.btnStartRecord) {
       dom.btnStartRecord.style.display = 'inline-flex';
       dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
@@ -509,18 +561,10 @@
       emptyMosaic.className = 'studio-empty-mosaic-hero';
       emptyMosaic.innerHTML = `
         <div class="empty-hero-icon">🎬</div>
-        <h3 class="empty-hero-title">Mosaico Zerado • Monte suas Câmeras</h3>
+        <h3 class="empty-hero-title">Mosaico Zerado • Monte suas Faixas</h3>
         <p class="empty-hero-desc">
-          Nenhuma faixa no projeto. Adicione instrumentos ou vozes para compor seu mosaico:
+          Nenhuma faixa no projeto. Grave sua guia ou instrumentos e dê o nome que preferir:
         </p>
-        <div class="empty-hero-presets">
-          ${INSTRUMENT_PRESETS.map((preset, idx) => `
-            <button class="btn-preset-add" data-preset="${idx}" title="Adicionar faixa de ${escapeHtml(preset)}">
-              <span class="preset-color-dot" style="background: ${INSTRUMENT_COLORS[idx % INSTRUMENT_COLORS.length]};"></span>
-              ${escapeHtml(preset)}
-            </button>
-          `).join('')}
-        </div>
         <div class="empty-hero-actions">
           <button class="btn btn-gold btn-hero-add-track" title="Adicionar nova faixa">
             <span>➕</span> Adicionar Faixa ao Mosaico
@@ -546,7 +590,7 @@
       header.innerHTML = `
         <div class="track-title-box">
           <div class="track-badge-num">${index + 1}</div>
-          <input type="text" class="track-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" title="Clique para editar o nome do instrumento">
+          <input type="text" class="track-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" placeholder="Ex: Guia, Voz, Caixa..." title="Clique para dar um nome personalizado à faixa">
         </div>
         <button class="track-delete-btn" data-id="${track.id}" title="Remover esta faixa">✕</button>
       `;
@@ -650,6 +694,7 @@
 
           <div class="track-extra-actions">
             ${track.mediaUrl ? `
+              <button class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂️ Cortar</button>
               <button class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">📹 Câmera</button>
               <button class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">🎙️ Mic</button>
               <button class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">🗑️</button>
@@ -734,6 +779,14 @@
       };
     });
 
+    // Botão Cortar Faixa no Mosaico
+    dom.mosaicGrid.querySelectorAll('.btn-cut-track').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        openTrackCutModal(id);
+      };
+    });
+
     // Limpar vídeo gravado
     dom.mosaicGrid.querySelectorAll('.btn-clear-media').forEach(btn => {
       btn.onclick = () => {
@@ -744,10 +797,16 @@
             clearTimeout(track._offsetTimer);
             track._offsetTimer = null;
           }
+          if (track._trimStopTimer) {
+            clearTimeout(track._trimStopTimer);
+            track._trimStopTimer = null;
+          }
           if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
           track.mediaUrl = null;
           track.mediaBlob = null;
           track.duration = 0;
+          track.trimStart = 0;
+          track.trimEnd = 0;
           track.waveformPeaks = null;
           renderStudioViews();
           saveCurrentSession();
@@ -902,26 +961,18 @@
         <div class="empty-hero-icon">🎛️</div>
         <h3 class="empty-hero-title">Estúdio Multitrack deste Breque</h3>
         <p class="empty-hero-desc">
-          Grave faixas ao vivo com microfone/câmera ou importe a levada montada no Pad deste breque:
+          Grave sua guia ou instrumentos ao vivo e dê o nome que quiser depois, ou importe faixas montadas no Pad:
         </p>
-        <div class="empty-hero-actions" style="margin-bottom: 14px;">
+        <div class="empty-hero-actions" style="margin-bottom: 4px;">
           <button class="btn btn-gold btn-hero-record-now" title="Abrir gravador de áudio/vídeo agora">
             <span>🎙️</span> Gravar Faixa Agora
           </button>
-          <button class="btn btn-primary btn-hero-import-pad" title="Trazer a bateria desenhada no Pad deste breque como faixa de áudio">
+          <button class="btn btn-primary btn-hero-import-pad" title="Trazer o instrumento ou bateria desenhada no Pad deste breque como faixa de áudio">
             <span>🥁</span> Importar do Pad
           </button>
           <button class="btn btn-secondary btn-hero-add-track" title="Adicionar faixa em branco">
             <span>➕</span> Nova Faixa Vazia
           </button>
-        </div>
-        <div class="empty-hero-presets">
-          ${INSTRUMENT_PRESETS.map((preset, idx) => `
-            <button class="btn-preset-add" data-preset="${idx}" title="Adicionar faixa de ${escapeHtml(preset)}">
-              <span class="preset-color-dot" style="background: ${INSTRUMENT_COLORS[idx % INSTRUMENT_COLORS.length]};"></span>
-              ${escapeHtml(preset)}
-            </button>
-          `).join('')}
         </div>
       `;
       dom.reaperTracksStack.appendChild(emptyProjectHero);
@@ -950,7 +1001,7 @@
         <!-- Linha 1: Número, Nome e Excluir -->
         <div class="tcp-header-row">
           <span class="tcp-track-number">${String(index + 1).padStart(2, '0')}</span>
-          <input type="text" class="tcp-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" title="Clique para editar o nome da faixa">
+          <input type="text" class="tcp-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" placeholder="Ex: Guia, Voz, Caixa..." title="Clique para dar um nome personalizado à faixa">
           <button class="tcp-btn-delete" data-id="${track.id}" title="Remover faixa">✕</button>
         </div>
 
@@ -993,6 +1044,7 @@
               📁
               <input type="file" accept="video/*,audio/*" data-id="${track.id}" class="tcp-file-uploader" style="display:none;">
             </label>
+            ${track.mediaUrl ? `<button class="tcp-action-btn btn-tcp-cut" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir faixa">✂️</button>` : ''}
             ${track.mediaUrl ? `<button class="tcp-action-btn btn-tcp-clear" data-id="${track.id}" title="Limpar gravação desta faixa">🗑️</button>` : ''}
           </div>
         </div>
@@ -1015,30 +1067,38 @@
 
       if (track.mediaUrl) {
         // Bloco de Mídia / Item da Pista estilo REAPER
-        // O tamanho da faixa reflete EXATAMENTE o tamanho da gravação!
+        // O tamanho da faixa reflete EXATAMENTE a duração ativa (com cortes aplicados)
         const mediaItem = document.createElement('div');
-        mediaItem.className = 'reaper-media-item';
+        mediaItem.className = `reaper-media-item ${state.selectedTrackId === track.id ? 'is-selected' : ''}`;
         mediaItem.id = `media_item_${track.id}`;
         mediaItem.style.borderColor = trackColor;
 
-        const trackDur = track.duration > 0 ? track.duration : timelineDurSec;
-        const widthPercent = Math.min(100, Math.max(6, (trackDur / timelineDurSec) * 100));
+        const trackDur = track.duration > 0 ? getTrackEffectiveDuration(track) : timelineDurSec;
+        const widthPercent = Math.min(100, Math.max(4, (trackDur / timelineDurSec) * 100));
         const offsetSec = (track.offsetMs || 0) / 1000;
-        const leftPercent = Math.max(0, Math.min(94, (offsetSec / timelineDurSec) * 100));
+        const leftPercent = Math.max(0, Math.min(96, (offsetSec / timelineDurSec) * 100));
 
         mediaItem.style.width = widthPercent + '%';
         mediaItem.style.left = leftPercent + '%';
         mediaItem.style.transform = 'none';
 
+        const isTrimmed = (track.trimStart || 0) > 0.02 || (track.trimEnd || 0) > 0.02;
+        const trimEndTime = getTrackEndMediaTime(track);
+
         mediaItem.innerHTML = `
+          <div class="clip-trim-handle clip-trim-handle-left" data-id="${track.id}" data-side="left" title="Arraste para cortar o início da faixa"></div>
+          <div class="clip-trim-handle clip-trim-handle-right" data-id="${track.id}" data-side="right" title="Arraste para cortar o final da faixa"></div>
           <div class="media-item-header">
             <div class="item-title">
               <span>${track.mediaType === 'video' ? '📹' : '🎙️'}</span>
-              <span>Take 01 — ${escapeHtml(track.name)}</span>
+              <span>${escapeHtml(track.name)}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
+              ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂️ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
               <span class="item-meta-tag item-sync-badge">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
-              <span class="item-meta-tag" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
+              <span class="item-meta-tag item-dur-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
+              <button type="button" class="btn-clip-action btn-clip-cut" data-id="${track.id}" title="Abrir editor de corte da faixa">✂️ Cortar</button>
+              ${isTrimmed ? `<button type="button" class="btn-clip-action btn-clip-restore" data-id="${track.id}" title="Restaurar gravação original inteira">↺</button>` : ''}
             </div>
           </div>
           <div class="media-item-waveform-wrapper">
@@ -1054,7 +1114,7 @@
           if (cvs) drawWaveform(cvs, track, trackColor);
         });
 
-        // Suporte a arrasto do clipe (Drag & Slide) para sincronização fina
+        // Suporte a arrasto do clipe (Drag & Slide) e Alças de Corte (Trim Esquerda / Direita)
         setupMediaItemDrag(mediaItem, track);
       } else {
         // Faixa vazia com botões rápidos estilo DAW
@@ -1083,6 +1143,12 @@
     addLaneBtn.innerHTML = `<span>➕</span> Inserir Nova Pista de Instrumento / Breque Vocal (Track)`;
     addLaneBtn.onclick = () => addTrack();
     dom.reaperTracksStack.appendChild(addLaneBtn);
+
+    // Mantém playhead sincronizado na posição atual
+    if (!state.isPlaying && dom.reaperPlayhead) {
+      const pct = timelineDurSec > 0 ? Math.min(100, Math.max(0, (state.playheadPosSec / timelineDurSec) * 100)) : 0;
+      dom.reaperPlayhead.style.left = pct + '%';
+    }
 
     bindReaperEvents();
   }
@@ -1183,9 +1249,15 @@
         }
         const normFactor = maxPeak > 0.02 ? (1 / Math.max(0.25, maxPeak)) : 1;
 
+        const rawDur = track.duration > 0 ? track.duration : 1;
+        const startRatio = Math.max(0, Math.min(0.98, (track.trimStart || 0) / rawDur));
+        const endRatio = Math.max(startRatio + 0.02, Math.min(1, getTrackEndMediaTime(track) / rawDur));
+
         for (let i = 0; i < barsCount; i++) {
           const x = i * barGap;
-          const peakIdx = Math.min(peaks.length - 1, Math.floor((i / barsCount) * peaks.length));
+          const rel = barsCount > 1 ? (i / barsCount) : 0;
+          const mappedRatio = startRatio + rel * (endRatio - startRatio);
+          const peakIdx = Math.min(peaks.length - 1, Math.max(0, Math.floor(mappedRatio * peaks.length)));
           const rawAmp = peaks[peakIdx] || 0;
           const scaledAmp = Math.min(1.0, rawAmp * normFactor);
           const barHeight = Math.max(2, scaledAmp * (h * 0.86));
@@ -1229,66 +1301,160 @@
     return x - Math.floor(x);
   }
 
-  // --- Arraste Horizontal do Clipe (Drag & Slide) para Offset Temporal ---
+  // Posiciona a Agulha (Playhead) da Timeline em segundos
+  function setPlayheadTimeSec(targetTimeSec) {
+    const loopDurationSec = getTimelineDurationSec();
+    const clampedSec = Math.max(0, Math.min(loopDurationSec, targetTimeSec));
+    state.playheadPosSec = clampedSec;
+
+    if (dom.reaperPlayhead && loopDurationSec > 0) {
+      dom.reaperPlayhead.style.left = ((clampedSec / loopDurationSec) * 100) + '%';
+    }
+
+    state.tracks.forEach(track => {
+      if (track.videoElement) {
+        const offsetSec = (track.offsetMs || 0) / 1000;
+        const trimStartSec = track.trimStart || 0;
+        const mediaTime = Math.min(
+          getTrackEndMediaTime(track) || Infinity,
+          Math.max(trimStartSec, (clampedSec - offsetSec) + trimStartSec)
+        );
+        try { track.videoElement.currentTime = mediaTime; } catch (err) {}
+      }
+    });
+
+    updateReaperLcdDisplay(clampedSec * 1000, loopDurationSec * 1000);
+  }
+
+  // --- Arraste Horizontal do Clipe (Drag & Slide) e Alças de Corte (Trim Esquerda / Direita) ---
   function setupMediaItemDrag(itemEl, track) {
-    let isDragging = false;
-    let startX = 0;
-    let initialOffset = track.offsetMs || 0;
-
-    itemEl.addEventListener('mousedown', (e) => {
-      // Ignora clique se for botão interno
+    const startInteraction = (e, isTouch = false) => {
       if (e.target.closest('button') || e.target.closest('input')) return;
-      isDragging = true;
-      startX = e.clientX;
-      initialOffset = track.offsetMs || 0;
-      itemEl.classList.add('is-selected');
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+      const trimHandle = e.target.closest('.clip-trim-handle');
+      const trimSide = trimHandle ? trimHandle.dataset.side : null;
 
-      const onMouseMove = (moveEvt) => {
-        if (!isDragging) return;
-        const dx = moveEvt.clientX - startX;
-        const laneWidth = itemEl.parentElement.clientWidth || 800;
-        const timelineDurSec = getTimelineDurationSec();
+      // Seleciona esta faixa na timeline
+      state.selectedTrackId = track.id;
+      if (dom.reaperTracksStack) {
+        dom.reaperTracksStack.querySelectorAll('.reaper-media-item').forEach(el => {
+          el.classList.toggle('is-selected', el === itemEl);
+        });
+      }
 
-        // Converte pixel delta para milissegundos
-        const deltaMs = Math.round((dx / laneWidth) * timelineDurSec * 1000);
-        let newOffset = Math.max(-500, Math.min(500, initialOffset + deltaMs));
+      if (trimHandle) {
+        e.preventDefault();
+        e.stopPropagation();
+        trimHandle.classList.add('is-trimming');
+      }
 
-        if (state.snapToGrid) {
-          // Snap em múltiplos de 10ms
-          newOffset = Math.round(newOffset / 10) * 10;
+      let hasMoved = false;
+      const startX = clientX;
+      const initialOffsetMs = track.offsetMs || 0;
+      const initialTrimStart = track.trimStart || 0;
+      const initialTrimEnd = track.trimEnd || 0;
+      const rawDur = track.duration > 0 ? track.duration : getTimelineDurationSec();
+      const timelineDurSec = getTimelineDurationSec();
+      const laneEl = itemEl.parentElement;
+      const laneWidth = laneEl ? (laneEl.clientWidth || 800) : 800;
+      const trackColor = itemEl.style.borderColor || '#E8C31B';
+
+      const onMove = (moveEvt) => {
+        const curX = isTouch ? (moveEvt.touches[0] ? moveEvt.touches[0].clientX : startX) : moveEvt.clientX;
+        const dx = curX - startX;
+        if (Math.abs(dx) >= 3) hasMoved = true;
+        if (!hasMoved) return;
+
+        const deltaSec = (dx / laneWidth) * timelineDurSec;
+
+        if (trimSide === 'left') {
+          // Alça Esquerda: corta o início (trimStart) e ajusta offsetMs para manter o resto do áudio cravado no compasso!
+          const maxTrimStart = Math.max(0, rawDur - initialTrimEnd - 0.12);
+          let newTrimStart = Math.max(0, Math.min(maxTrimStart, initialTrimStart + deltaSec));
+          if (state.snapToGrid) {
+            newTrimStart = Math.round(newTrimStart * 100) / 100;
+          }
+          const appliedDeltaSec = newTrimStart - initialTrimStart;
+          track.trimStart = newTrimStart;
+          track.offsetMs = Math.round(initialOffsetMs + appliedDeltaSec * 1000);
+        } else if (trimSide === 'right') {
+          // Alça Direita: corta o final (trimEnd)
+          const maxTrimEnd = Math.max(0, rawDur - initialTrimStart - 0.12);
+          let newTrimEnd = Math.max(0, Math.min(maxTrimEnd, initialTrimEnd - deltaSec));
+          if (state.snapToGrid) {
+            newTrimEnd = Math.round(newTrimEnd * 100) / 100;
+          }
+          track.trimEnd = newTrimEnd;
+        } else {
+          // Arraste do corpo do clipe: move na timeline (offsetMs)
+          const deltaMs = Math.round(deltaSec * 1000);
+          const maxOffsetMs = Math.round(Math.max(500, (timelineDurSec - 0.1) * 1000));
+          let newOffset = Math.max(-2000, Math.min(maxOffsetMs, initialOffsetMs + deltaMs));
+          if (state.snapToGrid) {
+            newOffset = Math.round(newOffset / 10) * 10;
+          }
+          track.offsetMs = newOffset;
         }
 
-        track.offsetMs = newOffset;
-
-        // Atualiza posição horizontal relativa (left) e badges
+        // Atualiza visualmente largura, posição e badges em tempo real
+        const effDur = getTrackEffectiveDuration(track);
+        const widthPercent = Math.min(100, Math.max(4, (effDur / timelineDurSec) * 100));
         const offsetSec = (track.offsetMs || 0) / 1000;
-        const leftPercent = Math.max(0, Math.min(94, (offsetSec / timelineDurSec) * 100));
+        const leftPercent = Math.max(0, Math.min(96, (offsetSec / timelineDurSec) * 100));
+
+        itemEl.style.width = widthPercent + '%';
         itemEl.style.left = leftPercent + '%';
 
-        const badge = itemEl.querySelector('.item-sync-badge');
-        if (badge) badge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+        const syncBadge = itemEl.querySelector('.item-sync-badge');
+        if (syncBadge) syncBadge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+
+        const durBadge = itemEl.querySelector('.item-dur-badge');
+        if (durBadge) durBadge.textContent = `${effDur.toFixed(1)}s`;
 
         const row = document.getElementById(`reaper_row_${track.id}`);
         if (row) {
           const syncDisp = row.querySelector('.tcp-sync-display');
           if (syncDisp) syncDisp.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
         }
+
+        if (trimSide) {
+          const cvs = document.getElementById(`wf_${track.id}`);
+          if (cvs) drawWaveform(cvs, track, trackColor);
+        }
       };
 
-      const onMouseUp = () => {
-        if (isDragging) {
-          isDragging = false;
-          itemEl.classList.remove('is-selected');
-          window.removeEventListener('mousemove', onMouseMove);
-          window.removeEventListener('mouseup', onMouseUp);
-          renderMosaic(); // Atualiza mosaico
+      const onEnd = () => {
+        if (trimHandle) trimHandle.classList.remove('is-trimming');
+        if (isTouch) {
+          window.removeEventListener('touchmove', onMove);
+          window.removeEventListener('touchend', onEnd);
+        } else {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onEnd);
+        }
+
+        if (!hasMoved && !trimSide && laneEl) {
+          // Clique rápido sobre a onda sonora do clipe: posiciona a agulha exatamente onde clicou!
+          const rect = laneEl.getBoundingClientRect();
+          const clickPct = Math.max(0, Math.min(1, (startX - rect.left) / (rect.width || 1)));
+          setPlayheadTimeSec(clickPct * timelineDurSec);
+        } else if (hasMoved) {
+          renderStudioViews();
           saveCurrentSession();
         }
       };
 
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    });
+      if (isTouch) {
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onEnd);
+      } else {
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+      }
+    };
+
+    itemEl.addEventListener('mousedown', (e) => startInteraction(e, false));
+    itemEl.addEventListener('touchstart', (e) => startInteraction(e, true), { passive: true });
   }
 
   // --- Binds de Eventos da DAW estilo REAPER ---
@@ -1299,9 +1465,10 @@
     dom.reaperTracksStack.querySelectorAll('.tcp-name-input').forEach(input => {
       input.onchange = (e) => {
         const id = e.target.dataset.id;
-        const track = state.tracks.find(t => t.id === id);
-        if (track) {
-          track.name = e.target.value.trim() || 'Instrumento';
+        const idx = state.tracks.findIndex(t => t.id === id);
+        if (idx !== -1) {
+          state.tracks[idx].name = e.target.value.trim() || `Faixa ${idx + 1}`;
+          e.target.value = state.tracks[idx].name;
           renderMosaic(); // Atualiza também o mosaico
           saveCurrentSession();
         }
@@ -1340,6 +1507,30 @@
       };
     });
 
+    // Botão Cortar Faixa (✂️ no TCP ou no Clipe)
+    dom.reaperTracksStack.querySelectorAll('.btn-tcp-cut, .btn-clip-cut').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        openTrackCutModal(id);
+      };
+    });
+
+    // Botão Restaurar Faixa Inteira (↺ no Clipe)
+    dom.reaperTracksStack.querySelectorAll('.btn-clip-restore').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const track = state.tracks.find(t => t.id === id);
+        if (track) {
+          track.trimStart = 0;
+          track.trimEnd = 0;
+          renderStudioViews();
+          saveCurrentSession();
+        }
+      };
+    });
+
     // Limpar mídia gravada
     dom.reaperTracksStack.querySelectorAll('.btn-tcp-clear').forEach(btn => {
       btn.onclick = () => {
@@ -1350,10 +1541,16 @@
             clearTimeout(track._offsetTimer);
             track._offsetTimer = null;
           }
+          if (track._trimStopTimer) {
+            clearTimeout(track._trimStopTimer);
+            track._trimStopTimer = null;
+          }
           if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
           track.mediaUrl = null;
           track.mediaBlob = null;
           track.duration = 0;
+          track.trimStart = 0;
+          track.trimEnd = 0;
           track.waveformPeaks = null;
           renderStudioViews();
           saveCurrentSession();
@@ -1472,9 +1669,7 @@
     }
     let trackName = (typeof name === 'string' && name.trim() && !name.startsWith('[object')) ? name.trim() : null;
     if (!trackName) {
-      const usedNames = state.tracks.map(t => (typeof t.name === 'string' ? t.name.toLowerCase() : ''));
-      const nextPreset = INSTRUMENT_PRESETS.find(p => !usedNames.includes(p.toLowerCase()));
-      trackName = nextPreset || `Faixa ${state.tracks.length + 1}`;
+      trackName = `Faixa ${state.tracks.length + 1}`;
     }
     const newTrack = createTrack(trackName, state.tracks.length);
     state.tracks.push(newTrack);
@@ -1502,10 +1697,16 @@
       clearTimeout(track._offsetTimer);
       track._offsetTimer = null;
     }
+    if (track._trimStopTimer) {
+      clearTimeout(track._trimStopTimer);
+      track._trimStopTimer = null;
+    }
     if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
     track.mediaBlob = file;
     track.mediaUrl = URL.createObjectURL(file);
     track.mediaType = file.type.startsWith('video') ? 'video' : 'audio';
+    track.trimStart = 0;
+    track.trimEnd = 0;
     track.waveformPeaks = null;
 
     // Determina a duração exata do arquivo para a faixa
@@ -1962,34 +2163,63 @@
     }
   }
 
-  // Dispara reprodução de uma faixa respeitando seu offsetMs (adiantamento negativo ou atraso positivo)
+  // Dispara reprodução de uma faixa respeitando seu offsetMs e cortes (trimStart / trimEnd)
   function triggerTrackAtTimelineOffset(track, timelinePosSec = 0) {
     if (!track || !track.videoElement) return;
     if (track._offsetTimer) {
       clearTimeout(track._offsetTimer);
       track._offsetTimer = null;
     }
+    if (track._trimStopTimer) {
+      clearTimeout(track._trimStopTimer);
+      track._trimStopTimer = null;
+    }
 
     const offsetSec = (track.offsetMs || 0) / 1000;
-    const mediaTime = timelinePosSec - offsetSec;
+    const trimStartSec = Math.max(0, track.trimStart || 0);
+    const hasDuration = track.duration > 0;
+    const effDurSec = hasDuration ? getTrackEffectiveDuration(track) : Infinity;
+    const endMediaSec = hasDuration ? getTrackEndMediaTime(track) : Infinity;
+    const relTimelineSec = timelinePosSec - offsetSec;
 
-    if (mediaTime >= 0) {
+    if (relTimelineSec >= effDurSec) {
+      // Já passou do fim cortado desta faixa
+      track.videoElement.pause();
+      try { track.videoElement.currentTime = trimStartSec; } catch (e) {}
+      return;
+    }
+
+    const scheduleStopAtTrimEnd = (remainingPlaySec) => {
+      if (!isFinite(remainingPlaySec) || remainingPlaySec <= 0) return;
+      track._trimStopTimer = setTimeout(() => {
+        track._trimStopTimer = null;
+        if (track.videoElement) {
+          track.videoElement.pause();
+          try { track.videoElement.currentTime = endMediaSec; } catch (e) {}
+        }
+      }, Math.max(20, Math.round(remainingPlaySec * 1000)));
+    };
+
+    if (relTimelineSec >= 0) {
+      const targetMediaTime = trimStartSec + relTimelineSec;
       try {
-        track.videoElement.currentTime = mediaTime;
+        track.videoElement.currentTime = targetMediaTime;
       } catch (e) {}
       track.videoElement.play().catch(e => console.warn('Play error:', e));
+      scheduleStopAtTrimEnd(effDurSec - relTimelineSec);
     } else {
-      // Atraso positivo (offsetMs > 0): aguarda antes de iniciar o elemento de mídia em currentTime = 0
+      // Atraso positivo (offsetMs > 0): aguarda antes de iniciar o elemento de mídia em trimStartSec
       track.videoElement.pause();
       try {
-        track.videoElement.currentTime = 0;
+        track.videoElement.currentTime = trimStartSec;
       } catch (e) {}
-      const delayMs = Math.round(-mediaTime * 1000);
+      const delayMs = Math.round(-relTimelineSec * 1000);
       track._offsetTimer = setTimeout(() => {
         track._offsetTimer = null;
         if (track.videoElement) {
-          try { track.videoElement.currentTime = 0; } catch (e) {}
+          try { track.videoElement.currentTime = trimStartSec; } catch (e) {}
           track.videoElement.play().catch(e => console.warn('Delayed play error:', e));
+          scheduleStopAtTrimEnd(effDurSec);
         }
       }, delayMs);
     }
@@ -2058,9 +2288,13 @@
         clearTimeout(t._offsetTimer);
         t._offsetTimer = null;
       }
+      if (t._trimStopTimer) {
+        clearTimeout(t._trimStopTimer);
+        t._trimStopTimer = null;
+      }
       if (t.videoElement) {
         t.videoElement.pause();
-        try { t.videoElement.currentTime = 0; } catch (e) {}
+        try { t.videoElement.currentTime = t.trimStart || 0; } catch (e) {}
       }
     });
     stopMetronomeClock();
@@ -2070,7 +2304,22 @@
     cleanupReviewMedia();
 
     dom.btnStartRecord.style.display = 'none';
+    if (dom.recordTipText) dom.recordTipText.style.display = 'none';
     dom.reviewActions.classList.add('active');
+
+    const activeTrack = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    if (dom.recTakeNameInput) {
+      const currentName = activeTrack ? activeTrack.name : '';
+      const isGenericName = /^Faixa \d+$/i.test(currentName) || /^Instrumento \d+$/i.test(currentName);
+      dom.recTakeNameInput.value = isGenericName ? '' : currentName;
+      dom.recTakeNameInput.placeholder = `Ex: Guia, Voz, Caixa, Tamborim... (${currentName || 'Faixa 1'})`;
+      setTimeout(() => {
+        if (dom.recTakeNameInput) {
+          dom.recTakeNameInput.focus();
+          dom.recTakeNameInput.select();
+        }
+      }, 60);
+    }
 
     // Reproduz a mídia gravada para o usuário escutar e avaliar
     const mediaUrl = URL.createObjectURL(blob);
@@ -2099,15 +2348,24 @@
     if (!recordingContext.lastRecordedBlob) return;
     const track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
     if (track) {
+      if (dom.recTakeNameInput && dom.recTakeNameInput.value.trim()) {
+        track.name = dom.recTakeNameInput.value.trim();
+      }
       if (track._offsetTimer) {
         clearTimeout(track._offsetTimer);
         track._offsetTimer = null;
+      }
+      if (track._trimStopTimer) {
+        clearTimeout(track._trimStopTimer);
+        track._trimStopTimer = null;
       }
       if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
       track.mediaBlob = recordingContext.lastRecordedBlob;
       track.mediaUrl = URL.createObjectURL(recordingContext.lastRecordedBlob);
       track.mediaType = recordingContext.captureMode; // 'audio' ou 'video'
       track.duration = recordingContext.recordedDurationSec || 0;
+      track.trimStart = 0;
+      track.trimEnd = 0;
       track.waveformPeaks = null;
 
       // Decodifica picos reais e duração precisa em background
@@ -2120,6 +2378,7 @@
     recordingContext.lastRecordedBlob = null;
     recordingContext.recordedChunks = [];
     if (dom.reviewActions) dom.reviewActions.classList.remove('active');
+    if (dom.recordTipText) dom.recordTipText.style.display = '';
     if (dom.btnStartRecord) {
       dom.btnStartRecord.style.display = 'inline-flex';
       dom.btnStartRecord.textContent = '🔴 Gravar Novo Take';
@@ -2137,6 +2396,7 @@
     recordingContext.lastRecordedBlob = null;
     recordingContext.recordedChunks = [];
     dom.reviewActions.classList.remove('active');
+    if (dom.recordTipText) dom.recordTipText.style.display = '';
     dom.btnStartRecord.style.display = 'inline-flex';
     dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
     dom.recProgressBar.style.width = '0%';
@@ -2295,6 +2555,7 @@
     }
 
     // Reseta Playhead e Visor Digital LCD
+    state.playheadPosSec = 0;
     if (dom.reaperPlayhead) {
       dom.reaperPlayhead.style.left = '0%';
     }
@@ -2305,9 +2566,13 @@
         clearTimeout(track._offsetTimer);
         track._offsetTimer = null;
       }
+      if (track._trimStopTimer) {
+        clearTimeout(track._trimStopTimer);
+        track._trimStopTimer = null;
+      }
       if (track.videoElement) {
         track.videoElement.pause();
-        try { track.videoElement.currentTime = 0; } catch (e) {}
+        try { track.videoElement.currentTime = track.trimStart || 0; } catch (e) {}
       }
       const card = document.getElementById(`card_${track.id}`);
       if (card) card.classList.remove('active-playing');
@@ -2515,6 +2780,10 @@
               clearTimeout(t._offsetTimer);
               t._offsetTimer = null;
             }
+            if (t._trimStopTimer) {
+              clearTimeout(t._trimStopTimer);
+              t._trimStopTimer = null;
+            }
             if (t.videoElement) t.videoElement.pause();
           });
 
@@ -2628,8 +2897,19 @@
             src.connect(gain);
             gain.connect(offlineCtx.destination);
 
-            const startTime = Math.max(0, (track.offsetMs || 0) / 1000);
-            src.start(startTime);
+            const trimStartSec = Math.max(0, track.trimStart || 0);
+            const trimEndSec = Math.max(0, track.trimEnd || 0);
+            const effDurSec = Math.max(0.05, audioBuf.duration - trimStartSec - trimEndSec);
+            const rawOffsetSec = (track.offsetMs || 0) / 1000;
+
+            if (rawOffsetSec >= 0) {
+              src.start(rawOffsetSec, trimStartSec, effDurSec);
+            } else {
+              const skipSec = -rawOffsetSec;
+              if (skipSec < effDurSec) {
+                src.start(0, trimStartSec + skipSec, effDurSec - skipSec);
+              }
+            }
             decodedCount++;
           } catch (decErr) {
             console.warn('Decodificação OfflineAudioContext falhou para:', track.name, decErr);
@@ -2694,6 +2974,10 @@
           if (t._offsetTimer) {
             clearTimeout(t._offsetTimer);
             t._offsetTimer = null;
+          }
+          if (t._trimStopTimer) {
+            clearTimeout(t._trimStopTimer);
+            t._trimStopTimer = null;
           }
           if (t.videoElement) t.videoElement.pause();
         });
@@ -2766,6 +3050,8 @@
         muted: t.muted,
         solo: t.solo,
         offsetMs: t.offsetMs,
+        trimStart: t.trimStart || 0,
+        trimEnd: t.trimEnd || 0,
         duration: t.duration || 0,
         waveformPeaks: t.waveformPeaks || null,
         mediaBlob: t.mediaBlob
@@ -2810,7 +3096,7 @@
         state.bpm = saved.bpm || fallbackBpm || 142;
         state.meter = saved.meter || '2/4';
         state.mode = saved.mode || 'free';
-        state.measures = saved.measures || 4;
+        state.measures = saved.measures || 8;
         state.looping = !!saved.looping;
         state.metronomeEnabled = saved.metronomeEnabled !== undefined ? saved.metronomeEnabled : true;
         if (!userAlreadyInRecord) {
@@ -2825,6 +3111,8 @@
           tr.muted = !!st.muted;
           tr.solo = !!st.solo;
           tr.offsetMs = st.offsetMs || 0;
+          tr.trimStart = st.trimStart || 0;
+          tr.trimEnd = st.trimEnd || 0;
           tr.duration = st.duration || 0;
           tr.waveformPeaks = st.waveformPeaks || null;
           if (st.mediaBlob) {
@@ -3023,6 +3311,423 @@
     renderStudioViews();
   }
 
+  // --- Lógica de Corte, Aparagem (Trim) e Divisão (Split) de Faixas ---
+  let cutModalCtx = {
+    trackId: null,
+    duration: 0,
+    trimStart: 0,
+    trimEnd: 0,
+    cursorSec: 0,
+    previewMedia: null,
+    previewTimer: null,
+    isPlayingPreview: false
+  };
+
+  function stopCutPreview() {
+    if (cutModalCtx.previewTimer) {
+      clearInterval(cutModalCtx.previewTimer);
+      cutModalCtx.previewTimer = null;
+    }
+    if (cutModalCtx.previewMedia) {
+      try { cutModalCtx.previewMedia.pause(); } catch (e) {}
+      cutModalCtx.previewMedia = null;
+    }
+    cutModalCtx.isPlayingPreview = false;
+    if (dom.btnCutPreviewPlay) {
+      dom.btnCutPreviewPlay.innerHTML = '<span>▶</span> Ouvir Trecho';
+    }
+  }
+
+  function openTrackCutModal(trackId) {
+    const track = state.tracks.find(t => t.id === trackId);
+    if (!track || !track.mediaUrl) return;
+
+    stopStudioPlayback();
+    stopCutPreview();
+
+    state.selectedTrackId = track.id;
+    const rawDur = track.duration > 0 ? track.duration : getTimelineDurationSec();
+
+    cutModalCtx.trackId = track.id;
+    cutModalCtx.duration = Math.max(0.2, rawDur);
+    cutModalCtx.trimStart = Math.max(0, Math.min(cutModalCtx.duration - 0.1, track.trimStart || 0));
+    cutModalCtx.trimEnd = Math.max(0, Math.min(cutModalCtx.duration - cutModalCtx.trimStart - 0.1, track.trimEnd || 0));
+
+    // Posiciona a agulha inicial do editor na posição correspondente da agulha da timeline (se estiver dentro da faixa)
+    const offsetSec = (track.offsetMs || 0) / 1000;
+    const relFromTimeline = (state.playheadPosSec - offsetSec) + cutModalCtx.trimStart;
+    const endTime = cutModalCtx.duration - cutModalCtx.trimEnd;
+    if (relFromTimeline > cutModalCtx.trimStart && relFromTimeline < endTime) {
+      cutModalCtx.cursorSec = relFromTimeline;
+    } else {
+      cutModalCtx.cursorSec = cutModalCtx.trimStart + (endTime - cutModalCtx.trimStart) / 2;
+    }
+
+    if (dom.cutModalTrackTitle) {
+      dom.cutModalTrackTitle.textContent = `Cortar Faixa: ${track.name}`;
+    }
+
+    if (dom.trackCutModal) {
+      dom.trackCutModal.classList.add('active');
+    }
+
+    requestAnimationFrame(() => {
+      drawCutModalWaveform(track);
+      updateCutModalUi();
+    });
+  }
+
+  function closeTrackCutModal() {
+    stopCutPreview();
+    if (dom.trackCutModal) {
+      dom.trackCutModal.classList.remove('active');
+    }
+    cutModalCtx.trackId = null;
+  }
+
+  function drawCutModalWaveform(track) {
+    if (!dom.cutWaveformCanvas || !track) return;
+    const canvas = dom.cutWaveformCanvas;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.parentElement?.clientWidth || 640;
+    const h = canvas.height = canvas.parentElement?.clientHeight || 140;
+    const center = h / 2;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Linha de centro
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.fillRect(0, center - 0.5, w, 1);
+
+    const idx = state.tracks.findIndex(t => t.id === track.id);
+    const trackColor = INSTRUMENT_COLORS[(idx >= 0 ? idx : 0) % INSTRUMENT_COLORS.length] || '#E8C31B';
+
+    const renderFullPeaks = (peaks) => {
+      if (!canvas.isConnected) return;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(0, center - 0.5, w, 1);
+
+      const barGap = 3.5;
+      const barsCount = Math.max(1, Math.floor(w / barGap));
+      ctx.fillStyle = trackColor;
+
+      if (peaks && peaks.length > 0) {
+        let maxPeak = 0;
+        for (let i = 0; i < peaks.length; i++) {
+          if (peaks[i] > maxPeak) maxPeak = peaks[i];
+        }
+        const normFactor = maxPeak > 0.02 ? (1 / Math.max(0.25, maxPeak)) : 1;
+
+        for (let i = 0; i < barsCount; i++) {
+          const x = i * barGap;
+          const peakIdx = Math.min(peaks.length - 1, Math.floor((i / barsCount) * peaks.length));
+          const scaledAmp = Math.min(1.0, (peaks[peakIdx] || 0) * normFactor);
+          const barH = Math.max(2, scaledAmp * (h * 0.84));
+          ctx.fillRect(x, center - barH / 2, 2.2, barH);
+        }
+      } else {
+        const seed = hashString(track.id + (track.duration || 1));
+        for (let i = 0; i < barsCount; i++) {
+          const x = i * barGap;
+          const amp = Math.min(1.0, Math.max(0.08, pseudoRandom(seed + i) * 0.65));
+          const barH = amp * (h * 0.78);
+          ctx.fillRect(x, center - barH / 2, 2.2, barH);
+        }
+      }
+    };
+
+    if (track.waveformPeaks) {
+      renderFullPeaks(track.waveformPeaks);
+    } else {
+      extractWaveformPeaks(track).then(peaks => renderFullPeaks(peaks));
+    }
+  }
+
+  function updateCutModalUi() {
+    const dur = Math.max(0.2, cutModalCtx.duration);
+    const tStart = cutModalCtx.trimStart;
+    const tEnd = cutModalCtx.trimEnd;
+    const endMediaSec = Math.max(tStart + 0.08, dur - tEnd);
+    const activeDur = Math.max(0.08, endMediaSec - tStart);
+
+    const startPct = Math.max(0, Math.min(98, (tStart / dur) * 100));
+    const endPct = Math.max(startPct + 2, Math.min(100, (endMediaSec / dur) * 100));
+    const cursorPct = Math.max(0, Math.min(100, (cutModalCtx.cursorSec / dur) * 100));
+
+    if (dom.cutShadeLeft) dom.cutShadeLeft.style.width = startPct + '%';
+    if (dom.cutShadeRight) dom.cutShadeRight.style.width = (100 - endPct) + '%';
+    if (dom.cutHandleStart) dom.cutHandleStart.style.left = startPct + '%';
+    if (dom.cutHandleEnd) dom.cutHandleEnd.style.left = endPct + '%';
+    if (dom.cutCursorLine) dom.cutCursorLine.style.left = cursorPct + '%';
+
+    if (dom.cutBadgeStart) dom.cutBadgeStart.textContent = `${tStart.toFixed(2)}s`;
+    if (dom.cutBadgeEnd) dom.cutBadgeEnd.textContent = `${endMediaSec.toFixed(2)}s`;
+    if (dom.cutStatStartVal) dom.cutStatStartVal.textContent = `${tStart.toFixed(2)}s`;
+    if (dom.cutStatEndVal) dom.cutStatEndVal.textContent = `${endMediaSec.toFixed(2)}s`;
+    if (dom.cutStatDurationVal) dom.cutStatDurationVal.textContent = `${activeDur.toFixed(2)}s`;
+    if (dom.cutStatCursorVal) dom.cutStatCursorVal.textContent = `${cutModalCtx.cursorSec.toFixed(2)}s`;
+  }
+
+  function toggleCutModalPreview() {
+    if (cutModalCtx.isPlayingPreview) {
+      stopCutPreview();
+      return;
+    }
+    const track = state.tracks.find(t => t.id === cutModalCtx.trackId);
+    if (!track || !track.mediaUrl) return;
+
+    const media = document.createElement(track.mediaType === 'video' ? 'video' : 'audio');
+    media.src = track.mediaUrl;
+    media.volume = Math.min(1, Math.max(0.1, track.volume || 1));
+
+    const startSec = cutModalCtx.trimStart;
+    const endSec = Math.max(startSec + 0.08, cutModalCtx.duration - cutModalCtx.trimEnd);
+
+    cutModalCtx.previewMedia = media;
+    cutModalCtx.isPlayingPreview = true;
+    cutModalCtx.cursorSec = startSec;
+    updateCutModalUi();
+
+    if (dom.btnCutPreviewPlay) {
+      dom.btnCutPreviewPlay.innerHTML = '<span>⏹</span> Parar Preview';
+    }
+
+    try { media.currentTime = startSec; } catch (e) {}
+    media.play().catch(err => console.warn('Preview play error:', err));
+
+    cutModalCtx.previewTimer = setInterval(() => {
+      if (!cutModalCtx.previewMedia) return;
+      const cur = cutModalCtx.previewMedia.currentTime || 0;
+      cutModalCtx.cursorSec = cur;
+      updateCutModalUi();
+      if (cur >= endSec || cutModalCtx.previewMedia.ended) {
+        stopCutPreview();
+        cutModalCtx.cursorSec = startSec;
+        updateCutModalUi();
+      }
+    }, 30);
+  }
+
+  function applyCutModalChanges() {
+    const track = state.tracks.find(t => t.id === cutModalCtx.trackId);
+    if (!track) return;
+
+    const deltaStartSec = cutModalCtx.trimStart - (track.trimStart || 0);
+    track.trimStart = cutModalCtx.trimStart;
+    track.trimEnd = cutModalCtx.trimEnd;
+    // Ajusta offsetMs proporcionalmente se o início foi alterado para manter a sincronia musical
+    if (Math.abs(deltaStartSec) > 0.005) {
+      track.offsetMs = Math.round((track.offsetMs || 0) + deltaStartSec * 1000);
+    }
+
+    closeTrackCutModal();
+    renderStudioViews();
+    saveCurrentSession();
+  }
+
+  // Divide uma faixa em duas pistas separadas no ponto exato (em segundos da mídia original)
+  function splitTrackAtMediaTime(track, splitMediaSec) {
+    if (!track || !track.mediaBlob) return false;
+    const rawDur = track.duration > 0 ? track.duration : getTimelineDurationSec();
+    const curTrimStart = track.trimStart || 0;
+    const curTrimEnd = track.trimEnd || 0;
+    const endMediaSec = Math.max(curTrimStart + 0.1, rawDur - curTrimEnd);
+
+    if (splitMediaSec <= curTrimStart + 0.08 || splitMediaSec >= endMediaSec - 0.08) {
+      alert('Posicione a agulha dentro da área ativa da faixa para dividi-la em 2 partes!');
+      return false;
+    }
+
+    if (state.tracks.length >= 9) {
+      alert('O limite máximo de 9 faixas foi atingido. Remova uma faixa para poder dividir em duas.');
+      return false;
+    }
+
+    const trackIdx = state.tracks.findIndex(t => t.id === track.id);
+    const firstPartDurSec = splitMediaSec - curTrimStart;
+    const secondPartOffsetMs = Math.round((track.offsetMs || 0) + firstPartDurSec * 1000);
+
+    // 1ª Parte permanece na faixa atual (terminando na agulha)
+    track.trimEnd = Math.max(0, rawDur - splitMediaSec);
+
+    // 2ª Parte é criada logo abaixo começando exatamente onde a 1ª terminou
+    const baseName = track.name.replace(/\s*\(Pt\.\s*\d+\)$/i, '');
+    const part2Track = createTrack(`${baseName} (Pt. 2)`, trackIdx + 1);
+    part2Track.mediaBlob = track.mediaBlob;
+    part2Track.mediaUrl = URL.createObjectURL(track.mediaBlob);
+    part2Track.mediaType = track.mediaType;
+    part2Track.volume = track.volume;
+    part2Track.muted = track.muted;
+    part2Track.solo = track.solo;
+    part2Track.duration = rawDur;
+    part2Track.trimStart = splitMediaSec;
+    part2Track.trimEnd = curTrimEnd;
+    part2Track.offsetMs = secondPartOffsetMs;
+    part2Track.waveformPeaks = track.waveformPeaks ? track.waveformPeaks.slice() : null;
+
+    state.tracks.splice(trackIdx + 1, 0, part2Track);
+    state.selectedTrackId = part2Track.id;
+
+    renderStudioViews();
+    saveCurrentSession();
+    return true;
+  }
+
+  // Divide a faixa selecionada na posição atual da Agulha da Timeline (Atalho S ou botão Cortar [S])
+  function splitSelectedTrackAtPlayhead() {
+    let targetTrack = state.tracks.find(t => t.id === state.selectedTrackId && t.mediaUrl);
+    if (!targetTrack) {
+      targetTrack = state.tracks.find(t => t.mediaUrl);
+    }
+    if (!targetTrack) {
+      alert('Grave ou importe uma faixa primeiro para poder cortá-la!');
+      return;
+    }
+
+    const offsetSec = (targetTrack.offsetMs || 0) / 1000;
+    const trimStartSec = targetTrack.trimStart || 0;
+    const effDurSec = getTrackEffectiveDuration(targetTrack);
+    const clipStartSec = offsetSec;
+    const clipEndSec = offsetSec + effDurSec;
+
+    // Se a agulha estiver dentro do clipe na timeline, divide diretamente na agulha; caso contrário, abre o editor visual de corte!
+    if (state.playheadPosSec > clipStartSec + 0.08 && state.playheadPosSec < clipEndSec - 0.08) {
+      const splitMediaSec = trimStartSec + (state.playheadPosSec - clipStartSec);
+      splitTrackAtMediaTime(targetTrack, splitMediaSec);
+    } else {
+      openTrackCutModal(targetTrack.id);
+    }
+  }
+
+  function bindCutModalEvents() {
+    if (dom.cutModalCloseBtn) dom.cutModalCloseBtn.onclick = closeTrackCutModal;
+    if (dom.btnCutCancel) dom.btnCutCancel.onclick = closeTrackCutModal;
+    if (dom.btnCutApply) dom.btnCutApply.onclick = applyCutModalChanges;
+    if (dom.btnCutPreviewPlay) dom.btnCutPreviewPlay.onclick = toggleCutModalPreview;
+
+    // Botões de ajuste fino (-50ms / +50ms) para Início e Fim
+    if (dom.btnCutStartMinus) {
+      dom.btnCutStartMinus.onclick = () => {
+        cutModalCtx.trimStart = Math.max(0, cutModalCtx.trimStart - 0.05);
+        updateCutModalUi();
+      };
+    }
+    if (dom.btnCutStartPlus) {
+      dom.btnCutStartPlus.onclick = () => {
+        const maxStart = Math.max(0, cutModalCtx.duration - cutModalCtx.trimEnd - 0.1);
+        cutModalCtx.trimStart = Math.min(maxStart, cutModalCtx.trimStart + 0.05);
+        updateCutModalUi();
+      };
+    }
+    if (dom.btnCutEndMinus) {
+      dom.btnCutEndMinus.onclick = () => {
+        const maxEnd = Math.max(0, cutModalCtx.duration - cutModalCtx.trimStart - 0.1);
+        cutModalCtx.trimEnd = Math.min(maxEnd, cutModalCtx.trimEnd + 0.05);
+        updateCutModalUi();
+      };
+    }
+    if (dom.btnCutEndPlus) {
+      dom.btnCutEndPlus.onclick = () => {
+        cutModalCtx.trimEnd = Math.max(0, cutModalCtx.trimEnd - 0.05);
+        updateCutModalUi();
+      };
+    }
+
+    // Ações rápidas na posição da agulha do modal
+    if (dom.btnCutTrimToCursorStart) {
+      dom.btnCutTrimToCursorStart.onclick = () => {
+        const maxStart = Math.max(0, cutModalCtx.duration - cutModalCtx.trimEnd - 0.1);
+        cutModalCtx.trimStart = Math.max(0, Math.min(maxStart, cutModalCtx.cursorSec));
+        updateCutModalUi();
+      };
+    }
+    if (dom.btnCutTrimToCursorEnd) {
+      dom.btnCutTrimToCursorEnd.onclick = () => {
+        const newTrimEnd = cutModalCtx.duration - cutModalCtx.cursorSec;
+        const maxEnd = Math.max(0, cutModalCtx.duration - cutModalCtx.trimStart - 0.1);
+        cutModalCtx.trimEnd = Math.max(0, Math.min(maxEnd, newTrimEnd));
+        updateCutModalUi();
+      };
+    }
+    if (dom.btnCutSplitAtCursor) {
+      dom.btnCutSplitAtCursor.onclick = () => {
+        const track = state.tracks.find(t => t.id === cutModalCtx.trackId);
+        if (!track) return;
+        track.trimStart = cutModalCtx.trimStart;
+        track.trimEnd = cutModalCtx.trimEnd;
+        const splitTime = cutModalCtx.cursorSec;
+        if (splitTrackAtMediaTime(track, splitTime)) {
+          closeTrackCutModal();
+        }
+      };
+    }
+    if (dom.btnCutResetFull) {
+      dom.btnCutResetFull.onclick = () => {
+        cutModalCtx.trimStart = 0;
+        cutModalCtx.trimEnd = 0;
+        updateCutModalUi();
+      };
+    }
+
+    // Arraste das alças de início/fim e clique para posicionar a agulha na onda do Modal
+    if (dom.cutWaveformStage) {
+      const startStageDrag = (e, isTouch = false) => {
+        const target = e.target;
+        const handleStart = target.closest('#cutHandleStart');
+        const handleEnd = target.closest('#cutHandleEnd');
+        let mode = 'cursor';
+        if (handleStart) mode = 'start';
+        else if (handleEnd) mode = 'end';
+
+        const updateFromClientX = (clientX) => {
+          const rect = dom.cutWaveformStage.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (clientX - rect.left) / (rect.width || 1)));
+          const timeSec = pct * cutModalCtx.duration;
+
+          if (mode === 'start') {
+            const maxStart = Math.max(0, cutModalCtx.duration - cutModalCtx.trimEnd - 0.1);
+            cutModalCtx.trimStart = Math.max(0, Math.min(maxStart, timeSec));
+          } else if (mode === 'end') {
+            const maxEnd = Math.max(0, cutModalCtx.duration - cutModalCtx.trimStart - 0.1);
+            cutModalCtx.trimEnd = Math.max(0, Math.min(maxEnd, cutModalCtx.duration - timeSec));
+          } else {
+            cutModalCtx.cursorSec = timeSec;
+          }
+          updateCutModalUi();
+        };
+
+        const initX = isTouch ? e.touches[0].clientX : e.clientX;
+        updateFromClientX(initX);
+
+        const onMove = (moveEvt) => {
+          const cx = isTouch ? (moveEvt.touches[0] ? moveEvt.touches[0].clientX : initX) : moveEvt.clientX;
+          updateFromClientX(cx);
+        };
+        const onUp = () => {
+          if (isTouch) {
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onUp);
+          } else {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+          }
+        };
+
+        if (isTouch) {
+          window.addEventListener('touchmove', onMove, { passive: false });
+          window.addEventListener('touchend', onUp);
+        } else {
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+        }
+      };
+
+      dom.cutWaveformStage.addEventListener('mousedown', (e) => startStageDrag(e, false));
+      dom.cutWaveformStage.addEventListener('touchstart', (e) => startStageDrag(e, true), { passive: true });
+    }
+  }
+
   // --- Inicialização e Bind Global ---
   function init() {
     cacheDom();
@@ -3103,37 +3808,40 @@
 
         const loopDurationSec = getTimelineDurationSec();
         const targetTimeSec = percent * loopDurationSec;
-
-        if (dom.reaperPlayhead) {
-          dom.reaperPlayhead.style.left = (percent * 100) + '%';
-        }
-
-        // Ajusta currentTime dos vídeos respeitando offsetMs
-        state.tracks.forEach(track => {
-          if (track.videoElement) {
-            const offsetSec = (track.offsetMs || 0) / 1000;
-            const mediaTime = Math.max(0, targetTimeSec - offsetSec);
-            try { track.videoElement.currentTime = mediaTime; } catch (err) {}
-          }
-        });
-
-        updateReaperLcdDisplay(targetTimeSec * 1000, loopDurationSec * 1000);
+        setPlayheadTimeSec(targetTimeSec);
       };
     }
 
-    // Atalho de Teclado: Barra de Espaço = Play / Pause no Studio
+    // Botão de Dividir na Agulha (Split at Playhead)
+    if (dom.btnSplitAtPlayhead) {
+      dom.btnSplitAtPlayhead.onclick = () => splitSelectedTrackAtPlayhead();
+    }
+
+    // Eventos do Modal de Corte de Faixa
+    bindCutModalEvents();
+
+    // Atalhos de Teclado: Barra de Espaço = Play/Pause, Tecla S = Cortar na Agulha
     window.addEventListener('keydown', (e) => {
       const tabBeatbox = document.getElementById('tab-beatbox');
       const isStudioActive = tabBeatbox && tabBeatbox.classList.contains('active');
       if (!isStudioActive) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
-      if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+      if (e.code === 'Space') {
         e.preventDefault();
+        if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) {
+          toggleCutModalPreview();
+          return;
+        }
         if (state.isPlaying) {
           stopStudioPlayback();
         } else {
           startStudioPlayback();
         }
+      } else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) return;
+        e.preventDefault();
+        splitSelectedTrackAtPlayhead();
       }
     });
 
@@ -3405,6 +4113,14 @@
     };
     dom.btnKeepTake.onclick = keepCurrentTake;
     dom.btnDiscardTake.onclick = discardAndRetry;
+    if (dom.recTakeNameInput) {
+      dom.recTakeNameInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          keepCurrentTake();
+        }
+      };
+    }
 
     // Salvar Projeto em Arquivo JSON (incluindo gravações codificadas em Base64/DataURL)
     dom.btnSaveProject.onclick = async () => {
@@ -3417,6 +4133,8 @@
           muted: t.muted,
           solo: t.solo,
           offsetMs: t.offsetMs,
+          trimStart: t.trimStart || 0,
+          trimEnd: t.trimEnd || 0,
           duration: t.duration || 0,
           waveformPeaks: t.waveformPeaks || null,
           mediaDataUrl: t.mediaBlob ? await blobToDataURL(t.mediaBlob) : null
@@ -3471,6 +4189,8 @@
                   tr.muted = !!t.muted;
                   tr.solo = !!t.solo;
                   tr.offsetMs = t.offsetMs || 0;
+                  tr.trimStart = t.trimStart || 0;
+                  tr.trimEnd = t.trimEnd || 0;
                   tr.duration = t.duration || 0;
                   tr.waveformPeaks = t.waveformPeaks || null;
 
@@ -3509,28 +4229,29 @@
     restoreSession();
   }
 
-  // Importa um arranjo/breque renderizado pelo Sequenciador diretamente como pista no Studio Multitrack
-  async function importSequencerBounce(wavBlob, durationSec, bpm, meter, measures) {
+  // Importa um arranjo/breque ou instrumento renderizado pelo Sequenciador diretamente como pista no Studio Multitrack
+  async function importSequencerBounce(wavBlob, durationSec, bpm, meter, measures, customTrackName) {
     stopStudioPlayback();
 
     if (bpm) state.bpm = bpm;
     if (meter) state.meter = meter;
     if (measures) state.measures = measures;
 
-    let targetTrack = state.tracks.find(t => t.name === 'Base Bateria (Sequenciador)');
-    if (!targetTrack) {
-      targetTrack = state.tracks.find(t => !t.mediaUrl);
-    }
+    const finalTrackName = (typeof customTrackName === 'string' && customTrackName.trim())
+      ? customTrackName.trim()
+      : 'Bateria (Pad)';
+
+    let targetTrack = state.tracks.find(t => !t.mediaUrl && !t.mediaBlob);
     if (!targetTrack) {
       if (state.tracks.length < 9) {
-        targetTrack = createTrack('Base Bateria (Sequenciador)', state.tracks.length);
-        state.tracks.unshift(targetTrack);
+        targetTrack = createTrack(finalTrackName, state.tracks.length);
+        state.tracks.push(targetTrack);
       } else {
-        targetTrack = state.tracks[0];
+        targetTrack = state.tracks[state.tracks.length - 1];
       }
     }
 
-    targetTrack.name = 'Base Bateria (Sequenciador)';
+    targetTrack.name = finalTrackName;
     if (targetTrack._offsetTimer) {
       clearTimeout(targetTrack._offsetTimer);
       targetTrack._offsetTimer = null;
@@ -3544,6 +4265,8 @@
     targetTrack.mediaType = 'audio';
     targetTrack.duration = durationSec;
     targetTrack.offsetMs = 0;
+    targetTrack.trimStart = 0;
+    targetTrack.trimEnd = 0;
     targetTrack.waveformPeaks = null;
 
     syncToolbarControls();
@@ -3552,7 +4275,7 @@
     await saveCurrentSession();
   }
 
-  // Inicia gravação guiada configurando instrumento, BPM, metrônomo e modo de captura
+  // Inicia gravação guiada configurando BPM, metrônomo e modo de captura (sem exigir escolha prévia de instrumento)
   async function startGuidedRecording({ instrumentName, mode = 'audio', bpm = 142, metronome = true } = {}) {
     stopStudioPlayback();
 
@@ -3566,7 +4289,6 @@
 
     let targetTrack = null;
     if (instrumentName) {
-      // Procura faixa vazia com o mesmo instrumento ou reutiliza uma faixa vazia sem mídia
       targetTrack = state.tracks.find(t => !t.mediaUrl && t.name === instrumentName);
       if (!targetTrack) {
         const emptyFirst = state.tracks.find(t => !t.mediaUrl);
@@ -3580,9 +4302,9 @@
     }
     if (!targetTrack) {
       if (state.tracks.length === 0) {
-        targetTrack = addTrack(instrumentName || INSTRUMENT_PRESETS[0]);
+        targetTrack = addTrack();
       } else {
-        targetTrack = state.tracks.find(t => !t.mediaUrl) || state.tracks[0];
+        targetTrack = state.tracks.find(t => !t.mediaUrl) || addTrack() || state.tracks[0];
       }
     }
 

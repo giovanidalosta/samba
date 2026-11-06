@@ -164,7 +164,7 @@
       color: var(--text-main);
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 0;
       text-transform: uppercase;
     }
 
@@ -424,7 +424,9 @@
     .beat-badge {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      padding: 0 6px;
+      gap: 4px;
       font-size: 10px;
       font-weight: 600;
       user-select: none;
@@ -434,6 +436,41 @@
       border-radius: 3px;
       margin: 0 1px;
       box-sizing: border-box;
+    }
+
+    .beat-badge.beat-tuplet-active {
+      background: rgba(232, 195, 27, 0.12);
+      border-bottom: 2px solid var(--naum-gold) !important;
+      color: var(--naum-gold);
+    }
+
+    .btn-beat-tuplet {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      padding: 0px 5px;
+      height: 15px;
+      line-height: 13px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-beat-tuplet:hover {
+      border-color: var(--naum-gold);
+      color: var(--naum-gold);
+      background: rgba(232, 195, 27, 0.1);
+    }
+
+    .btn-beat-tuplet.active {
+      background: var(--naum-gold);
+      border-color: var(--naum-gold);
+      color: #0A090C;
+      font-weight: 800;
     }
 
     .beat-badge.beat-surdo2 {
@@ -702,6 +739,23 @@
     .step-cell.measure-first {
       background: #15141C;
       border-left: 2px solid rgba(232, 195, 27, 0.65) !important;
+    }
+
+    .step-cell.tuplet-cell {
+      background: rgba(232, 195, 27, 0.035);
+      border-bottom: 1px dashed rgba(232, 195, 27, 0.35);
+    }
+
+    .step-cell.tuplet-cell::after {
+      content: attr(data-tuplet-sub);
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 700;
+      color: rgba(232, 195, 27, 0.45);
+      pointer-events: none;
     }
 
     .step-cell:hover {
@@ -1077,44 +1131,65 @@
 <body>
 
   <header id="appMainHeader">
-    <div class="brand" id="headerBrandLogo" style="cursor: pointer;" title="Voltar para a Tela Inicial">
-      <img src="assets/logo-naumteria.png" alt="Logo Bateria Naumteria" class="brand-logo">
-      <div class="brand-text-wrap">
-        <h1>NAUMTERIA <span class="brand-gold">STUDIO</span></h1>
-        <span class="brand-subtitle">Bateria Universitária • UNESP Bauru</span>
+    <!-- Zona 1 (Esquerda): Identidade do App + Breadcrumb Contextual do Breque -->
+    <div class="header-left-zone">
+      <div class="brand" id="headerBrandLogo" style="cursor: pointer;" title="Voltar para a Tela Inicial">
+        <img src="assets/logo-naumteria.png" alt="Logo Naumtestudio" class="brand-logo">
+        <div class="brand-text-wrap">
+          <h1>NAUMTE<span class="brand-gold">STUDIO</span></h1>
+        </div>
+      </div>
+
+      <!-- Breadcrumb do Breque Aberto (Ao lado da marca no Desktop) -->
+      <div class="header-project-breadcrumb" id="projectHeaderBar" style="display: none;">
+        <span class="header-v-divider" aria-hidden="true"></span>
+
+        <button class="btn-back-home" id="btnBackToHome" title="Voltar para a lista de Meus Breques">
+          <span class="back-arrow">←</span>
+          <span class="back-text">Meus Breques</span>
+        </button>
+
+        <span class="header-breadcrumb-chevron" aria-hidden="true">›</span>
+
+        <button class="project-title-pill" id="btnEditBrequeTitle" title="Clique para renomear este breque">
+          <span class="project-title-name" id="activeBrequeTitleText">Novo Breque</span>
+          <span class="project-title-edit">✎</span>
+        </button>
       </div>
     </div>
 
-    <!-- Barra Contextual do Breque Aberto (Oculta na Home) -->
-    <div class="project-header-bar" id="projectHeaderBar" style="display: none;">
-      <button class="btn-back-home" id="btnBackToHome" title="Voltar para a lista de Breques">
-        <span class="back-arrow">←</span>
-        <span class="back-text">Voltar</span>
-      </button>
-
-      <button class="project-title-pill" id="btnEditBrequeTitle" title="Clique para renomear este breque">
-        <span class="project-title-name" id="activeBrequeTitleText">Novo Breque</span>
-        <span class="project-title-edit">✎</span>
-      </button>
-
-      <div class="project-mode-switch" id="projectModeSwitch" title="Alternar entre Pad e Estúdio dentro deste Breque">
+    <!-- Zona 2 (Centro): Alternador Centralizado de Modo (Pad | Estúdio) -->
+    <div class="header-center-zone">
+      <div class="project-mode-switch" id="projectModeSwitch" style="display: none;"
+        title="Alternar entre Pad e Estúdio dentro deste Breque">
         <button class="mode-switch-btn active" id="btnSwitchToPad">
-          <span>🥁</span> <span>Pad</span>
+          <span>🥁</span>
+          <span class="mode-label-desktop">Pad Sequenciador</span>
+          <span class="mode-label-mobile">Pad</span>
         </button>
         <button class="mode-switch-btn" id="btnSwitchToStudio">
-          <span>🎛️</span> <span>Estúdio</span>
+          <span>🎛️</span>
+          <span class="mode-label-desktop">Estúdio Multitrack</span>
+          <span class="mode-label-mobile">Estúdio</span>
         </button>
       </div>
     </div>
 
-    <!-- Ações Rápidas & Status Mobile -->
-    <div class="header-mobile-actions">
-      <button id="mobHeaderInstall" class="mob-install-pill" style="display: none;"
-        title="Instalar aplicativo no celular">
-        <span>⬇</span> Instalar App
+    <!-- Zona 3 (Direita): Ação Rápida Global & Status -->
+    <div class="header-right-zone">
+      <button id="btnHeaderNewBreque" class="btn-header-new-breque" title="Criar um novo breque">
+        <span>➕</span>
+        <span>Novo Breque</span>
       </button>
-      <div class="mob-status-pill" id="mobStatusPill" style="display: none;" title="Compasso e BPM atuais">
-        <span id="mobStatusBpm">142 BPM</span>
+
+      <div class="header-mobile-actions">
+        <button id="mobHeaderInstall" class="mob-install-pill" style="display: none;"
+          title="Instalar aplicativo no celular">
+          <span>⬇</span> Instalar App
+        </button>
+        <div class="mob-status-pill" id="mobStatusPill" style="display: none;" title="Compasso e BPM atuais">
+          <span id="mobStatusBpm">142 BPM</span>
+        </div>
       </div>
     </div>
   </header>
@@ -1184,7 +1259,8 @@
             <div class="modal-choice-icon">🎙️</div>
             <div class="modal-choice-texts">
               <span class="modal-choice-title">Gravar ao Vivo</span>
-              <span class="modal-choice-desc">Grave áudio ou vídeo com metrônomo e contagem 1-2-3-4 direto para o Multitrack.</span>
+              <span class="modal-choice-desc">Grave áudio ou vídeo com metrônomo e contagem 1-2-3-4 direto para o
+                Multitrack.</span>
               <span class="modal-choice-badge">Gravação Direta</span>
             </div>
           </div>
@@ -1192,7 +1268,8 @@
             <div class="modal-choice-icon">🥁</div>
             <div class="modal-choice-texts">
               <span class="modal-choice-title">Montar no Pad / Sequenciador</span>
-              <span class="modal-choice-desc">Programe as células e notas na grade tátil de surdos, caixa, repique, tamborim e agogô.</span>
+              <span class="modal-choice-desc">Programe as células e notas na grade tátil de surdos, caixa, repique,
+                tamborim e agogô.</span>
               <span class="modal-choice-badge">Composição Tátil</span>
             </div>
           </div>
@@ -1202,20 +1279,8 @@
         <div id="stepModalRecordSetup" class="modal-pad-setup" style="display: none;">
           <div class="setup-field">
             <label for="inputRecordBrequeName">Nome do Breque</label>
-            <input type="text" id="inputRecordBrequeName" class="setup-input" placeholder="Ex: Breque 1, Virada de Caixa..." value="Novo Breque">
-          </div>
-          <div class="setup-field">
-            <label for="selectRecordInstrument">Qual instrumento ou voz você vai gravar primeiro?</label>
-            <select id="selectRecordInstrument" class="setup-input">
-              <option value="Surdo 1ª (Tum)">🥁 Surdo de 1ª (Marcação)</option>
-              <option value="Surdo 2ª (Tump)">🥁 Surdo de 2ª (Resposta)</option>
-              <option value="Caixa (Tchá)">🥁 Caixa de Guerra</option>
-              <option value="Repique (Tá-tá)">🥁 Repique</option>
-              <option value="Tamborim (Teleco-teco)">🥁 Tamborim</option>
-              <option value="Agogô (Dlim-dlom)">🔔 Agogô</option>
-              <option value="Ganzá (Tchi-tchi)">🪇 Ganzá / Chocalho</option>
-              <option value="Breque (Voz / Fala)">🎙️ Voz / Guia de Breque</option>
-            </select>
+            <input type="text" id="inputRecordBrequeName" class="setup-input"
+              placeholder="Ex: Breque 1, Virada de Caixa..." value="Novo Breque">
           </div>
           <div class="setup-field">
             <label for="selectRecordCaptureMode">Modo de Captura</label>
@@ -1247,21 +1312,12 @@
         <div id="stepModalPadSetup" class="modal-pad-setup" style="display: none;">
           <div class="setup-field">
             <label for="inputNewBrequeName">Nome do Breque</label>
-            <input type="text" id="inputNewBrequeName" class="setup-input" placeholder="Ex: Breque 1, Entrada da Bateria..." value="Novo Breque">
+            <input type="text" id="inputNewBrequeName" class="setup-input"
+              placeholder="Ex: Breque 1, Entrada da Bateria..." value="Novo Breque">
           </div>
-          <div class="setup-row-2">
-            <div class="setup-field">
-              <label for="inputNewBrequeBpm">Andamento (BPM)</label>
-              <input type="number" id="inputNewBrequeBpm" class="setup-input" min="60" max="220" value="142">
-            </div>
-            <div class="setup-field">
-              <label for="selectNewBrequeMeasures">Compassos</label>
-              <select id="selectNewBrequeMeasures" class="setup-input">
-                <option value="2" selected>2 Compassos (Samba)</option>
-                <option value="4">4 Compassos</option>
-                <option value="1">1 Compasso</option>
-              </select>
-            </div>
+          <div class="setup-field">
+            <label for="inputNewBrequeBpm">Andamento (BPM)</label>
+            <input type="number" id="inputNewBrequeBpm" class="setup-input" min="60" max="220" value="142">
           </div>
           <div class="setup-actions">
             <button id="btnBackToChoice" class="btn-setup-back">Voltar</button>
@@ -1347,7 +1403,8 @@
           </button>
         </div>
 
-        <button id="btnImportFromPad" class="btn btn-secondary" title="Trazer a bateria desenhada no Pad deste Breque como faixa no Estúdio">
+        <button id="btnImportFromPad" class="btn btn-secondary"
+          title="Trazer a bateria desenhada no Pad deste Breque como faixa no Estúdio">
           <span>🥁</span> Importar do Pad
         </button>
 
@@ -1381,8 +1438,8 @@
               <label for="studioMeasures">Quantidade de Compassos</label>
               <select id="studioMeasures">
                 <option value="2">2 Compassos</option>
-                <option value="4" selected>4 Compassos</option>
-                <option value="8">8 Compassos</option>
+                <option value="4">4 Compassos</option>
+                <option value="8" selected>8 Compassos</option>
                 <option value="16">16 Compassos</option>
                 <option value="32">32 Compassos</option>
               </select>
@@ -1466,6 +1523,9 @@
           <div class="reaper-ruler-header">
             <div class="reaper-tcp-corner">
               <span class="corner-label">PISTAS / NAIPES</span>
+              <button type="button" id="btnSplitAtPlayhead" class="btn-ruler-split" title="Dividir a faixa selecionada na posição da agulha [Tecla S]">
+                <span>✂️</span> Cortar [S]
+              </button>
             </div>
             <div class="reaper-ruler-track" id="reaperRulerTrack">
               <div class="reaper-ruler-bars" id="reaperRulerBars">
@@ -1502,7 +1562,8 @@
           <div class="rec-header-left">
             <div class="rec-track-picker">
               <label for="recTrackSelect"><span class="rec-header-dot">●</span> Gravar na Faixa:</label>
-              <select id="recTrackSelect" class="rec-device-select rec-track-select" title="Selecione qual faixa deseja gravar"></select>
+              <select id="recTrackSelect" class="rec-device-select rec-track-select"
+                title="Selecione qual faixa deseja gravar"></select>
             </div>
             <div class="rec-mode-selector">
               <button type="button" class="rec-mode-pill active" id="recModeVideoBtn" data-mode="video">
@@ -1599,12 +1660,19 @@
           </button>
 
           <div class="review-actions-group" id="reviewActions">
-            <button type="button" id="btnDiscardTake" class="btn btn-danger">
-              Descartar e Regravar
-            </button>
-            <button type="button" id="btnKeepTake" class="btn btn-primary">
-              Salvar Take na Pista
-            </button>
+            <div class="review-name-field">
+              <label for="recTakeNameInput">Nome desta gravação:</label>
+              <input type="text" id="recTakeNameInput" class="rec-take-name-input"
+                placeholder="Ex: Guia, Voz, Tamborim, Surdo, Caixa...">
+            </div>
+            <div class="review-buttons-row">
+              <button type="button" id="btnDiscardTake" class="btn btn-danger">
+                Descartar e Regravar
+              </button>
+              <button type="button" id="btnKeepTake" class="btn btn-primary">
+                Salvar Take na Pista
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1648,17 +1716,17 @@
 
         <!-- Subdivisão -->
         <div class="control-group">
-          <label for="subdivSelect">Resolução</label>
-          <select id="subdivSelect">
-            <option value="semicolcheia" selected>8 div (Semicolcheia)</option>
-            <option value="fusa">16 div (Fusa)</option>
+          <label for="subdivSelect">Subdivisão</label>
+          <select id="subdivSelect" title="Figura rítmica da grade: Semicolcheia (1/16) ou Fusa (1/32)">
+            <option value="semicolcheia" selected>Semicolcheia 1/16</option>
+            <option value="fusa">Fusa 1/32</option>
           </select>
         </div>
 
         <!-- Compassos / Medidas -->
         <div class="control-group">
           <button id="btnRemoveMeasure" class="btn-step" title="Remover compasso">−</button>
-          <span id="measureCountDisplay" style="font-weight: 600; font-size: 12px; padding: 0 4px;">2 Comp</span>
+          <span id="measureCountDisplay" style="font-weight: 600; font-size: 12px; padding: 0 4px;">8 Compassos</span>
           <button id="btnAddMeasure" class="btn-step" title="Adicionar compasso">+</button>
         </div>
 
@@ -1670,12 +1738,6 @@
         <!-- Contagem Pré-Roll (1 Compasso de Baqueta) -->
         <button id="btnPreRoll" class="btn" title="Contagem de 1 compasso antes de iniciar">
           <span id="preRollIcon">⏱</span> <span id="preRollText">Contagem: Off</span>
-        </button>
-
-        <!-- Speed Trainer (Acelerador de Ensaio) -->
-        <button id="btnSpeedTrainer" class="btn"
-          title="Acelera automaticamente o BPM a cada repetição em Loop (+2 BPM)">
-          <span id="speedTrainerIcon">⚡</span> <span id="speedTrainerText">Treino: Off</span>
         </button>
 
         <!-- Presets da Bateria -->
@@ -1747,6 +1809,9 @@
           condução característica e editar seus breques por cima.</span>
         <span><strong>3. Toque para Ouvir (Audition):</strong> Clique no nome/ícone do instrumento para ouvir o timbre
           imediatamente com vibração.</span>
+        <span><strong>4. Tercinas (<code>3x</code>):</strong> Clique no botão <code>3x</code> de qualquer tempo na régua
+          superior para dividi-lo em <strong>3 partes iguais (Tercina)</strong> — ou em <strong>6 partes
+            (Sextina)</strong> quando estiver em Fusa.</span>
       </div>
     </div>
 
@@ -1795,6 +1860,105 @@
   <canvas id="exportRenderCanvas"></canvas>
 
   <!-- =========================================================================
+       MODAL DE CORTE E EDIÇÃO DE FAIXA (TRIM INÍCIO / FIM / DIVIDIR)
+       ========================================================================= -->
+  <div class="modal-overlay" id="trackCutModal">
+    <div class="project-modal-box track-cut-modal-box">
+      <div class="project-modal-header">
+        <div class="project-modal-title-wrap">
+          <span class="project-modal-icon">✂️</span>
+          <div>
+            <h3 id="cutModalTrackTitle">Cortar Faixa</h3>
+            <span class="project-modal-subtitle">Arraste as bordas douradas ou use a agulha para aparar sobras ou dividir a gravação</span>
+          </div>
+        </div>
+        <button class="track-delete-btn" id="cutModalCloseBtn" style="font-size: 18px;" title="Fechar">✕</button>
+      </div>
+
+      <div class="project-modal-body">
+        <!-- Editor Visual de Onda Sonora com Alças de Corte -->
+        <div class="cut-waveform-stage" id="cutWaveformStage">
+          <canvas id="cutWaveformCanvas" class="cut-waveform-canvas"></canvas>
+          <!-- Sombras das áreas cortadas (Início e Fim) -->
+          <div class="cut-shade cut-shade-left" id="cutShadeLeft"></div>
+          <div class="cut-shade cut-shade-right" id="cutShadeRight"></div>
+          <!-- Alça Esquerda (Início) -->
+          <div class="cut-handle cut-handle-start" id="cutHandleStart" title="Arraste para cortar o início">
+            <div class="cut-handle-grip">⟪</div>
+            <span class="cut-handle-badge" id="cutBadgeStart">0.00s</span>
+          </div>
+          <!-- Alça Direita (Fim) -->
+          <div class="cut-handle cut-handle-end" id="cutHandleEnd" title="Arraste para cortar o final">
+            <div class="cut-handle-grip">⟫</div>
+            <span class="cut-handle-badge" id="cutBadgeEnd">0.00s</span>
+          </div>
+          <!-- Cursor / Agulha de Preview -->
+          <div class="cut-cursor-line" id="cutCursorLine" title="Agulha de corte">
+            <div class="cut-cursor-head"></div>
+          </div>
+        </div>
+
+        <!-- Resumo de Tempos (Início, Fim, Duração Ativa e Posição da Agulha) -->
+        <div class="cut-stats-bar">
+          <div class="cut-stat-pill">
+            <span class="cut-stat-label">Início (Corte Esq.)</span>
+            <div class="cut-nudge-group">
+              <button type="button" class="btn-step" id="btnCutStartMinus" title="-50ms">−</button>
+              <strong id="cutStatStartVal">0.00s</strong>
+              <button type="button" class="btn-step" id="btnCutStartPlus" title="+50ms">+</button>
+            </div>
+          </div>
+
+          <div class="cut-stat-pill">
+            <span class="cut-stat-label">Agulha (Clique na Onda)</span>
+            <strong id="cutStatCursorVal" style="color: var(--naum-gold);">0.00s</strong>
+          </div>
+
+          <div class="cut-stat-pill">
+            <span class="cut-stat-label">Duração Final</span>
+            <strong id="cutStatDurationVal" style="color: #7CC0EE;">0.00s</strong>
+          </div>
+
+          <div class="cut-stat-pill">
+            <span class="cut-stat-label">Fim (Corte Dir.)</span>
+            <div class="cut-nudge-group">
+              <button type="button" class="btn-step" id="btnCutEndMinus" title="-50ms">−</button>
+              <strong id="cutStatEndVal">0.00s</strong>
+              <button type="button" class="btn-step" id="btnCutEndPlus" title="+50ms">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ações Rápidas na Posição da Agulha -->
+        <div class="cut-quick-actions">
+          <button type="button" id="btnCutPreviewPlay" class="btn btn-primary btn-sm" title="Ouvir apenas o trecho selecionado">
+            <span>▶</span> Ouvir Trecho
+          </button>
+          <button type="button" id="btnCutTrimToCursorStart" class="btn btn-sm" title="Cortar tudo do começo até onde está a agulha">
+            <span>✂️</span> Cortar Início até Agulha
+          </button>
+          <button type="button" id="btnCutTrimToCursorEnd" class="btn btn-sm" title="Cortar tudo da agulha até o final">
+            <span>✂️</span> Cortar Agulha até o Fim
+          </button>
+          <button type="button" id="btnCutSplitAtCursor" class="btn btn-sm" title="Dividir esta gravação em duas faixas separadas na posição da agulha">
+            <span>➗</span> Dividir em 2 Faixas na Agulha
+          </button>
+          <button type="button" id="btnCutResetFull" class="btn btn-danger btn-sm" title="Remover cortes e restaurar a gravação completa original">
+            <span>↺</span> Restaurar Inteira
+          </button>
+        </div>
+      </div>
+
+      <div class="project-modal-footer">
+        <button type="button" id="btnCutCancel" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="btnCutApply" class="btn btn-gold">
+          <span>✂️</span> Aplicar Corte na Faixa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
        MODAL DE MONTAGEM DE NOVO PROJETO (ESTÚDIO MULTITRACK)
        ========================================================================= -->
   <div class="modal-overlay" id="newProjectModal">
@@ -1814,7 +1978,8 @@
         <!-- 1. Dados Básicos -->
         <div class="project-form-section">
           <label class="project-form-label" for="newProjectName">Nome do Projeto</label>
-          <input type="text" id="newProjectName" class="project-text-input" placeholder="Ex: Samba-Breque Naumteria" value="Novo Projeto Samba">
+          <input type="text" id="newProjectName" class="project-text-input" placeholder="Ex: Samba-Breque Naumteria"
+            value="Novo Projeto Samba">
         </div>
 
         <div class="project-form-grid">
@@ -1846,7 +2011,8 @@
               <option value="4/4">4/4 (Quatro Tempos)</option>
             </select>
 
-            <label class="project-form-label" for="newProjectMode" style="margin-top: 12px;">Extensão da Gravação</label>
+            <label class="project-form-label" for="newProjectMode" style="margin-top: 12px;">Extensão da
+              Gravação</label>
             <select id="newProjectMode" class="project-select-input">
               <option value="free" selected>Livre (Duração baseada na gravação)</option>
               <option value="fixed">Compassos Fixos (Loop)</option>
@@ -1861,7 +2027,8 @@
             <span class="project-hint-badge" id="newProjectTrackCountHint">0 faixas (Projeto Zerado)</span>
           </div>
           <p class="project-section-desc">
-            Por padrão, o projeto inicia <strong>zerado</strong> (sem nenhuma faixa). Você pode adicionar faixas conforme queira no estúdio, ou pré-selecionar os instrumentos abaixo:
+            Por padrão, o projeto inicia <strong>zerado</strong> (sem nenhuma faixa). Você pode adicionar faixas
+            conforme queira no estúdio, ou pré-selecionar os instrumentos abaixo:
           </p>
 
           <div class="project-instruments-picker" id="newProjectInstrumentsPicker">
@@ -2640,8 +2807,9 @@
 
         const beatsPerMeasure = seqState.meter === '2/4' ? 2 : 4;
         const stepsPerBeat = stepsPerMeasure / beatsPerMeasure;
-        const stepDurationSec = (60 / seqState.bpm) / stepsPerBeat;
-        const loopDurationSec = totalSteps * stepDurationSec;
+        const beatDurationSec = 60 / seqState.bpm;
+        const totalBeats = Math.round(totalSteps / stepsPerBeat);
+        const loopDurationSec = totalBeats * beatDurationSec;
 
         const sampleRate = 44100;
         const totalFrames = Math.max(1, Math.ceil(loopDurationSec * sampleRate));
@@ -2651,7 +2819,14 @@
         const hasAnySolo = Object.values(seqState.solos).some(v => v === true);
 
         for (let s = 0; s < totalSteps; s++) {
-          const stepTime = s * stepDurationSec;
+          const globalBeatIdx = Math.floor(s / stepsPerBeat);
+          const offsetInBeat = s % stepsPerBeat;
+          const rawTuplet = seqState.beatTuplets?.[globalBeatIdx];
+          const tuplet = (rawTuplet === 6 && seqState.subdivision !== 'fusa') ? 3 : (rawTuplet || null);
+          const activeStepsInBeat = tuplet || stepsPerBeat;
+          if (offsetInBeat >= activeStepsInBeat) continue;
+
+          const stepTime = (globalBeatIdx * beatDurationSec) + (offsetInBeat * (beatDurationSec / activeStepsInBeat));
           instrumentsList.forEach(inst => {
             if (seqState.mutes[inst.id]) return;
             if (hasAnySolo && !seqState.solos[inst.id]) return;
@@ -2747,7 +2922,7 @@
       bpm: 142,
       meter: '2/4',
       subdivision: 'semicolcheia',
-      measures: 2,
+      measures: 8,
       metronomeEnabled: false,
       isPlaying: false,
       currentStep: 0,
@@ -2761,7 +2936,8 @@
       selectedGroove: {}, // última levada selecionada por instrumento
       gridData: {},
       loopGridData: {},   // versão de repetição contínua (a partir da 2ª volta do loop) quando o 1º compasso é diferente
-      stepMeta: {}        // metadados opcionais por step (ex: { tipo: 'acento'|'medio', vel: 0-127 })
+      stepMeta: {},       // metadados opcionais por step (ex: { tipo: 'acento'|'medio', vel: 0-127 })
+      beatTuplets: {}     // mapa { [globalBeatIdx]: 3 | 6 } para tempos em Tercina (3) ou Sextina (6)
     };
 
     function computeStepVelMultiplier(noteId, meta) {
@@ -2807,6 +2983,165 @@
 
     function getTotalSteps() {
       return state.measures * getStepsPerMeasure();
+    }
+
+    function getBeatTuplet(globalBeatIdx) {
+      const raw = state.beatTuplets?.[globalBeatIdx];
+      if (!raw) return null;
+      if (raw === 6 && state.subdivision !== 'fusa') return 3;
+      return raw === 3 || raw === 6 ? raw : null;
+    }
+
+    function getActiveStepsInBeat(globalBeatIdx) {
+      const stepsPerBeat = state.subdivision === 'fusa' ? 8 : 4;
+      return getBeatTuplet(globalBeatIdx) || stepsPerBeat;
+    }
+
+    function toggleBeatTuplet(globalBeatIdx) {
+      if (!state.beatTuplets) state.beatTuplets = {};
+      const stepsPerBeat = state.subdivision === 'fusa' ? 8 : 4;
+      const beatStart = globalBeatIdx * stepsPerBeat;
+      const current = getBeatTuplet(globalBeatIdx);
+
+      // Materializa loopGridData caso alguma faixa estivesse em modo intro+loop automático
+      if (state.loopGridData) {
+        state.loopGridData = {};
+      }
+
+      if (state.subdivision === 'semicolcheia') {
+        // Em Semicolcheia (4 por tempo): alterna Normal (4) <-> Tercina (3)
+        if (!current) {
+          state.beatTuplets[globalBeatIdx] = 3;
+        } else {
+          delete state.beatTuplets[globalBeatIdx];
+        }
+      } else {
+        // Em Fusa (8 por tempo): alterna Normal (8) -> Tercina (3) -> Sextina (6) -> Normal (8)
+        if (!current) {
+          // Normal (8) -> Tercina (3): se só havia notas nas posições pares (0, 2, 4), agrupa-as em (0, 1, 2)
+          INSTRUMENTS.forEach(inst => {
+            const arr = state.gridData[inst.id];
+            if (!arr) return;
+            const hasOdd = arr[beatStart + 1] || arr[beatStart + 3] || arr[beatStart + 5];
+            if (!hasOdd && (arr[beatStart + 2] || arr[beatStart + 4])) {
+              const n0 = arr[beatStart + 0];
+              const n1 = arr[beatStart + 2];
+              const n2 = arr[beatStart + 4];
+              arr[beatStart + 0] = n0;
+              arr[beatStart + 1] = n1;
+              arr[beatStart + 2] = n2;
+              for (let k = 3; k < 8; k++) arr[beatStart + k] = null;
+            }
+          });
+          state.beatTuplets[globalBeatIdx] = 3;
+        } else if (current === 3) {
+          // Tercina (3) -> Sextina (6): espaça as 3 notas (0, 1, 2) para (0, 2, 4) mantendo o ritmo exato
+          INSTRUMENTS.forEach(inst => {
+            const arr = state.gridData[inst.id];
+            if (!arr) return;
+            const n0 = arr[beatStart + 0];
+            const n1 = arr[beatStart + 1];
+            const n2 = arr[beatStart + 2];
+            arr[beatStart + 0] = n0;
+            arr[beatStart + 1] = null;
+            arr[beatStart + 2] = n1;
+            arr[beatStart + 3] = null;
+            arr[beatStart + 4] = n2;
+            arr[beatStart + 5] = null;
+          });
+          state.beatTuplets[globalBeatIdx] = 6;
+        } else {
+          delete state.beatTuplets[globalBeatIdx];
+        }
+      }
+
+      renderStudio();
+    }
+
+    function rescaleArrayForSubdivisionChange(arr, fromSubdiv, toSubdiv) {
+      if (!Array.isArray(arr) || fromSubdiv === toSubdiv) return arr;
+      if (fromSubdiv === 'semicolcheia' && toSubdiv === 'fusa') {
+        const totalBeats = Math.floor(arr.length / 4);
+        const out = new Array(arr.length * 2).fill(null);
+        for (let b = 0; b < totalBeats; b++) {
+          const oldStart = b * 4;
+          const newStart = b * 8;
+          const tuplet = state.beatTuplets?.[b];
+          if (tuplet === 3) {
+            // Mantém as 3 notas da tercina nas 3 células da tercina (0, 1, 2)
+            out[newStart + 0] = arr[oldStart + 0] ?? null;
+            out[newStart + 1] = arr[oldStart + 1] ?? null;
+            out[newStart + 2] = arr[oldStart + 2] ?? null;
+          } else {
+            for (let i = 0; i < 4; i++) {
+              out[newStart + i * 2] = arr[oldStart + i] ?? null;
+            }
+          }
+        }
+        return out;
+      }
+      if (fromSubdiv === 'fusa' && toSubdiv === 'semicolcheia') {
+        const totalBeats = Math.floor(arr.length / 8);
+        const out = new Array(Math.max(1, totalBeats * 4)).fill(null);
+        for (let b = 0; b < totalBeats; b++) {
+          const oldStart = b * 8;
+          const newStart = b * 4;
+          const tuplet = state.beatTuplets?.[b];
+          if (tuplet === 3) {
+            out[newStart + 0] = arr[oldStart + 0] ?? null;
+            out[newStart + 1] = arr[oldStart + 1] ?? null;
+            out[newStart + 2] = arr[oldStart + 2] ?? null;
+          } else if (tuplet === 6) {
+            // Converte Sextina (6) para Tercina (3) ao voltar para Semicolcheia
+            for (let k = 0; k < 3; k++) {
+              out[newStart + k] = (arr[oldStart + k * 2] !== null && arr[oldStart + k * 2] !== undefined)
+                ? arr[oldStart + k * 2]
+                : (arr[oldStart + k * 2 + 1] ?? null);
+            }
+          } else {
+            for (let i = 0; i < 4; i++) {
+              out[newStart + i] = (arr[oldStart + i * 2] !== null && arr[oldStart + i * 2] !== undefined)
+                ? arr[oldStart + i * 2]
+                : (arr[oldStart + i * 2 + 1] ?? null);
+            }
+          }
+        }
+        return out;
+      }
+      return arr;
+    }
+
+    function changeSubdivisionAndRescaleNotes(newSubdiv) {
+      const prevSubdiv = state.subdivision;
+      if (!newSubdiv || prevSubdiv === newSubdiv) return;
+
+      INSTRUMENTS.forEach(inst => {
+        if (Array.isArray(state.gridData[inst.id])) {
+          state.gridData[inst.id] = rescaleArrayForSubdivisionChange(state.gridData[inst.id], prevSubdiv, newSubdiv);
+        }
+        if (state.loopGridData && Array.isArray(state.loopGridData[inst.id])) {
+          state.loopGridData[inst.id] = rescaleArrayForSubdivisionChange(state.loopGridData[inst.id], prevSubdiv, newSubdiv);
+        }
+        if (state.stepMeta && Array.isArray(state.stepMeta[inst.id])) {
+          state.stepMeta[inst.id] = rescaleArrayForSubdivisionChange(state.stepMeta[inst.id], prevSubdiv, newSubdiv);
+        }
+      });
+
+      if (prevSubdiv === 'fusa' && newSubdiv === 'semicolcheia' && state.beatTuplets) {
+        Object.keys(state.beatTuplets).forEach(b => {
+          if (state.beatTuplets[b] === 6) {
+            state.beatTuplets[b] = 3;
+          }
+        });
+      }
+
+      state.subdivision = newSubdiv;
+    }
+
+    function updateSubdivSelectLabels() {
+      const subdivSelect = document.getElementById('subdivSelect');
+      if (!subdivSelect) return;
+      subdivSelect.value = state.subdivision;
     }
 
     function initGridData() {
@@ -3059,15 +3394,16 @@
       if (!found) return;
 
       audio.init();
+      const sub = found.savedSubdivision || 'semicolcheia';
       const stepsPerMeasure = getStepsPerMeasure();
-      const neededMeasures = Math.ceil(((found.introPattern || found.pattern).length) / stepsPerMeasure);
+      const convertedRef = convertPatternResolution(found.introPattern || found.pattern, sub);
+      const neededMeasures = Math.ceil(convertedRef.length / stepsPerMeasure);
       if (state.measures < neededMeasures) {
         state.measures = neededMeasures;
         document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
         initGridData();
       }
       const totalSteps = getTotalSteps();
-      const sub = found.savedSubdivision || 'semicolcheia';
 
       state.gridData[instId] = expandPatternToGrid(
         found.pattern,
@@ -3190,21 +3526,35 @@
         document.getElementById('bpmSlider').value = state.bpm;
         document.getElementById('bpmDisplay').textContent = state.bpm;
       }
+      if (preset.meter) {
+        state.meter = preset.meter;
+        const meterSel = document.getElementById('meterSelect');
+        if (meterSel) meterSel.value = state.meter;
+      }
+      if (preset.subdivision) {
+        state.subdivision = preset.subdivision;
+        const subdivSel = document.getElementById('subdivSelect');
+        if (subdivSel) subdivSel.value = state.subdivision;
+      }
       if (preset.measures && state.measures !== preset.measures) {
         state.measures = preset.measures;
         document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
       }
+      state.beatTuplets = preset.beatTuplets ? { ...preset.beatTuplets } : {};
 
       const totalSteps = getTotalSteps();
       const stepsPerMeasure = getStepsPerMeasure();
+      const srcTracks = preset.tracks || preset.gridData || null;
 
       INSTRUMENTS.forEach(inst => {
-        const trackPattern = preset.tracks ? preset.tracks[inst.id] : null;
+        const trackPattern = srcTracks ? srcTracks[inst.id] : null;
         const trackIntro = preset.tracksIntro ? preset.tracksIntro[inst.id] : null;
         if (trackPattern) {
-          state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, preset.subdivision || 'semicolcheia', trackIntro);
+          state.gridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, preset.subdivision || state.subdivision || 'semicolcheia', trackIntro);
           if (trackIntro) {
-            state.loopGridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, preset.subdivision || 'semicolcheia', null);
+            state.loopGridData[inst.id] = expandPatternToGrid(trackPattern, totalSteps, stepsPerMeasure, preset.subdivision || state.subdivision || 'semicolcheia', null);
+          } else if (preset.loopGridData && preset.loopGridData[inst.id]) {
+            state.loopGridData[inst.id] = expandPatternToGrid(preset.loopGridData[inst.id], totalSteps, stepsPerMeasure, preset.subdivision || state.subdivision || 'semicolcheia', null);
           } else {
             delete state.loopGridData[inst.id];
           }
@@ -3213,13 +3563,13 @@
           delete state.loopGridData[inst.id];
         }
 
-        const metaPattern = preset.tracksMeta ? preset.tracksMeta[inst.id] : null;
+        const metaPattern = preset.tracksMeta ? preset.tracksMeta[inst.id] : (preset.stepMeta ? preset.stepMeta[inst.id] : null);
         if (metaPattern) {
-          state.stepMeta[inst.id] = expandPatternToGrid(metaPattern, totalSteps, stepsPerMeasure);
+          state.stepMeta[inst.id] = expandPatternToGrid(metaPattern, totalSteps, stepsPerMeasure, preset.subdivision || state.subdivision || 'semicolcheia');
         } else {
           state.stepMeta[inst.id] = new Array(totalSteps).fill(null);
         }
-        state.selectedGroove[inst.id] = null;
+        state.selectedGroove[inst.id] = preset.selectedGroove?.[inst.id] || null;
       });
 
       renderStudio();
@@ -3273,6 +3623,7 @@
         bpm: state.bpm,
         meter: state.meter,
         subdivision: state.subdivision,
+        beatTuplets: state.beatTuplets && Object.keys(state.beatTuplets).length > 0 ? { ...state.beatTuplets } : undefined,
         tracks,
         tracksIntro: Object.keys(tracksIntro).length > 0 ? tracksIntro : undefined,
         tracksMeta: Object.keys(tracksMeta).length > 0 ? tracksMeta : undefined
@@ -3304,6 +3655,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
     function duplicateMeasure(measureIndex) {
       const stepsPerMeasure = getStepsPerMeasure();
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
       const srcStart = measureIndex * stepsPerMeasure;
 
       // Se for o último compasso, adiciona +1 compasso automaticamente para colar a cópia
@@ -3321,11 +3673,23 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         }
       });
 
+      if (!state.beatTuplets) state.beatTuplets = {};
+      for (let b = 0; b < beatsPerMeasure; b++) {
+        const srcBeat = measureIndex * beatsPerMeasure + b;
+        const dstBeat = (measureIndex + 1) * beatsPerMeasure + b;
+        if (state.beatTuplets[srcBeat]) {
+          state.beatTuplets[dstBeat] = state.beatTuplets[srcBeat];
+        } else {
+          delete state.beatTuplets[dstBeat];
+        }
+      }
+
       renderStudio();
     }
 
     function clearMeasure(measureIndex) {
       const stepsPerMeasure = getStepsPerMeasure();
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
       const start = measureIndex * stepsPerMeasure;
       INSTRUMENTS.forEach(inst => {
         for (let i = 0; i < stepsPerMeasure; i++) {
@@ -3333,6 +3697,11 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           if (state.stepMeta[inst.id]) state.stepMeta[inst.id][start + i] = null;
         }
       });
+      if (state.beatTuplets) {
+        for (let b = 0; b < beatsPerMeasure; b++) {
+          delete state.beatTuplets[measureIndex * beatsPerMeasure + b];
+        }
+      }
       renderStudio();
     }
 
@@ -3361,6 +3730,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
 
     function renderStudio() {
+      updateSubdivSelectLabels();
       initGridData();
       const totalSteps = getTotalSteps();
       const stepsPerMeasure = getStepsPerMeasure();
@@ -3413,11 +3783,39 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         beatsSubruler.className = 'beats-subruler';
 
         for (let b = 0; b < beatsPerMeasure; b++) {
+          const globalBeatIdx = m * beatsPerMeasure + b;
+          const tuplet = getBeatTuplet(globalBeatIdx);
           const beatBadge = document.createElement('div');
           beatBadge.style.width = `${stepsPerBeat * 36}px`;
-          beatBadge.className = `beat-badge ${b === 0 ? 'beat-surdo2' : (b === 1 ? 'beat-surdo1' : '')}`;
-          const surdoLabel = b === 0 ? 'Tempo 1 (2ª)' : (b === 1 ? 'Tempo 2 (1ª)' : `T${b + 1}`);
-          beatBadge.innerHTML = `<span>${surdoLabel}</span>`;
+          const isSurdo2Beat = (b % 2 === 0);
+          beatBadge.className = `beat-badge ${isSurdo2Beat ? 'beat-surdo2' : 'beat-surdo1'} ${tuplet ? 'beat-tuplet-active' : ''}`;
+          const surdoLabel = isSurdo2Beat ? `Tempo ${b + 1} (2ª)` : `Tempo ${b + 1} (1ª)`;
+
+          const labelSpan = document.createElement('span');
+          labelSpan.textContent = surdoLabel;
+
+          const btnTuplet = document.createElement('button');
+          btnTuplet.type = 'button';
+          btnTuplet.className = `btn-beat-tuplet ${tuplet ? 'active' : ''}`;
+          if (tuplet === 6) {
+            btnTuplet.textContent = '6x Sextina';
+            btnTuplet.title = 'Sextina ativa (6 divisões iguais neste tempo) — Clique para voltar à divisão normal';
+          } else if (tuplet === 3) {
+            btnTuplet.textContent = '3x Tercina';
+            btnTuplet.title = state.subdivision === 'fusa'
+              ? 'Tercina ativa (3 divisões iguais neste tempo) — Clique para mudar para Sextina (6x) ou voltar ao normal'
+              : 'Tercina ativa (3 divisões iguais neste tempo) — Clique para voltar à divisão normal';
+          } else {
+            btnTuplet.textContent = '3x';
+            btnTuplet.title = 'Transformar este tempo em Tercina (3 divisões iguais no tempo)';
+          }
+          btnTuplet.onclick = (e) => {
+            e.stopPropagation();
+            toggleBeatTuplet(globalBeatIdx);
+          };
+
+          beatBadge.appendChild(labelSpan);
+          beatBadge.appendChild(btnTuplet);
           beatsSubruler.appendChild(beatBadge);
         }
 
@@ -3636,16 +4034,27 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         header.appendChild(artPalette);
         header.appendChild(headerBottom);
 
-        // Células da Grade com suporte a Click & Drag Paint
+        // Células da Grade com suporte a Click & Drag Paint e Tercinas/Sextinas por Tempo
         const stepsContainer = document.createElement('div');
         stepsContainer.className = 'steps-container';
 
         for (let s = 0; s < totalSteps; s++) {
+          const globalBeatIdx = Math.floor(s / stepsPerBeat);
+          const offsetInBeat = s % stepsPerBeat;
+          const tuplet = getBeatTuplet(globalBeatIdx);
+          const activeStepsInBeat = tuplet || stepsPerBeat;
+          if (offsetInBeat >= activeStepsInBeat) continue;
+
           const cell = document.createElement('div');
           cell.className = 'step-cell';
-          cell.style.width = '36px';
+          const cellWidthPx = (stepsPerBeat * 36) / activeStepsInBeat;
+          cell.style.width = `${cellWidthPx}px`;
           cell.dataset.instrument = inst.id;
           cell.dataset.step = s;
+          if (tuplet) {
+            cell.classList.add('tuplet-cell');
+            cell.dataset.tupletSub = `${offsetInBeat + 1}/${tuplet}`;
+          }
 
           const stepInMeasure = s % stepsPerMeasure;
           const isMeasureFirst = stepInMeasure === 0;
@@ -3656,8 +4065,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
             cell.classList.add('measure-first');
           } else if (isBeatFirst) {
             cell.classList.add('beat-first');
-            if (beatIndex === 0) cell.classList.add('beat-surdo2-head');
-            else if (beatIndex === 1) cell.classList.add('beat-surdo1-head');
+            if (beatIndex % 2 === 0) cell.classList.add('beat-surdo2-head');
+            else cell.classList.add('beat-surdo1-head');
           }
 
           updateSingleCellDOM(cell, inst, s);
@@ -3799,6 +4208,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           s: state.subdivision,
           c: state.measures,
           vol: state.volumes,
+          t: state.beatTuplets,
           g: state.gridData
         };
         const jsonStr = JSON.stringify(payload);
@@ -3844,6 +4254,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         state.subdivision = data.s || 'semicolcheia';
         state.measures = data.c || 2;
         if (data.vol) state.volumes = { ...state.volumes, ...data.vol };
+        state.beatTuplets = data.t && typeof data.t === 'object' ? { ...data.t } : {};
         state.gridData = data.g;
 
         const slider = document.getElementById('bpmSlider');
@@ -3913,11 +4324,31 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     /* =========================================================================
        5. REPRODUÇÃO & SEQUENCIADOR (CLOCK DE ALTA PRECISÃO WEB AUDIO)
        ========================================================================= */
-    function getStepDurationSec() {
+    function getStepDurationSec(stepIndex = 0) {
       const stepsPerMeasure = getStepsPerMeasure();
       const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
       const stepsPerBeat = stepsPerMeasure / beatsPerMeasure;
-      return (60 / state.bpm) / stepsPerBeat;
+      const globalBeatIdx = Math.floor(stepIndex / stepsPerBeat);
+      const activeStepsInBeat = getActiveStepsInBeat(globalBeatIdx);
+      return (60 / state.bpm) / activeStepsInBeat;
+    }
+
+    function getNextPlayableStep(stepIndex, totalSteps) {
+      const stepsPerMeasure = getStepsPerMeasure();
+      const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+      const stepsPerBeat = stepsPerMeasure / beatsPerMeasure;
+      const globalBeatIdx = Math.floor(stepIndex / stepsPerBeat);
+      const offsetInBeat = stepIndex % stepsPerBeat;
+      const activeStepsInBeat = getActiveStepsInBeat(globalBeatIdx);
+
+      if (offsetInBeat + 1 < activeStepsInBeat) {
+        return { nextStep: stepIndex + 1, wrapped: false };
+      }
+      const nextBeatStart = (globalBeatIdx + 1) * stepsPerBeat;
+      if (nextBeatStart >= totalSteps) {
+        return { nextStep: 0, wrapped: true };
+      }
+      return { nextStep: nextBeatStart, wrapped: false };
     }
 
     function startPlayback() {
@@ -3935,31 +4366,21 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
       state.nextNoteTime = audio.ctx.currentTime + 0.02;
 
-      // Scheduler com compensação de drift no clock do Web Audio API
+      // Scheduler com compensação de drift no clock do Web Audio API e suporte exato a Tercinas/Sextinas
       state.timerId = setInterval(() => {
         if (!state.isPlaying || !audio.ctx) return;
         const now = audio.ctx.currentTime;
         const totalSteps = getTotalSteps();
-        const stepDur = getStepDurationSec();
 
         while (state.nextNoteTime <= now + 0.035) {
           const stepToPlay = state.currentStep;
+          const stepDur = getStepDurationSec(stepToPlay);
           playStep(stepToPlay, state.nextNoteTime);
           updateCursor(stepToPlay);
-          if (state.currentStep + 1 >= totalSteps) {
-            state.currentStep = 0;
+          const { nextStep, wrapped } = getNextPlayableStep(stepToPlay, totalSteps);
+          state.currentStep = nextStep;
+          if (wrapped) {
             state.loopCount = (state.loopCount || 0) + 1;
-            // Speed Trainer: Acelera o andamento a cada volta completa
-            if (state.speedTrainerMode > 0 && state.bpm < 185) {
-              state.bpm = Math.min(185, state.bpm + state.speedTrainerMode);
-              const bpmSlider = document.getElementById('bpmSlider');
-              const bpmDisplay = document.getElementById('bpmDisplay');
-              if (bpmSlider) bpmSlider.value = state.bpm;
-              if (bpmDisplay) bpmDisplay.textContent = state.bpm;
-              updatePrintDetails();
-            }
-          } else {
-            state.currentStep += 1;
           }
           state.nextNoteTime += stepDur;
         }
@@ -4037,7 +4458,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           meter: state.meter,
           subdivision: state.subdivision,
           measures: state.measures,
-          volumes: state.volumes
+          volumes: state.volumes,
+          beatTuplets: state.beatTuplets
         },
         customGrooves,
         customBateriaPresets,
@@ -4083,6 +4505,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           if (data.settings.volumes) {
             state.volumes = { ...state.volumes, ...data.settings.volumes };
           }
+          state.beatTuplets = data.settings.beatTuplets ? { ...data.settings.beatTuplets } : {};
           if (data.customGrooves && typeof data.customGrooves === 'object') {
             Object.assign(customGrooves, data.customGrooves);
             saveCustomGroovesToStorage(customGrooves);
@@ -4147,13 +4570,28 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           stepsPerMeasure
         );
 
+        // Identifica quais instrumentos estão ativos na grade exportada para dar o nome automático da faixa
+        const hasAnySolo = Object.values(state.solos).some(v => v === true);
+        const activeInsts = INSTRUMENTS.filter(inst => {
+          if (state.mutes[inst.id]) return false;
+          if (hasAnySolo && !state.solos[inst.id]) return false;
+          return (state.gridData[inst.id] || []).some(n => n !== null);
+        });
+        let importedTrackName = 'Bateria (Pad)';
+        if (activeInsts.length === 1) {
+          importedTrackName = activeInsts[0].name;
+        } else if (activeInsts.length >= 2 && activeInsts.length <= 3) {
+          importedTrackName = activeInsts.map(i => i.name).join(' + ');
+        }
+
         if (window.BeatboxStudio && typeof window.BeatboxStudio.importSequencerBounce === 'function') {
           await window.BeatboxStudio.importSequencerBounce(
             wavBlob,
             durationSec,
             state.bpm,
             state.meter,
-            state.measures
+            state.measures,
+            importedTrackName
           );
           if (typeof saveActiveBrequeState === 'function') {
             saveActiveBrequeState('studio');
@@ -4213,7 +4651,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     };
 
     document.getElementById('subdivSelect').onchange = (e) => {
-      state.subdivision = e.target.value;
+      changeSubdivisionAndRescaleNotes(e.target.value);
       stopPlayback();
       renderStudio();
     };
@@ -4286,6 +4724,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         state.stepMeta = {};
         state.loopGridData = {};
         state.selectedGroove = {};
+        state.beatTuplets = {};
         document.getElementById('bateriaPresetSelect').value = '';
         stopPlayback();
         renderStudio();
@@ -4326,20 +4765,6 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       };
     }
 
-    const btnSpeedTrainer = document.getElementById('btnSpeedTrainer');
-    if (btnSpeedTrainer) {
-      btnSpeedTrainer.onclick = () => {
-        if (!state.speedTrainerMode) state.speedTrainerMode = 0;
-        if (state.speedTrainerMode === 0) state.speedTrainerMode = 2;
-        else if (state.speedTrainerMode === 2) state.speedTrainerMode = 4;
-        else state.speedTrainerMode = 0;
-
-        btnSpeedTrainer.classList.toggle('btn-primary', state.speedTrainerMode > 0);
-        const text = document.getElementById('speedTrainerText');
-        if (text) text.textContent = state.speedTrainerMode > 0 ? `Treino: +${state.speedTrainerMode} BPM` : 'Treino: Off';
-      };
-    }
-
     const btnShareLink = document.getElementById('btnShareLink');
     if (btnShareLink) {
       btnShareLink.onclick = shareBrequeLink;
@@ -4352,6 +4777,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     const appMainHeader = document.getElementById('appMainHeader');
     const headerBrandLogo = document.getElementById('headerBrandLogo');
     const projectHeaderBar = document.getElementById('projectHeaderBar');
+    const projectModeSwitch = document.getElementById('projectModeSwitch');
+    const btnHeaderNewBreque = document.getElementById('btnHeaderNewBreque');
     const btnBackToHome = document.getElementById('btnBackToHome');
     const btnEditBrequeTitle = document.getElementById('btnEditBrequeTitle');
     const activeBrequeTitleText = document.getElementById('activeBrequeTitleText');
@@ -4403,12 +4830,15 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         ...existing,
         name: state.activeBrequeName || existing.name || 'Novo Breque',
         bpm: state.bpm || existing.bpm || 142,
-        measures: state.measures || existing.measures || 2,
+        meter: state.meter || existing.meter || '2/4',
+        subdivision: state.subdivision || existing.subdivision || 'semicolcheia',
+        measures: state.measures || existing.measures || 8,
         lastMode: currentMode,
         hasPadNotes: hasPadNotesInCurrentGrid(),
         updatedAt: Date.now(),
         gridData: JSON.parse(JSON.stringify(state.gridData || {})),
         stepMeta: JSON.parse(JSON.stringify(state.stepMeta || {})),
+        beatTuplets: JSON.parse(JSON.stringify(state.beatTuplets || {})),
         loopMeasures: state.loopMeasures,
         loopGridData: JSON.parse(JSON.stringify(state.loopGridData || {})),
         selectedGroove: JSON.parse(JSON.stringify(state.selectedGroove || {})),
@@ -4436,7 +4866,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       }
     };
 
-    function createNewBrequeProject({ name, bpm = 142, measures = 2, initialMode = 'pad' }) {
+    function createNewBrequeProject({ name, bpm = 142, measures = 8, initialMode = 'pad' }) {
       const cleanName = (name && name.trim()) || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
       const key = 'breque_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
 
@@ -4444,8 +4874,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       state.stepMeta = {};
       state.loopGridData = {};
       state.selectedGroove = {};
+      state.beatTuplets = {};
       state.bpm = Math.min(220, Math.max(60, parseInt(bpm, 10) || 142));
-      state.measures = parseInt(measures, 10) || 2;
+      state.measures = parseInt(measures, 10) || 8;
       state.activeBrequeName = cleanName;
       state.activeBrequeId = 'custom:' + key;
 
@@ -4511,8 +4942,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         state.stepMeta = {};
         state.loopGridData = {};
         state.selectedGroove = {};
+        state.beatTuplets = presetObj.beatTuplets ? { ...presetObj.beatTuplets } : {};
         state.bpm = presetObj.bpm || 142;
-        state.measures = presetObj.measures || 2;
+        state.measures = presetObj.measures || 8;
         const bpmSlider = document.getElementById('bpmSlider');
         if (bpmSlider) bpmSlider.value = state.bpm;
         const bpmDisplay = document.getElementById('bpmDisplay');
@@ -4564,6 +4996,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       const isProjectOpen = target !== 'tab-home';
       if (projectHeaderBar) {
         projectHeaderBar.style.display = isProjectOpen ? 'flex' : 'none';
+      }
+      if (projectModeSwitch) {
+        projectModeSwitch.style.display = isProjectOpen ? 'inline-flex' : 'none';
       }
       if (appMainHeader) {
         appMainHeader.classList.toggle('project-open', isProjectOpen);
@@ -4636,7 +5071,6 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     const btnBackFromRecord = document.getElementById('btnBackFromRecord');
     const btnConfirmRecordSetup = document.getElementById('btnConfirmRecordSetup');
     const inputRecordBrequeName = document.getElementById('inputRecordBrequeName');
-    const selectRecordInstrument = document.getElementById('selectRecordInstrument');
     const selectRecordCaptureMode = document.getElementById('selectRecordCaptureMode');
     const inputRecordBpm = document.getElementById('inputRecordBpm');
     const selectRecordMetronome = document.getElementById('selectRecordMetronome');
@@ -4644,7 +5078,6 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     const btnConfirmPadSetup = document.getElementById('btnConfirmPadSetup');
     const inputNewBrequeName = document.getElementById('inputNewBrequeName');
     const inputNewBrequeBpm = document.getElementById('inputNewBrequeBpm');
-    const selectNewBrequeMeasures = document.getElementById('selectNewBrequeMeasures');
 
     function openModalNewBreque() {
       if (!modalNewBreque) return;
@@ -4669,6 +5102,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
 
     if (btnHomeCreateBreque) btnHomeCreateBreque.onclick = openModalNewBreque;
+    if (btnHeaderNewBreque) btnHeaderNewBreque.onclick = openModalNewBreque;
     if (btnCloseModalNewBreque) btnCloseModalNewBreque.onclick = closeModalNewBreque;
 
     if (modalNewBreque) {
@@ -4698,12 +5132,11 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     if (btnConfirmRecordSetup) {
       btnConfirmRecordSetup.onclick = async () => {
         const name = (inputRecordBrequeName && inputRecordBrequeName.value.trim()) || 'Novo Breque';
-        const instrumentName = selectRecordInstrument ? selectRecordInstrument.value : 'Gravação Ao Vivo';
         const mode = selectRecordCaptureMode ? selectRecordCaptureMode.value : 'audio';
         const bpm = parseInt(inputRecordBpm ? inputRecordBpm.value : '142', 10) || 142;
         const metronome = selectRecordMetronome ? selectRecordMetronome.value !== 'false' : true;
 
-        const brequeId = createNewBrequeProject({ name, bpm, measures: 2, initialMode: 'studio' });
+        const brequeId = createNewBrequeProject({ name, bpm, measures: 8, initialMode: 'studio' });
         closeModalNewBreque();
 
         if (window.BeatboxStudio && typeof window.BeatboxStudio.loadBrequeProject === 'function') {
@@ -4712,7 +5145,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         switchTab('tab-beatbox');
         showHeadphonesToast();
         if (window.BeatboxStudio && typeof window.BeatboxStudio.startGuidedRecording === 'function') {
-          await window.BeatboxStudio.startGuidedRecording({ instrumentName, mode, bpm, metronome });
+          await window.BeatboxStudio.startGuidedRecording({ mode, bpm, metronome });
         } else if (window.BeatboxStudio && typeof window.BeatboxStudio.switchViewMode === 'function') {
           window.BeatboxStudio.switchViewMode('record');
         }
@@ -4746,9 +5179,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       btnConfirmPadSetup.onclick = async () => {
         const name = (inputNewBrequeName && inputNewBrequeName.value.trim()) || 'Novo Breque';
         const bpm = parseInt(inputNewBrequeBpm ? inputNewBrequeBpm.value : '142', 10) || 142;
-        const measures = parseInt(selectNewBrequeMeasures ? selectNewBrequeMeasures.value : '2', 10) || 2;
 
-        const brequeId = createNewBrequeProject({ name, bpm, measures, initialMode: 'pad' });
+        const brequeId = createNewBrequeProject({ name, bpm, measures: 8, initialMode: 'pad' });
         if (window.BeatboxStudio && typeof window.BeatboxStudio.loadBrequeProject === 'function') {
           await window.BeatboxStudio.loadBrequeProject(brequeId, bpm);
         }
@@ -4819,7 +5251,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           id: 'custom:' + key,
           name: p.name || key,
           bpm: p.bpm || 142,
-          measures: p.measures || 2,
+          measures: p.measures || 8,
           isCustom: true,
           presetObj: p
         });

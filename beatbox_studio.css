@@ -2080,11 +2080,55 @@
 .review-actions-group {
   display: none;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .review-actions-group.active {
   display: flex;
+}
+
+.review-name-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 260px;
+}
+
+.review-name-field label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--naum-gold);
+  white-space: nowrap;
+}
+
+.rec-take-name-input {
+  background: #14131A;
+  border: 1px solid var(--naum-gold);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 6px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rec-take-name-input:focus {
+  border-color: var(--naum-gold-hover);
+  box-shadow: 0 0 0 2px rgba(232, 195, 27, 0.2);
+}
+
+.review-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* =========================================================================
@@ -2735,7 +2779,6 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .mob-bar-play {
     display: none !important;
-  }
   }
 
   .mob-bar-play:active {
@@ -3692,28 +3735,97 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 }
 
 /* =========================================================================
-   CABEÇALHO CONTEXTUAL DO BREQUE ABERTO ([← Voltar] + Nome + [Pad | Estúdio])
+   CABEÇALHO DE ESTÚDIO (DAW TOP BAR — DESKTOP 3 ZONAS & MOBILE COMPACTO)
    ========================================================================= */
-.project-header-bar {
+header#appMainHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 60px;
+  padding: 8px 24px;
+  gap: 16px;
+  background: rgba(12, 11, 16, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.header-left-zone {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  justify-self: start;
+}
+
+.header-center-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+}
+
+.header-right-zone {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 10px;
-  flex: 1;
-  max-width: 720px;
-  margin: 0 12px;
+  justify-self: end;
+}
+
+/* Quando um breque está aberto no Desktop: compacta o subtítulo da marca para dar foco ao breadcrumb */
+header#appMainHeader.project-open .brand {
+  gap: 10px;
+}
+
+header#appMainHeader.project-open .brand .brand-logo {
+  width: 32px;
+  height: 32px;
+}
+
+header#appMainHeader.project-open .brand h1 {
+  font-size: 16px;
+}
+
+header#appMainHeader.project-open .brand .brand-subtitle {
+  display: none;
+}
+
+.header-project-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-v-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.header-breadcrumb-chevron {
+  color: rgba(255, 255, 255, 0.32);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .btn-back-home {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-color);
-  color: #FFFFFF;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-silver);
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
   font-weight: 700;
   font-family: var(--font-ui);
   cursor: pointer;
@@ -3721,26 +3833,32 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   flex-shrink: 0;
 }
 
+.btn-back-home .back-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .btn-back-home:hover {
-  border-color: var(--naum-gold);
-  color: var(--naum-gold);
+  border-color: rgba(232, 195, 27, 0.45);
+  color: #FFFFFF;
   background: rgba(232, 195, 27, 0.08);
 }
 
 .project-title-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(18, 17, 24, 0.85);
+  gap: 8px;
+  height: 36px;
+  background: rgba(20, 19, 27, 0.9);
   border: 1px solid rgba(232, 195, 27, 0.28);
   color: #FFFFFF;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 0 13px;
+  border-radius: 9px;
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
-  max-width: 240px;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3762,44 +3880,88 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   font-size: 11px;
   color: var(--naum-gold);
   opacity: 0.85;
+  flex-shrink: 0;
 }
 
+/* Segmented Control Central (Sequenciador Pad | Estúdio Multitrack) */
 .project-mode-switch {
   display: inline-flex;
   align-items: center;
-  background: #0B0A0F;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
+  height: 38px;
+  background: #08070B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
   padding: 3px;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .mode-switch-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
   background: transparent;
   border: none;
   color: var(--text-silver);
-  padding: 6px 13px;
-  border-radius: 7px;
+  padding: 0 14px;
+  border-radius: 8px;
   font-size: 12.5px;
   font-weight: 700;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+  white-space: nowrap;
 }
 
 .mode-switch-btn:hover {
   color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .mode-switch-btn.active {
   background: linear-gradient(135deg, var(--naum-gold), #D4843E);
   color: #0A090C;
   font-weight: 800;
-  box-shadow: 0 2px 8px rgba(232, 195, 27, 0.25);
+  box-shadow: 0 2px 10px rgba(232, 195, 27, 0.28);
+}
+
+.mode-label-mobile {
+  display: none;
+}
+
+/* Botão secundário "+ Novo Breque" na zona direita do Desktop */
+.btn-header-new-breque {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  background: rgba(232, 195, 27, 0.1);
+  border: 1px solid rgba(232, 195, 27, 0.32);
+  color: var(--naum-gold);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-header-new-breque:hover {
+  background: rgba(232, 195, 27, 0.18);
+  border-color: var(--naum-gold);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.btn-header-new-breque .new-breque-plus {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .home-breque-card-clickable {
@@ -3818,21 +3980,56 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   flex-shrink: 0;
 }
 
+@media (max-width: 980px) {
+  .mode-label-desktop {
+    display: none;
+  }
+  .mode-label-mobile {
+    display: inline;
+  }
+  .btn-header-new-breque span:nth-child(2) {
+    display: none;
+  }
+  .btn-header-new-breque {
+    padding: 0 11px;
+  }
+}
+
 @media (max-width: 768px) {
   body {
     padding-bottom: 12px !important;
   }
-  header.project-open .brand {
+  header#appMainHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 50px;
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .btn-header-new-breque {
     display: none !important;
   }
-  header.project-open .project-header-bar {
-    margin: 0;
+  header#appMainHeader.project-open .brand,
+  header#appMainHeader.project-open .header-v-divider,
+  header#appMainHeader.project-open .header-breadcrumb-chevron,
+  header#appMainHeader.project-open .header-right-zone {
+    display: none !important;
+  }
+  header#appMainHeader.project-open .header-left-zone {
+    flex: 1;
+    min-width: 0;
+    gap: 6px;
+  }
+  header#appMainHeader.project-open .header-project-breadcrumb {
+    flex: 1;
     width: 100%;
-    max-width: 100%;
+    min-width: 0;
     gap: 6px;
   }
   .btn-back-home {
-    padding: 6px 9px;
+    height: 32px;
+    padding: 0 9px;
     font-size: 12px;
   }
   .btn-back-home .back-text {
@@ -3840,13 +4037,309 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
   .project-title-pill {
     flex: 1;
+    height: 32px;
     max-width: none;
     justify-content: center;
-    padding: 5px 8px;
+    padding: 0 8px;
     font-size: 13px;
   }
+  .project-mode-switch {
+    height: 34px;
+    padding: 2px;
+  }
   .mode-switch-btn {
-    padding: 5px 10px;
+    height: 28px;
+    padding: 0 10px;
     font-size: 12px;
   }
+}
+
+/* =========================================================================
+   CORTE DE FAIXAS (TRIM HANDLES, SPLIT NA AGULHA E EDITOR VISUAL DE CORTE)
+   ========================================================================= */
+.btn-ruler-split {
+  background: rgba(232, 195, 27, 0.12);
+  border: 1px solid rgba(232, 195, 27, 0.4);
+  color: var(--naum-gold);
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.14s ease;
+}
+
+.btn-ruler-split:hover {
+  background: var(--naum-gold);
+  color: #0A090C;
+  border-color: var(--naum-gold);
+}
+
+/* Alças de Corte (Trim Handles) nas bordas esquerda/direita do clipe na Timeline */
+.clip-trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 11px;
+  z-index: 12;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(232, 195, 27, 0.14);
+  transition: background 0.14s ease, width 0.12s ease;
+  user-select: none;
+  touch-action: none;
+}
+
+.clip-trim-handle-left {
+  left: 0;
+  border-right: 1.5px solid rgba(232, 195, 27, 0.55);
+  border-radius: 4px 0 0 4px;
+}
+
+.clip-trim-handle-right {
+  right: 0;
+  border-left: 1.5px solid rgba(232, 195, 27, 0.55);
+  border-radius: 0 4px 4px 0;
+}
+
+.clip-trim-handle::after {
+  content: '';
+  width: 2px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--naum-gold);
+  opacity: 0.75;
+}
+
+.clip-trim-handle:hover,
+.clip-trim-handle.is-trimming {
+  background: var(--naum-gold);
+  width: 13px;
+}
+
+.clip-trim-handle:hover::after,
+.clip-trim-handle.is-trimming::after {
+  background: #0A090C;
+  opacity: 1;
+}
+
+.btn-clip-action {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-silver);
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 0 5px;
+  height: 15px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.12s ease;
+}
+
+.btn-clip-action:hover {
+  background: var(--naum-gold);
+  color: #0A090C;
+  border-color: var(--naum-gold);
+}
+
+.item-trim-badge {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #7dd3fc !important;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* Modal Dedicado de Corte de Faixa */
+.track-cut-modal-box {
+  max-width: 720px;
+  width: 95%;
+}
+
+.cut-waveform-stage {
+  position: relative;
+  height: 140px;
+  background: #09080C;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  user-select: none;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.cut-waveform-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cut-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(6, 5, 8, 0.78);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cut-shade-left {
+  left: 0;
+  width: 0%;
+  border-right: 1px dashed rgba(232, 195, 27, 0.5);
+}
+
+.cut-shade-right {
+  right: 0;
+  width: 0%;
+  border-left: 1px dashed rgba(232, 195, 27, 0.5);
+}
+
+.cut-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  z-index: 6;
+  cursor: ew-resize;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.cut-handle-start {
+  left: 0%;
+  transform: translateX(-50%);
+}
+
+.cut-handle-end {
+  left: 100%;
+  transform: translateX(-50%);
+}
+
+.cut-handle-grip {
+  width: 18px;
+  height: 36px;
+  background: var(--naum-gold);
+  color: #0A090C;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+}
+
+.cut-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--naum-gold);
+  z-index: -1;
+}
+
+.cut-handle-badge {
+  position: absolute;
+  top: 6px;
+  background: #121118;
+  border: 1px solid var(--naum-gold);
+  color: var(--naum-gold);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cut-cursor-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0%;
+  width: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.cut-cursor-head {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #38bdf8;
+}
+
+.cut-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .cut-stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cut-stat-pill {
+  background: #121117;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.cut-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.cut-stat-pill strong {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.cut-nudge-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cut-quick-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
 }
