@@ -140,7 +140,7 @@
     bpm: 120,
     meter: '2/4', // 2/4 ou 4/4
     mode: 'free', // 'free' (tamanho baseado na gravação) ou 'fixed' (compassos fixos)
-    measures: 8, // 2, 4, 8, 16, 32
+    measures: 4, // 2, 4, 8, 16, 32
     looping: false, // false = tocar até o fim da gravação e parar; true = repetir em loop contínuo
     metronomeEnabled: true,
     layout: 'auto',
@@ -148,6 +148,9 @@
     zoomLevel: 100, // 100, 125, 150, 200
     snapToGrid: true,
     isPlaying: false,
+    isPaused: false,
+    playbackStartPerfTime: 0,
+    playbackStartPosSec: 0,
     playbackTimer: null,
     playheadPosSec: 0,
     selectedTrackId: null,
@@ -158,6 +161,31 @@
     tracks: []
   };
 
+  const MAX_STUDIO_TRACKS = 32;
+  let sessionEpoch = 0;
+
+  function closeAllKebabMenus() {
+    document.querySelectorAll('.tcp-menu-dropdown').forEach(m => {
+      m.style.display = 'none';
+    });
+    document.querySelectorAll('.reaper-track-row.menu-open').forEach(r => {
+      r.classList.remove('menu-open');
+    });
+  }
+
+  function closeStudioMenus() {
+    closeAllKebabMenus();
+    ['studioSettingsPopover', 'studioProjectPopover'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('open', 'active');
+        el.style.left = '';
+        el.style.right = '';
+        el.style.maxHeight = '';
+      }
+    });
+  }
+
   // --- Objeto da Faixa (Track) ---
   function createTrack(name, initialIndex) {
     const safeName = (typeof name === 'string' && name.trim() && !name.startsWith('[object'))
@@ -166,6 +194,7 @@
     return {
       id: 'track_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       name: safeName,
+      armed: false, // Status de gravação / REC ARM
       mediaBlob: null,
       mediaUrl: null,
       mediaType: 'video', // 'video' | 'audio'
@@ -207,6 +236,7 @@
   function cacheDom() {
     dom.btnMasterPlay = document.getElementById('btnStudioPlay');
     dom.btnMasterStop = document.getElementById('btnStudioStop');
+    dom.btnStudioRecord = document.getElementById('btnStudioRecord');
     dom.btnToggleLoop = document.getElementById('btnToggleLoop');
     dom.loopIcon = document.getElementById('loopIcon');
     dom.loopText = document.getElementById('loopText');
@@ -370,9 +400,30 @@
     }
   }
 
+  // --- Quantização Musical / Snap-to-Grid com Limiar Magnético (Compassos, Tempos e Colcheias) ---
+  function snapTimeToGrid(timeSec, bpm, meter, snapEnabled = true) {
+    if (!snapEnabled) return Math.max(0, timeSec);
+    const validBpm = (typeof bpm === 'number' && bpm > 0) ? bpm : 120;
+    const beatsPerMeasure = meter === '2/4' ? 2 : 4;
+    const beatSec = 60 / validBpm;
+    const subdivisionSec = beatSec / 2; // Subdivisão em colcheias (8th notes)
+    if (subdivisionSec <= 0) return Math.max(0, timeSec);
+
+    const nearest = Math.round(timeSec / subdivisionSec) * subdivisionSec;
+    // Limiar magnético: 80ms ou 35% da subdivisão
+    const threshold = Math.min(0.08, subdivisionSec * 0.35);
+    if (Math.abs(timeSec - nearest) <= threshold) {
+      return Math.max(0, nearest);
+    }
+    return Math.max(0, timeSec);
+  }
+
   // --- Cálculo da Duração Total da Timeline (Baseado no Tamanho Efetivo da Gravação) ---
   function getTimelineDurationSec() {
-    let maxDur = 0;
+    if (!state.tracks || state.tracks.length === 0) {
+      state.projectDurationSec = 0;
+    }
+    let maxDur = state.projectDurationSec || 0;
     state.tracks.forEach(t => {
       const effDur = getTrackEffectiveDuration(t);
       if (t.mediaUrl && effDur > 0) {
@@ -380,6 +431,10 @@
         if (durWithOffset > maxDur) maxDur = durWithOffset;
       }
     });
+
+    if (maxDur > 0) {
+      state.projectDurationSec = maxDur;
+    }
 
     if (state.mode === 'fixed') {
       const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
@@ -437,6 +492,9 @@
       dom.recordWorkspace.style.display = state.viewMode === 'record' ? 'flex' : 'none';
     }
 
+    closeStudioMenus();
+    updateQuickStats();
+
     // Se estiver saindo da gravação, encerra streams de webcam/mic para poupar bateria e recursos
     if (previousMode === 'record' && newMode !== 'record') {
       stopRecordingView();
@@ -445,6 +503,10 @@
     // Se estiver entrando no modo gravação, inicializa o viewfinder e captura
     if (state.viewMode === 'record') {
       await startRecordingView(trackId, preferredMode);
+    }
+
+    if (typeof window.checkOrientation === 'function') {
+      window.checkOrientation();
     }
 
     updateQuickStats();
@@ -551,7 +613,7 @@
     if (dom.statViewMode) {
       dom.statViewMode.textContent = state.viewMode === 'timeline'
         ? 'Modo: Faixas'
-        : 'Modo: Mosaico';
+        : (state.viewMode === 'record' ? 'Modo: Cabine' : 'Modo: Mosaico');
     }
     if (dom.reaperLoopInfo) {
       dom.reaperLoopInfo.textContent = state.looping
@@ -693,21 +755,18 @@
         </div>
 
         <div class="mixer-row-secondary">
-          <div class="nudge-controls">
-            <span style="font-weight: 600; color: var(--text-muted);">Sync:</span>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="-50" title="Adiantar 50ms">-50</button>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="-10" title="Adiantar 10ms">-10</button>
-            <span class="nudge-val-display" title="Ajuste fino de sincronia">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="10" title="Atrasar 10ms">+10</button>
-            <button class="btn-nudge" data-id="${track.id}" data-delta="50" title="Atrasar 50ms">+50</button>
+          <div class="nudge-controls mosaic-sync-pill" title="Ajuste fino de sincronismo temporal (Shift: ±50ms)">
+            <button type="button" class="mosaic-sync-step" data-id="${track.id}" data-step="-10" title="Adiantar 10ms (Shift: 50ms)">‹</button>
+            <span class="nudge-val-display" data-id="${track.id}" title="Clique para zerar offset (0ms)">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
+            <button type="button" class="mosaic-sync-step" data-id="${track.id}" data-step="10" title="Atrasar 10ms (Shift: 50ms)">›</button>
           </div>
 
           <div class="track-extra-actions">
             ${track.mediaUrl ? `
-              <button class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂️ Cortar</button>
-              <button class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">📹 Câmera</button>
-              <button class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">🎙️ Mic</button>
-              <button class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">🗑️</button>
+              <button type="button" class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂️ <span class="act-label">Cortar</span></button>
+              <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">📹 <span class="act-label">Câmera</span></button>
+              <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">🎙️ <span class="act-label">Mic</span></button>
+              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">🗑️</button>
             ` : ''}
           </div>
         </div>
@@ -719,7 +778,7 @@
       dom.mosaicGrid.appendChild(card);
     });
 
-    if (state.tracks.length > 0 && state.tracks.length < 9) {
+    if (state.tracks.length > 0 && state.tracks.length < MAX_STUDIO_TRACKS) {
       const addCard = document.createElement('div');
       addCard.className = 'track-card track-add-card';
       addCard.title = 'Adicionar nova faixa ao estúdio';
@@ -727,7 +786,7 @@
         <div class="track-add-card-content">
           <span class="track-add-icon">➕</span>
           <span class="track-add-label">Adicionar Faixa</span>
-          <span class="track-add-sub">Pista ${state.tracks.length + 1} de 9</span>
+          <span class="track-add-sub">Pista ${state.tracks.length + 1} de ${MAX_STUDIO_TRACKS}</span>
         </div>
       `;
       addCard.onclick = () => addTrack();
@@ -801,29 +860,17 @@
       };
     });
 
-    // Limpar vídeo gravado
+    // Limpar vídeo/áudio gravado
     dom.mosaicGrid.querySelectorAll('.btn-clear-media').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const id = btn.dataset.id;
         const track = state.tracks.find(t => t.id === id);
-        if (track && confirm(`Limpar gravação de "${track.name}"?`)) {
-          if (track._offsetTimer) {
-            clearTimeout(track._offsetTimer);
-            track._offsetTimer = null;
-          }
-          if (track._trimStopTimer) {
-            clearTimeout(track._trimStopTimer);
-            track._trimStopTimer = null;
-          }
-          if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
-          track.mediaUrl = null;
-          track.mediaBlob = null;
-          track.duration = 0;
-          track.trimStart = 0;
-          track.trimEnd = 0;
-          track.waveformPeaks = null;
-          renderStudioViews();
-          saveCurrentSession();
+        if (!track || !track.mediaUrl) return;
+        const ok = window.appConfirm
+          ? await window.appConfirm(`Limpar a gravação da faixa "${track.name}"? A faixa vazia será mantida no projeto.`, 'Limpar Gravação', { isDanger: true, confirmText: 'Limpar' })
+          : confirm(`Limpar gravação de "${track.name}"?`);
+        if (ok) {
+          clearTrackMedia(id);
         }
       };
     });
@@ -861,27 +908,36 @@
     dom.mosaicGrid.querySelectorAll('.btn-solo').forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.id;
+        toggleTrackSolo(id);
+      };
+    });
+
+    // Sincronia / Nudge compacto no Mosaico
+    dom.mosaicGrid.querySelectorAll('.mosaic-sync-step, .btn-nudge').forEach(btn => {
+      btn.onclick = (e) => {
+        const id = btn.dataset.id;
+        const mult = e.shiftKey ? 5 : 1;
+        const rawStep = parseInt(btn.dataset.step || btn.dataset.delta, 10) || 0;
+        const delta = btn.dataset.step ? rawStep * mult : rawStep;
         const track = state.tracks.find(t => t.id === id);
         if (track) {
-          track.solo = !track.solo;
-          renderMosaic(); // Re-renderiza para atualizar destaques de solo
-          updateAudioMixRouting();
+          track.offsetMs = Math.max(-5000, Math.min(5000, (track.offsetMs || 0) + delta));
+          const display = btn.parentElement.querySelector('.nudge-val-display');
+          if (display) display.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+          renderReaperTimeline();
           saveCurrentSession();
         }
       };
     });
 
-    // Sincronia / Nudge Buttons
-    dom.mosaicGrid.querySelectorAll('.btn-nudge').forEach(btn => {
-      btn.onclick = () => {
-        const id = btn.dataset.id;
-        const delta = parseInt(btn.dataset.delta, 10);
+    dom.mosaicGrid.querySelectorAll('.nudge-val-display').forEach(valEl => {
+      valEl.onclick = () => {
+        const id = valEl.dataset.id;
         const track = state.tracks.find(t => t.id === id);
-        if (track) {
-          track.offsetMs = Math.max(-500, Math.min(500, track.offsetMs + delta));
-          const display = btn.parentElement.querySelector('.nudge-val-display');
-          if (display) display.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
-          renderReaperTimeline(); // Mantém o REAPER sincronizado
+        if (track && track.offsetMs !== 0) {
+          track.offsetMs = 0;
+          valEl.textContent = '+0ms';
+          renderReaperTimeline();
           saveCurrentSession();
         }
       };
@@ -998,33 +1054,51 @@
 
     state.tracks.forEach((track, index) => {
       const trackRow = document.createElement('div');
-      trackRow.className = `reaper-track-row ${track.solo ? 'is-soloed' : ''} ${track.muted ? 'is-muted' : ''}`;
+      trackRow.className = `reaper-track-row ${track.solo ? 'is-soloed' : ''} ${track.muted ? 'is-muted' : ''} ${state.selectedTrackId === track.id ? 'is-selected' : ''}`;
       trackRow.id = `reaper_row_${track.id}`;
 
       const trackColor = INSTRUMENT_COLORS[index % INSTRUMENT_COLORS.length];
       const volPercent = Math.round(track.volume * 100);
       const volDb = track.volume === 0 ? '-inf' : (20 * Math.log10(track.volume)).toFixed(1);
 
-      // --- Track Control Panel (TCP à esquerda) ---
+      // --- Track Control Panel (TCP à esquerda - 3 Linhas Limpas) ---
       const tcp = document.createElement('div');
       tcp.className = 'reaper-tcp';
 
       tcp.innerHTML = `
         <div class="tcp-color-strip" style="background: ${trackColor};"></div>
 
-        <!-- Linha 1: Número, Nome e Excluir -->
+        <!-- Linha 1: Número, Nome e Menu Mais Opções (Kebab) -->
         <div class="tcp-header-row">
           <span class="tcp-track-number">${String(index + 1).padStart(2, '0')}</span>
           <input type="text" class="tcp-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" placeholder="Ex: Guia, Voz, Caixa..." title="Clique para dar um nome personalizado à faixa">
-          <button class="tcp-btn-delete" data-id="${track.id}" title="Remover faixa">✕</button>
+          <div class="tcp-kebab-wrap">
+            <button type="button" class="tcp-btn-more" data-id="${track.id}" title="Mais opções da faixa (Carregar, Duplicar, Limpar, Excluir)" aria-label="Mais opções">⋯</button>
+            <div class="tcp-menu-dropdown" id="tcp_menu_${track.id}" style="display: none;">
+              <button type="button" class="tcp-menu-item tcp-menu-load" data-id="${track.id}">
+                <span class="menu-item-icon">📁</span> Carregar arquivo
+              </button>
+              <button type="button" class="tcp-menu-item tcp-menu-duplicate" data-id="${track.id}">
+                <span class="menu-item-icon">🔄</span> Duplicar faixa
+              </button>
+              <button type="button" class="tcp-menu-item tcp-menu-clear" data-id="${track.id}" ${track.mediaUrl ? '' : 'disabled'}>
+                <span class="menu-item-icon">🗑️</span> Limpar gravação
+              </button>
+              <div class="tcp-menu-divider"></div>
+              <button type="button" class="tcp-menu-item tcp-menu-delete tcp-menu-danger" data-id="${track.id}">
+                <span class="menu-item-icon">✕</span> Excluir faixa
+              </button>
+            </div>
+          </div>
+          <input type="file" accept="video/*,audio/*" data-id="${track.id}" class="tcp-file-uploader" style="display:none;">
         </div>
 
-        <!-- Linha 2: REC ARM, Mute, Solo e Miniatura -->
+        <!-- Linha 2: Arm ● REC, Mute, Solo e Miniatura -->
         <div class="tcp-controls-row">
           <div class="tcp-arm-mute-solo">
-            <button class="btn-rec-arm ${recordingContext.activeTrackId === track.id ? 'armed' : ''}" data-id="${track.id}" title="Armar Pista / Gravar Tomada">●</button>
-            <button class="tcp-btn-mute ${track.muted ? 'active' : ''}" data-id="${track.id}" title="Mute [M]">M</button>
-            <button class="tcp-btn-solo ${track.solo ? 'active' : ''}" data-id="${track.id}" title="Solo [S]">S</button>
+            <button type="button" class="btn-rec-arm ${track.armed ? 'armed active' : ''}" data-id="${track.id}" title="Armar Pista / Gravar Tomada">● REC</button>
+            <button type="button" class="tcp-btn-mute ${track.muted ? 'active' : ''}" data-id="${track.id}" title="Mute [M]">M</button>
+            <button type="button" class="tcp-btn-solo ${track.solo ? 'active' : ''}" data-id="${track.id}" title="Solo [Alt+S]">S</button>
           </div>
 
           <!-- Miniatura PIP / Preview da Webcam ou Mic -->
@@ -1037,31 +1111,15 @@
           </div>
         </div>
 
-        <!-- Linha 3: Fader de Volume Horizontal -->
+        <!-- Linha 3: Volume Fader e Offset Temporal Compacto -->
         <div class="tcp-fader-row">
-          <span class="fader-icon" title="Volume">VOL</span>
+          <span class="fader-icon" title="Volume">🔊</span>
           <input type="range" class="tcp-fader-slider" min="0" max="1.5" step="0.05" value="${track.volume}" data-id="${track.id}" title="Volume: ${volPercent}% (${volDb} dB)">
           <span class="tcp-vol-db">${volPercent}%</span>
-        </div>
-
-        <!-- Linha 4: Sincronia Fina e Ações Rápidas -->
-        <div class="tcp-footer-row">
-          <div class="tcp-sync-box" title="Ajuste fino de sincronismo temporal (offset milissegundos)">
-            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="-50" title="Adiantar 50ms">-50</button>
-            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="-10" title="Adiantar 10ms">-10</button>
-            <span class="tcp-sync-display">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
-            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="10" title="Atrasar 10ms">+10</button>
-            <button class="tcp-sync-btn" data-id="${track.id}" data-delta="50" title="Atrasar 50ms">+50</button>
-          </div>
-          <div class="tcp-actions-box">
-            <button class="tcp-action-btn btn-tcp-rec" data-id="${track.id}" data-mode="video" title="Gravar com Câmera e Microfone">📹</button>
-            <button class="tcp-action-btn btn-tcp-rec" data-id="${track.id}" data-mode="audio" title="Gravar apenas Microfone">🎙️</button>
-            <label class="tcp-action-btn" title="Carregar arquivo de áudio/vídeo" style="cursor: pointer; margin: 0;">
-              📁
-              <input type="file" accept="video/*,audio/*" data-id="${track.id}" class="tcp-file-uploader" style="display:none;">
-            </label>
-            ${track.mediaUrl ? `<button class="tcp-action-btn btn-tcp-cut" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir faixa">✂️</button>` : ''}
-            ${track.mediaUrl ? `<button class="tcp-action-btn btn-tcp-clear" data-id="${track.id}" title="Limpar gravação desta faixa">🗑️</button>` : ''}
+          <div class="tcp-sync-pill" data-id="${track.id}" title="Ajuste fino de sincronismo temporal (offset)">
+            <button type="button" class="tcp-sync-step sync-prev" data-id="${track.id}" data-step="-10" title="Adiantar 10ms (Shift: 50ms)">‹</button>
+            <span class="tcp-sync-val" data-id="${track.id}" title="Clique para resetar offset para 0ms">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
+            <button type="button" class="tcp-sync-step sync-next" data-id="${track.id}" data-step="10" title="Atrasar 10ms (Shift: 50ms)">›</button>
           </div>
         </div>
       `;
@@ -1092,7 +1150,7 @@
         const trackDur = track.duration > 0 ? getTrackEffectiveDuration(track) : timelineDurSec;
         const widthPercent = Math.min(100, Math.max(4, (trackDur / timelineDurSec) * 100));
         const offsetSec = (track.offsetMs || 0) / 1000;
-        const leftPercent = Math.max(0, Math.min(96, (offsetSec / timelineDurSec) * 100));
+        const leftPercent = Math.max(0, Math.min(100, (offsetSec / timelineDurSec) * 100));
 
         mediaItem.style.width = widthPercent + '%';
         mediaItem.style.left = leftPercent + '%';
@@ -1109,7 +1167,7 @@
               <span>${track.mediaType === 'video' ? '📹' : '🎙️'}</span>
               <span>${escapeHtml(track.name)}</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
+            <div class="media-item-badges">
               ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂️ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
               <span class="item-meta-tag item-sync-badge">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
               <span class="item-meta-tag item-dur-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
@@ -1133,16 +1191,12 @@
         // Suporte a arrasto do clipe (Drag & Slide) e Alças de Corte (Trim Esquerda / Direita)
         setupMediaItemDrag(mediaItem, track);
       } else {
-        // Faixa vazia com botões rápidos estilo DAW
+        // Faixa vazia com botão único e limpo estilo DAW moderna
         const emptyLane = document.createElement('div');
         emptyLane.className = 'reaper-empty-lane';
         emptyLane.innerHTML = `
-          <span class="empty-lane-text"><span>🎙️</span> Faixa sem gravação</span>
-          <button class="btn-empty-action btn-tcp-rec" data-id="${track.id}" data-mode="video" title="Gravar câmera e voz">
-            <span>📹</span> Gravar Câmera
-          </button>
-          <button class="btn-empty-action btn-tcp-rec" data-id="${track.id}" data-mode="audio" title="Gravar voz pelo microfone">
-            <span>🎙️</span> Gravar Microfone
+          <button type="button" class="btn-empty-action btn-empty-record" data-id="${track.id}" title="Gravar nesta faixa">
+            <span>🎙️</span> Gravar nesta faixa
           </button>
         `;
         lane.appendChild(emptyLane);
@@ -1155,9 +1209,14 @@
 
     // 3. Botão largo na base da timeline: Inserir Nova Pista
     const addLaneBtn = document.createElement('div');
-    addLaneBtn.className = 'reaper-add-track-lane';
-    addLaneBtn.innerHTML = `<span>➕</span> Inserir Nova Pista de Instrumento / Breque Vocal (Track)`;
-    addLaneBtn.onclick = () => addTrack();
+    const isAtTrackLimit = state.tracks.length >= MAX_STUDIO_TRACKS;
+    addLaneBtn.className = `reaper-add-track-lane${isAtTrackLimit ? ' is-capped' : ''}`;
+    if (isAtTrackLimit) {
+      addLaneBtn.innerHTML = `<span class="add-lane-inner"><span>⚠️</span> Limite de ${MAX_STUDIO_TRACKS} faixas atingido</span>`;
+    } else {
+      addLaneBtn.innerHTML = `<span class="add-lane-inner"><span>➕</span> <span class="add-lane-label-desktop">Inserir Nova Pista de Instrumento / Breque Vocal</span><span class="add-lane-label-mobile">Nova Faixa (${state.tracks.length + 1}/${MAX_STUDIO_TRACKS})</span></span>`;
+      addLaneBtn.onclick = () => addTrack();
+    }
     dom.reaperTracksStack.appendChild(addLaneBtn);
 
     // Mantém playhead sincronizado na posição atual
@@ -1328,96 +1387,148 @@
       dom.reaperPlayhead.style.left = ((clampedSec / loopDurationSec) * 100) + '%';
     }
 
-    state.tracks.forEach(track => {
-      if (track.videoElement) {
-        const offsetSec = (track.offsetMs || 0) / 1000;
-        const trimStartSec = track.trimStart || 0;
-        const mediaTime = Math.min(
-          getTrackEndMediaTime(track) || Infinity,
-          Math.max(trimStartSec, (clampedSec - offsetSec) + trimStartSec)
-        );
-        try { track.videoElement.currentTime = mediaTime; } catch (err) {}
+    if (state.isPlaying) {
+      // Feature 18: Ruler Seek Clock Synchronization
+      state.playbackStartPosSec = clampedSec;
+      state.playbackStartPerfTime = performance.now();
+      state.tracks.forEach(track => {
+        if (track.videoElement) {
+          triggerTrackAtTimelineOffset(track, clampedSec);
+        }
+      });
+      if (state.metronomeEnabled) {
+        resyncMetronomeToLoop();
       }
-    });
+    } else {
+      state.tracks.forEach(track => {
+        if (track.videoElement) {
+          const offsetSec = (track.offsetMs || 0) / 1000;
+          const trimStartSec = track.trimStart || 0;
+          const mediaTime = Math.min(
+            getTrackEndMediaTime(track) || Infinity,
+            Math.max(trimStartSec, (clampedSec - offsetSec) + trimStartSec)
+          );
+          try { track.videoElement.currentTime = mediaTime; } catch (err) {}
+        }
+      });
+    }
 
     updateReaperLcdDisplay(clampedSec * 1000, loopDurationSec * 1000);
   }
 
   // --- Arraste Horizontal do Clipe (Drag & Slide) e Alças de Corte (Trim Esquerda / Direita) ---
   function setupMediaItemDrag(itemEl, track) {
-    const startInteraction = (e, isTouch = false) => {
+    let isInteracting = false;
+
+    const startInteraction = (e) => {
       if (e.target.closest('button') || e.target.closest('input')) return;
-      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+      if (e.button !== undefined && e.button !== 0) return;
+
+      if (typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
+
+      isInteracting = true;
+
+      if (e.pointerId !== undefined && typeof itemEl.setPointerCapture === 'function') {
+        try {
+          itemEl.setPointerCapture(e.pointerId);
+        } catch (_) {}
+      }
+
       const trimHandle = e.target.closest('.clip-trim-handle');
       const trimSide = trimHandle ? trimHandle.dataset.side : null;
 
-      // Seleciona esta faixa na timeline
-      state.selectedTrackId = track.id;
-      if (dom.reaperTracksStack) {
-        dom.reaperTracksStack.querySelectorAll('.reaper-media-item').forEach(el => {
-          el.classList.toggle('is-selected', el === itemEl);
-        });
-      }
+      // Seleciona esta faixa na timeline (destacando a linha da pista e o clipe)
+      selectTrack(track.id);
 
       if (trimHandle) {
-        e.preventDefault();
-        e.stopPropagation();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
         trimHandle.classList.add('is-trimming');
       }
 
       let hasMoved = false;
+      const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
       const startX = clientX;
-      const initialOffsetMs = track.offsetMs || 0;
+      const laneEl = itemEl.parentElement;
+      const startLaneRect = laneEl ? laneEl.getBoundingClientRect() : { left: 0, width: 800 };
+      const clipRect = itemEl.getBoundingClientRect();
+      const grabOffsetPx = Math.max(0, Math.min(clipRect.width || 0, clientX - clipRect.left));
+
+      // Eliminação de Dead-Zone em t=0ms (Feature 13): garante que offsetMs não acumule valores negativos
+      const initialOffsetMs = Math.max(0, track.offsetMs || 0);
       const initialTrimStart = track.trimStart || 0;
       const initialTrimEnd = track.trimEnd || 0;
       const rawDur = track.duration > 0 ? track.duration : getTimelineDurationSec();
       const timelineDurSec = getTimelineDurationSec();
-      const laneEl = itemEl.parentElement;
-      const laneWidth = laneEl ? (laneEl.clientWidth || 800) : 800;
       const trackColor = itemEl.style.borderColor || '#E8C31B';
+      const scrollEl = dom.reaperDawScroll || document.getElementById('reaperDawScroll');
+      const lockedScrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
 
       const onMove = (moveEvt) => {
-        const curX = isTouch ? (moveEvt.touches[0] ? moveEvt.touches[0].clientX : startX) : moveEvt.clientX;
+        const curX = moveEvt.clientX !== undefined ? moveEvt.clientX : (moveEvt.touches && moveEvt.touches[0] ? moveEvt.touches[0].clientX : startX);
         const dx = curX - startX;
         if (Math.abs(dx) >= 3) hasMoved = true;
         if (!hasMoved) return;
 
-        const deltaSec = (dx / laneWidth) * timelineDurSec;
+        if (typeof moveEvt.preventDefault === 'function') {
+          moveEvt.preventDefault();
+        }
+        if (scrollEl && scrollEl.scrollLeft !== lockedScrollLeft) {
+          scrollEl.scrollLeft = lockedScrollLeft;
+        }
+
+        const curLaneRect = laneEl ? laneEl.getBoundingClientRect() : { left: 0, width: 800 };
+        const laneWidth = curLaneRect.width || (laneEl ? laneEl.clientWidth : 800) || 800;
 
         if (trimSide === 'left') {
-          // Alça Esquerda: corta o início (trimStart) e ajusta offsetMs para manter o resto do áudio cravado no compasso!
+          // Alça Esquerda: corta o início (trimStart) e ajusta offsetMs para manter o áudio cravado no compasso
+          const compensatedDx = (curX - curLaneRect.left) - (startX - startLaneRect.left);
+          const deltaSec = (compensatedDx / laneWidth) * timelineDurSec;
           const maxTrimStart = Math.max(0, rawDur - initialTrimEnd - 0.12);
           let newTrimStart = Math.max(0, Math.min(maxTrimStart, initialTrimStart + deltaSec));
           if (state.snapToGrid) {
-            newTrimStart = Math.round(newTrimStart * 100) / 100;
+            newTrimStart = snapTimeToGrid(newTrimStart, state.bpm, state.meter, true);
           }
           const appliedDeltaSec = newTrimStart - initialTrimStart;
           track.trimStart = newTrimStart;
-          track.offsetMs = Math.round(initialOffsetMs + appliedDeltaSec * 1000);
+          track.offsetMs = Math.max(0, Math.round(initialOffsetMs + appliedDeltaSec * 1000));
         } else if (trimSide === 'right') {
           // Alça Direita: corta o final (trimEnd)
+          const compensatedDx = (curX - curLaneRect.left) - (startX - startLaneRect.left);
+          const deltaSec = (compensatedDx / laneWidth) * timelineDurSec;
           const maxTrimEnd = Math.max(0, rawDur - initialTrimStart - 0.12);
           let newTrimEnd = Math.max(0, Math.min(maxTrimEnd, initialTrimEnd - deltaSec));
           if (state.snapToGrid) {
-            newTrimEnd = Math.round(newTrimEnd * 100) / 100;
+            newTrimEnd = snapTimeToGrid(newTrimEnd, state.bpm, state.meter, true);
           }
           track.trimEnd = newTrimEnd;
         } else {
-          // Arraste do corpo do clipe: move na timeline (offsetMs)
-          const deltaMs = Math.round(deltaSec * 1000);
-          const maxOffsetMs = Math.round(Math.max(500, (timelineDurSec - 0.1) * 1000));
-          let newOffset = Math.max(-2000, Math.min(maxOffsetMs, initialOffsetMs + deltaMs));
+          // Arraste do corpo do clipe: Scroll-Compensated Coordinate Math e Âncora de Grab (Features 9, 10, 13)
+          const currentLeftPx = (curX - grabOffsetPx) - curLaneRect.left;
+          const currentPercent = currentLeftPx / laneWidth;
+          let rawTimeSec = currentPercent * timelineDurSec;
+
+          // Dead-Zone Clamping Elimination: limite rígido em >= 0s (elimina dead-zone negativa)
+          rawTimeSec = Math.max(0, rawTimeSec);
+
+          // True Musical Snap-to-Grid: quantização em compassos, tempos e colcheias com threshold magnético
           if (state.snapToGrid) {
-            newOffset = Math.round(newOffset / 10) * 10;
+            rawTimeSec = snapTimeToGrid(rawTimeSec, state.bpm, state.meter, true);
           }
-          track.offsetMs = newOffset;
+
+          // Limite superior na timeline
+          const maxOffsetSec = Math.max(0, timelineDurSec - 0.1);
+          rawTimeSec = Math.min(maxOffsetSec, rawTimeSec);
+
+          track.offsetMs = Math.round(rawTimeSec * 1000);
         }
 
-        // Atualiza visualmente largura, posição e badges em tempo real
+        // Atualização visual e badges em tempo real sem destruição de DOM
         const effDur = getTrackEffectiveDuration(track);
         const widthPercent = Math.min(100, Math.max(4, (effDur / timelineDurSec) * 100));
         const offsetSec = (track.offsetMs || 0) / 1000;
-        const leftPercent = Math.max(0, Math.min(96, (offsetSec / timelineDurSec) * 100));
+        const leftPercent = Math.max(0, Math.min(100, (offsetSec / timelineDurSec) * 100));
 
         itemEl.style.width = widthPercent + '%';
         itemEl.style.left = leftPercent + '%';
@@ -1430,7 +1541,7 @@
 
         const row = document.getElementById(`reaper_row_${track.id}`);
         if (row) {
-          const syncDisp = row.querySelector('.tcp-sync-display');
+          const syncDisp = row.querySelector('.tcp-sync-val, .tcp-sync-display');
           if (syncDisp) syncDisp.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
         }
 
@@ -1440,15 +1551,23 @@
         }
       };
 
-      const onEnd = () => {
+      const onEnd = (endEvt) => {
+        isInteracting = false;
+        try {
+          if (endEvt && endEvt.pointerId !== undefined && typeof itemEl.releasePointerCapture === 'function' && itemEl.hasPointerCapture && itemEl.hasPointerCapture(endEvt.pointerId)) {
+            itemEl.releasePointerCapture(endEvt.pointerId);
+          }
+        } catch (_) {}
+
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onEnd);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onEnd);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('touchend', onEnd);
+
         if (trimHandle) trimHandle.classList.remove('is-trimming');
-        if (isTouch) {
-          window.removeEventListener('touchmove', onMove);
-          window.removeEventListener('touchend', onEnd);
-        } else {
-          window.removeEventListener('mousemove', onMove);
-          window.removeEventListener('mouseup', onEnd);
-        }
 
         if (!hasMoved && !trimSide && laneEl) {
           // Clique rápido sobre a onda sonora do clipe: posiciona a agulha exatamente onde clicou!
@@ -1456,30 +1575,172 @@
           const clickPct = Math.max(0, Math.min(1, (startX - rect.left) / (rect.width || 1)));
           setPlayheadTimeSec(clickPct * timelineDurSec);
         } else if (hasMoved) {
-          renderStudioViews();
+          // Non-Destructive In-Place Drop (Feature 12):
+          // Atualiza posições, estilos e offset in-place SEM destruir dom.reaperTracksStack,
+          // preservando o scrollLeft do contêiner e eliminando flicker de canvas
+          if (scrollEl && scrollEl.scrollLeft !== lockedScrollLeft) {
+            scrollEl.scrollLeft = lockedScrollLeft;
+          }
+          const effDur = getTrackEffectiveDuration(track);
+          const widthPercent = Math.min(100, Math.max(4, (effDur / timelineDurSec) * 100));
+          const offsetSec = (track.offsetMs || 0) / 1000;
+          const leftPercent = Math.max(0, Math.min(100, (offsetSec / timelineDurSec) * 100));
+
+          itemEl.style.width = widthPercent + '%';
+          itemEl.style.left = leftPercent + '%';
+
+          const syncBadge = itemEl.querySelector('.item-sync-badge');
+          if (syncBadge) syncBadge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+
+          const durBadge = itemEl.querySelector('.item-dur-badge');
+          if (durBadge) durBadge.textContent = `${effDur.toFixed(1)}s`;
+
+          const row = document.getElementById(`reaper_row_${track.id}`);
+          if (row) {
+            const syncDisp = row.querySelector('.tcp-sync-val, .tcp-sync-display');
+            if (syncDisp) syncDisp.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+          }
+
+          if (trimSide) {
+            const cvs = document.getElementById(`wf_${track.id}`);
+            if (cvs) drawWaveform(cvs, track, trackColor);
+          }
+
+          // Se o clipe ultrapassou os limites anteriores da régua, expande os compassos in-place
+          const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+          const measureDurationSec = (beatsPerMeasure * 60) / state.bpm;
+          const newTimelineDurSec = getTimelineDurationSec();
+          const newMeasures = Math.max(2, Math.ceil(newTimelineDurSec / measureDurationSec));
+          const currentBars = dom.reaperRulerBars ? dom.reaperRulerBars.querySelectorAll('.ruler-bar-item').length : 0;
+          if (newMeasures > currentBars && dom.reaperRulerBars) {
+            for (let m = currentBars + 1; m <= newMeasures; m++) {
+              const barItem = document.createElement('div');
+              barItem.className = 'ruler-bar-item';
+              barItem.innerHTML = `
+                <span>Bar ${m}</span>
+                <span class="ruler-sub-label">.1</span>
+                <div class="ruler-bar-beat-ticks">
+                  ${Array.from({ length: beatsPerMeasure }).map(() => '<div class="ruler-tick"></div>').join('')}
+                </div>
+              `;
+              dom.reaperRulerBars.appendChild(barItem);
+            }
+            if (dom.reaperTracksStack) {
+              dom.reaperTracksStack.querySelectorAll('.lane-grid-overlay').forEach(overlay => {
+                const curCols = overlay.querySelectorAll('.lane-grid-col').length;
+                for (let m = curCols + 1; m <= newMeasures; m++) {
+                  const gridCol = document.createElement('div');
+                  gridCol.className = 'lane-grid-col';
+                  overlay.appendChild(gridCol);
+                }
+              });
+            }
+            state.tracks.forEach(tr => {
+              const el = document.getElementById(`media_item_${tr.id}`);
+              if (el) {
+                const tDur = getTrackEffectiveDuration(tr);
+                el.style.width = Math.min(100, Math.max(4, (tDur / newTimelineDurSec) * 100)) + '%';
+                el.style.left = Math.max(0, Math.min(100, (((tr.offsetMs || 0) / 1000) / newTimelineDurSec) * 100)) + '%';
+              }
+            });
+            if (!state.isPlaying && dom.reaperPlayhead && newTimelineDurSec > 0) {
+              const phPct = Math.min(100, Math.max(0, (state.playheadPosSec / newTimelineDurSec) * 100));
+              dom.reaperPlayhead.style.left = phPct + '%';
+            }
+          }
+
+          updateQuickStats();
+          updateAudioMixRouting();
           saveCurrentSession();
         }
       };
 
-      if (isTouch) {
-        window.addEventListener('touchmove', onMove, { passive: false });
-        window.addEventListener('touchend', onEnd);
-      } else {
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onEnd);
-      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onEnd);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onEnd);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onEnd);
     };
 
-    itemEl.addEventListener('mousedown', (e) => startInteraction(e, false));
-    itemEl.addEventListener('touchstart', (e) => startInteraction(e, true), { passive: true });
+    itemEl.addEventListener('pointerdown', startInteraction);
+    itemEl.addEventListener('mousedown', (e) => {
+      if (!isInteracting) startInteraction(e);
+    });
+    itemEl.addEventListener('touchstart', (e) => {
+      if (!isInteracting && e.touches && e.touches[0]) startInteraction(e.touches[0]);
+    }, { passive: false });
+  }
+
+  // Alternância Não-Destrutiva de Solo com Roteamento de Áudio em Tempo Real (Feature 16)
+  function toggleTrackSolo(trackId) {
+    const track = state.tracks.find(t => t.id === trackId);
+    if (!track) return;
+    track.solo = !track.solo;
+    const anySolo = state.tracks.some(t => t.solo);
+
+    // Atualiza classes na Timeline REAPER sem destruir o DOM
+    if (dom.reaperTracksStack) {
+      dom.reaperTracksStack.querySelectorAll('.reaper-track-row').forEach(r => {
+        const trkId = r.id.replace('reaper_row_', '');
+        const trk = state.tracks.find(t => t.id === trkId);
+        if (trk) {
+          const sBtn = r.querySelector('.tcp-btn-solo');
+          if (sBtn) sBtn.classList.toggle('active', trk.solo);
+          r.classList.toggle('is-soloed', trk.solo);
+          r.classList.toggle('is-solo-dimmed', anySolo && !trk.solo);
+        }
+      });
+    }
+
+    // Reflete no Mosaico sem destruir elementos de áudio/vídeo
+    if (dom.mosaicGrid) {
+      dom.mosaicGrid.querySelectorAll('.mosaic-card').forEach(c => {
+        const trkId = c.id.replace('card_', '');
+        const trk = state.tracks.find(t => t.id === trkId);
+        if (trk) {
+          const mBtn = c.querySelector('.btn-solo');
+          if (mBtn) mBtn.classList.toggle('active', trk.solo);
+          c.classList.toggle('is-soloed', trk.solo);
+          c.classList.toggle('is-solo-dimmed', anySolo && !trk.solo);
+        }
+      });
+    }
+
+    updateAudioMixRouting();
+    saveCurrentSession();
   }
 
   // --- Binds de Eventos da DAW estilo REAPER ---
   function bindReaperEvents() {
     if (!dom.reaperTracksStack) return;
 
+    // Seleção de faixa ao clicar na linha da faixa ou no TCP
+    dom.reaperTracksStack.querySelectorAll('.reaper-track-row').forEach(row => {
+      row.onclick = (e) => {
+        if (e.target.closest('button, input, select, .tcp-menu-dropdown, .clip-trim-handle, .reaper-media-item')) return;
+        const id = row.id.replace('reaper_row_', '');
+        selectTrack(id);
+      };
+    });
+
+    dom.reaperTracksStack.querySelectorAll('.reaper-tcp').forEach(tcp => {
+      tcp.onclick = (e) => {
+        if (e.target.closest('button, input, select, .tcp-menu-dropdown')) return;
+        const row = tcp.closest('.reaper-track-row');
+        if (row) {
+          const id = row.id.replace('reaper_row_', '');
+          selectTrack(id);
+        }
+      };
+    });
+
     // Edição do nome da faixa
     dom.reaperTracksStack.querySelectorAll('.tcp-name-input').forEach(input => {
+      input.onfocus = () => {
+        if (input.dataset.id) selectTrack(input.dataset.id);
+      };
       input.onchange = (e) => {
         const id = e.target.dataset.id;
         const idx = state.tracks.findIndex(t => t.id === id);
@@ -1492,10 +1753,108 @@
       };
     });
 
-    // Excluir faixa
-    dom.reaperTracksStack.querySelectorAll('.tcp-btn-delete').forEach(btn => {
-      btn.onclick = async () => {
+    // Miniatura PIP clicável (abre gravação ou seleciona tomada)
+    dom.reaperTracksStack.querySelectorAll('.tcp-media-pip').forEach(pip => {
+      pip.onclick = (e) => {
+        e.stopPropagation();
+        const id = pip.dataset.id;
+        selectTrack(id);
+        const track = state.tracks.find(t => t.id === id);
+        if (!track) return;
+        if (!track.mediaUrl) {
+          openRecordingModal(id, track.mediaType || 'audio');
+        } else if (track.mediaType === 'video') {
+          switchViewMode('mosaic');
+        }
+      };
+    });
+
+    // Menu Kebab (⋯) - Abrir/Fechar dropdown com coordenadas fixed seguras (não corta em 1 faixa)
+    dom.reaperTracksStack.querySelectorAll('.tcp-btn-more').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
+        selectTrack(id);
+        const menu = document.getElementById(`tcp_menu_${id}`);
+        if (!menu) return;
+        const isShown = menu.style.display === 'block';
+        closeAllKebabMenus();
+        const sPop = document.getElementById('studioSettingsPopover');
+        const pPop = document.getElementById('studioProjectPopover');
+        if (sPop) sPop.classList.remove('open', 'active');
+        if (pPop) pPop.classList.remove('open', 'active');
+        if (typeof window.closeSeqPopovers === 'function') window.closeSeqPopovers();
+        if (!isShown) {
+          const row = btn.closest('.reaper-track-row');
+          if (row) row.classList.add('menu-open');
+          menu.style.display = 'block';
+          const btnRect = btn.getBoundingClientRect();
+          const menuRect = menu.getBoundingClientRect();
+          const minMenuW = window.innerWidth <= 360 ? 166 : 185;
+          const menuW = Math.max(minMenuW, menuRect.width || minMenuW);
+          const menuH = Math.max(140, menuRect.height || 146);
+          const pad = 8;
+          let left = btnRect.right + 6;
+          if (left + menuW > window.innerWidth - pad) {
+            left = Math.max(pad, window.innerWidth - menuW - pad);
+          }
+          let top = btnRect.top;
+          if (top + menuH > window.innerHeight - pad) {
+            top = Math.max(pad, window.innerHeight - menuH - pad);
+          }
+          if (top < pad) top = pad;
+          menu.style.position = 'fixed';
+          menu.style.top = `${Math.round(top)}px`;
+          menu.style.left = `${Math.round(left)}px`;
+          menu.style.right = 'auto';
+          menu.style.marginTop = '0';
+        }
+      };
+    });
+
+    // Kebab Menu: 1. Carregar arquivo
+    dom.reaperTracksStack.querySelectorAll('.tcp-menu-load').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        closeAllKebabMenus();
+        const uploader = dom.reaperTracksStack.querySelector(`.tcp-file-uploader[data-id="${id}"]`);
+        if (uploader) uploader.click();
+      };
+    });
+
+    // Kebab Menu: 2. Duplicar faixa
+    dom.reaperTracksStack.querySelectorAll('.tcp-menu-duplicate').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        closeAllKebabMenus();
+        duplicateTrack(id);
+      };
+    });
+
+    // Kebab Menu: 3. Limpar gravação
+    dom.reaperTracksStack.querySelectorAll('.tcp-menu-clear').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        closeAllKebabMenus();
+        const track = state.tracks.find(t => t.id === id);
+        if (!track || !track.mediaUrl) return;
+        const ok = window.appConfirm
+          ? await window.appConfirm(`Limpar a gravação da faixa "${track.name}"? A faixa vazia será mantida no projeto.`, 'Limpar Gravação', { isDanger: true, confirmText: 'Limpar' })
+          : confirm(`Limpar a gravação da faixa "${track.name}"?`);
+        if (!ok) return;
+        clearTrackMedia(id);
+      };
+    });
+
+    // Kebab Menu: 4. Excluir faixa (e botão legado tcp-btn-delete)
+    dom.reaperTracksStack.querySelectorAll('.tcp-menu-delete, .tcp-btn-delete').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        closeAllKebabMenus();
         const track = state.tracks.find(t => t.id === id);
         if (track && track.mediaUrl) {
           const ok = window.appConfirm
@@ -1508,12 +1867,29 @@
       };
     });
 
-    // Botão REC ARM (●) e Botões de Gravação rápida
-    dom.reaperTracksStack.querySelectorAll('.btn-rec-arm, .btn-tcp-rec').forEach(btn => {
-      btn.onclick = () => {
+    // Botão de Gravação da Faixa Vazia e Botões de Gravação rápida
+    dom.reaperTracksStack.querySelectorAll('.btn-tcp-rec, .btn-empty-record').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
         const mode = btn.dataset.mode || 'video';
+        selectTrack(id);
         openRecordingModal(id, mode);
+      };
+    });
+
+    // Botão REC ARM (● REC) - Armar Pista independente sem redirecionar view (Feature 14)
+    dom.reaperTracksStack.querySelectorAll('.btn-rec-arm').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const track = state.tracks.find(t => t.id === id);
+        if (!track) return;
+        track.armed = !track.armed;
+        btn.classList.toggle('armed', track.armed);
+        btn.classList.toggle('active', track.armed);
+        selectTrack(id);
+        saveCurrentSession();
       };
     });
 
@@ -1533,6 +1909,7 @@
       btn.onclick = (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
+        selectTrack(id);
         openTrackCutModal(id);
       };
     });
@@ -1542,6 +1919,7 @@
       btn.onclick = (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
+        selectTrack(id);
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           track.trimStart = 0;
@@ -1552,34 +1930,36 @@
       };
     });
 
-    // Limpar mídia gravada
+    // Limpar mídia gravada (legado btn-tcp-clear)
     dom.reaperTracksStack.querySelectorAll('.btn-tcp-clear').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
-        const track = state.tracks.find(t => t.id === id);
-        if (track && confirm(`Limpar gravação de "${track.name}"?`)) {
-          if (track._offsetTimer) {
-            clearTimeout(track._offsetTimer);
-            track._offsetTimer = null;
-          }
-          if (track._trimStopTimer) {
-            clearTimeout(track._trimStopTimer);
-            track._trimStopTimer = null;
-          }
-          if (track.mediaUrl) URL.revokeObjectURL(track.mediaUrl);
-          track.mediaUrl = null;
-          track.mediaBlob = null;
-          track.duration = 0;
-          track.trimStart = 0;
-          track.trimEnd = 0;
-          track.waveformPeaks = null;
-          renderStudioViews();
-          saveCurrentSession();
-        }
+        clearTrackMedia(id);
       };
     });
 
-    // Slider de Volume Horizontal estilo Fader
+    // Slider de Volume Horizontal estilo Fader (Duplo clique reseta para 100%)
+    const resetTrackVolume = (id, row) => {
+      const track = state.tracks.find(t => t.id === id);
+      if (!track) return;
+      track.volume = 1.0;
+      if (row) {
+        const sl = row.querySelector('.tcp-fader-slider');
+        if (sl) sl.value = '1';
+        const dbLabel = row.querySelector('.tcp-vol-db');
+        if (dbLabel) dbLabel.textContent = '100%';
+      }
+      const mosaicSlider = dom.mosaicGrid ? dom.mosaicGrid.querySelector(`.volume-slider[data-id="${id}"]`) : null;
+      if (mosaicSlider) {
+        mosaicSlider.value = '1';
+        const badge = mosaicSlider.parentElement.querySelector('.volume-val-badge');
+        if (badge) badge.textContent = '100%';
+      }
+      updateAudioMixRouting();
+      saveCurrentSession();
+    };
+
     dom.reaperTracksStack.querySelectorAll('.tcp-fader-slider').forEach(slider => {
       slider.oninput = (e) => {
         const id = slider.dataset.id;
@@ -1602,13 +1982,30 @@
           updateAudioMixRouting();
         }
       };
+      slider.ondblclick = (e) => {
+        e.stopPropagation();
+        resetTrackVolume(slider.dataset.id, slider.closest('.reaper-track-row'));
+      };
       slider.onchange = () => saveCurrentSession();
+    });
+
+    dom.reaperTracksStack.querySelectorAll('.tcp-vol-db').forEach(dbLabel => {
+      dbLabel.style.cursor = 'pointer';
+      dbLabel.title = 'Duplo clique para resetar volume em 100%';
+      dbLabel.ondblclick = (e) => {
+        e.stopPropagation();
+        const row = dbLabel.closest('.reaper-track-row');
+        const id = row ? row.id.replace('reaper_row_', '') : null;
+        if (id) resetTrackVolume(id, row);
+      };
     });
 
     // Botão MUTE [M]
     dom.reaperTracksStack.querySelectorAll('.tcp-btn-mute').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
+        selectTrack(id);
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           track.muted = !track.muted;
@@ -1624,27 +2021,58 @@
       };
     });
 
-    // Botão SOLO [S]
+    // Botão SOLO [Alt+S] - Non-Destructive Solo Audio Routing (Feature 16)
     dom.reaperTracksStack.querySelectorAll('.tcp-btn-solo').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
+        selectTrack(id);
+        toggleTrackSolo(id);
+      };
+    });
+
+    // Sync Nudge Buttons (‹ e › compactos na Row 3)
+    dom.reaperTracksStack.querySelectorAll('.tcp-sync-step').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        selectTrack(id);
+        const deltaMultiplier = e.shiftKey ? 5 : 1;
+        const delta = (parseInt(btn.dataset.step || btn.dataset.delta, 10) || (btn.classList.contains('sync-prev') ? -10 : 10)) * deltaMultiplier;
         const track = state.tracks.find(t => t.id === id);
         if (track) {
-          track.solo = !track.solo;
-          renderStudioViews(); // Atualiza destaques de solo em ambos
+          track.offsetMs = Math.max(-5000, Math.min(5000, (track.offsetMs || 0) + delta));
+          renderStudioViews();
           saveCurrentSession();
         }
       };
     });
 
-    // Sync Nudge Buttons (-10 / +10)
+    // Reset de Offset ao clicar no valor central
+    dom.reaperTracksStack.querySelectorAll('.tcp-sync-val').forEach(valSpan => {
+      valSpan.onclick = (e) => {
+        e.stopPropagation();
+        const id = valSpan.dataset.id;
+        selectTrack(id);
+        const track = state.tracks.find(t => t.id === id);
+        if (track && track.offsetMs !== 0) {
+          track.offsetMs = 0;
+          renderStudioViews();
+          saveCurrentSession();
+        }
+      };
+    });
+
+    // Legado: tcp-sync-btn (-50 / -10 / +10 / +50)
     dom.reaperTracksStack.querySelectorAll('.tcp-sync-btn').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
+        selectTrack(id);
         const delta = parseInt(btn.dataset.delta, 10);
         const track = state.tracks.find(t => t.id === id);
         if (track) {
-          track.offsetMs = Math.max(-500, Math.min(500, track.offsetMs + delta));
+          track.offsetMs = Math.max(-5000, Math.min(5000, (track.offsetMs || 0) + delta));
           renderStudioViews();
           saveCurrentSession();
         }
@@ -1683,29 +2111,121 @@
     }
   }
 
+  function selectTrack(trackId) {
+    state.selectedTrackId = trackId;
+    if (dom.reaperTracksStack) {
+      dom.reaperTracksStack.querySelectorAll('.reaper-track-row').forEach(row => {
+        row.classList.toggle('is-selected', row.id === `reaper_row_${trackId}`);
+      });
+      dom.reaperTracksStack.querySelectorAll('.reaper-media-item').forEach(item => {
+        item.classList.toggle('is-selected', item.id === `media_item_${trackId}`);
+      });
+    }
+  }
+
   function addTrack(name) {
-    if (state.tracks.length >= 9) {
-      if (window.appToast) window.appToast('Limite máximo de 9 faixas atingido.', 'warn');
-      else alert('Limite de 9 faixas no projeto atingido.');
+    if (state.tracks.length >= MAX_STUDIO_TRACKS) {
+      if (window.appToast) window.appToast(`Limite máximo de ${MAX_STUDIO_TRACKS} faixas atingido.`, 'warn');
+      else alert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
       return null;
     }
+    sessionEpoch++;
     let trackName = (typeof name === 'string' && name.trim() && !name.startsWith('[object')) ? name.trim() : null;
     if (!trackName) {
       trackName = `Faixa ${state.tracks.length + 1}`;
     }
     const newTrack = createTrack(trackName, state.tracks.length);
     state.tracks.push(newTrack);
+    selectTrack(newTrack.id);
     renderStudioViews();
     saveCurrentSession();
     return newTrack;
   }
 
+  function duplicateTrack(trackId) {
+    if (state.tracks.length >= MAX_STUDIO_TRACKS) {
+      if (window.appToast) window.appToast(`Limite máximo de ${MAX_STUDIO_TRACKS} faixas atingido.`, 'warn');
+      else alert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
+      return null;
+    }
+    const source = state.tracks.find(t => t.id === trackId);
+    if (!source) return null;
+    sessionEpoch++;
+    const newName = `${source.name} (Cópia)`;
+    const newTrack = createTrack(newName, state.tracks.length);
+    newTrack.volume = source.volume;
+    newTrack.muted = source.muted;
+    newTrack.solo = false;
+    newTrack.offsetMs = source.offsetMs;
+    newTrack.trimStart = source.trimStart;
+    newTrack.trimEnd = source.trimEnd;
+    newTrack.duration = source.duration;
+    newTrack.mediaType = source.mediaType;
+    if (source.waveformPeaks) {
+      newTrack.waveformPeaks = [...source.waveformPeaks];
+    }
+    if (source.mediaBlob) {
+      newTrack.mediaBlob = source.mediaBlob;
+      newTrack.mediaUrl = URL.createObjectURL(source.mediaBlob);
+      if (newTrack.mediaType === 'video') {
+        const v = document.createElement('video');
+        v.src = newTrack.mediaUrl;
+        v.muted = true;
+        v.playsInline = true;
+        v.loop = true;
+        v.preload = 'auto';
+        newTrack.videoElement = v;
+      }
+    }
+    const sourceIdx = state.tracks.findIndex(t => t.id === trackId);
+    state.tracks.splice(sourceIdx + 1, 0, newTrack);
+    selectTrack(newTrack.id);
+    renderStudioViews();
+    saveCurrentSession();
+    if (window.appToast) window.appToast(`Faixa "${source.name}" duplicada.`, 'success');
+    return newTrack;
+  }
+
+  function clearTrackMedia(id) {
+    const track = state.tracks.find(t => t.id === id);
+    if (!track) return;
+    sessionEpoch++;
+    if (track._offsetTimer) {
+      clearTimeout(track._offsetTimer);
+      track._offsetTimer = null;
+    }
+    if (track._trimStopTimer) {
+      clearTimeout(track._trimStopTimer);
+      track._trimStopTimer = null;
+    }
+    if (track.mediaUrl) {
+      URL.revokeObjectURL(track.mediaUrl);
+    }
+    track.mediaUrl = null;
+    track.mediaBlob = null;
+    track.duration = 0;
+    track.trimStart = 0;
+    track.trimEnd = 0;
+    track.waveformPeaks = null;
+    if (track.videoElement) {
+      track.videoElement.src = '';
+      track.videoElement = null;
+    }
+    renderStudioViews();
+    saveCurrentSession();
+    if (window.appToast) window.appToast(`Gravação da faixa "${track.name}" limpa.`, 'info');
+  }
+
   function removeTrack(id) {
     const idx = state.tracks.findIndex(t => t.id === id);
     if (idx !== -1) {
+      sessionEpoch++;
       const tr = state.tracks[idx];
       if (tr.mediaUrl) URL.revokeObjectURL(tr.mediaUrl);
       state.tracks.splice(idx, 1);
+      if (state.selectedTrackId === id) {
+        state.selectedTrackId = state.tracks[Math.min(idx, state.tracks.length - 1)]?.id || null;
+      }
       renderStudioViews();
       saveCurrentSession();
     }
@@ -2430,6 +2950,9 @@
     updateRecTrackPicker();
     renderStudioViews();
     saveCurrentSession();
+    if (typeof window.saveActiveBrequeState === 'function') {
+      window.saveActiveBrequeState('studio');
+    }
     // Envia direto para a timeline Multitrack após salvar o take
     switchViewMode('timeline');
   }
@@ -2567,8 +3090,13 @@
     }
 
     state.isPlaying = true;
-    dom.btnMasterPlay.classList.add('playing');
-    dom.btnMasterPlay.innerHTML = `<span>⏸</span> Pausar`;
+    state.isPaused = false;
+    state.playbackStartPosSec = state.playheadPosSec || 0;
+    state.playbackStartPerfTime = performance.now();
+    if (dom.btnMasterPlay) {
+      dom.btnMasterPlay.classList.add('playing');
+      dom.btnMasterPlay.innerHTML = `<span>⏸</span> Pausar`;
+    }
     if (typeof window.syncGlobalPlayButton === 'function') {
       window.syncGlobalPlayButton();
     }
@@ -2579,10 +3107,10 @@
     const totalDurationSec = getTimelineDurationSec();
     const totalDurationMs = totalDurationSec * 1000;
 
-    // Inicia todos os vídeos/áudios sincronizados respeitando offsetMs
+    // Inicia todos os vídeos/áudios sincronizados respeitando offsetMs a partir da agulha
     state.tracks.forEach(track => {
       if (track.videoElement) {
-        triggerTrackAtTimelineOffset(track, 0);
+        triggerTrackAtTimelineOffset(track, state.playbackStartPosSec);
 
         const card = document.getElementById(`card_${track.id}`);
         if (card) card.classList.add('active-playing');
@@ -2594,22 +3122,23 @@
 
     startMetronomeClock();
 
-    // Timer de Reprodução (Tocar até o fim ou Repetir em Loop)
-    const startTime = Date.now();
-    let lastCycleIndex = 0;
+    let lastCycleIndex = totalDurationSec > 0 ? Math.floor(state.playbackStartPosSec / totalDurationSec) : 0;
 
     clearInterval(state.playbackTimer);
     state.playbackTimer = setInterval(() => {
-      const elapsed = Date.now() - startTime;
+      const elapsedDeltaSec = (performance.now() - state.playbackStartPerfTime) / 1000;
+      const totalElapsedSec = state.playbackStartPosSec + elapsedDeltaSec;
 
       // SE LOOP ESTIVER DESLIGADO: Para automaticamente assim que terminar a gravação!
-      if (!state.looping && elapsed >= totalDurationMs) {
+      if (!state.looping && totalElapsedSec >= totalDurationSec) {
         stopStudioPlayback();
         return;
       }
 
-      const cycleProgress = (elapsed % totalDurationMs) / totalDurationMs;
-      const currentCycleIndex = Math.floor(elapsed / totalDurationMs);
+      const cyclePosSec = totalDurationSec > 0 ? (totalElapsedSec % totalDurationSec) : 0;
+      state.playheadPosSec = cyclePosSec;
+      const cycleProgress = totalDurationSec > 0 ? (cyclePosSec / totalDurationSec) : 0;
+      const currentCycleIndex = totalDurationSec > 0 ? Math.floor(totalElapsedSec / totalDurationSec) : 0;
 
       // 1. Atualiza barrinhas de progresso dos vídeos no Mosaico
       state.tracks.forEach(track => {
@@ -2623,7 +3152,7 @@
       }
 
       // 3. Atualiza Visor Digital LCD com Compassos.Batidas.Ticks e Segundos
-      updateReaperLcdDisplay(elapsed, totalDurationMs);
+      updateReaperLcdDisplay(cyclePosSec * 1000, totalDurationMs);
 
       // SE LOOP ESTIVER LIGADO: reseta e reinicia tudo perfeitamente sincronizado a cada ciclo
       if (state.looping && currentCycleIndex > lastCycleIndex) {
@@ -2640,8 +3169,48 @@
     }, 30);
   }
 
+  function pauseStudioPlayback() {
+    if (!state.isPlaying) return;
+    state.isPlaying = false;
+    state.isPaused = true;
+    if (typeof window.releaseScreenWakeLock === 'function') {
+      window.releaseScreenWakeLock();
+    }
+    clearInterval(state.playbackTimer);
+    state.playbackTimer = null;
+    stopMetronomeClock();
+
+    if (dom.btnMasterPlay) {
+      dom.btnMasterPlay.classList.remove('playing');
+      dom.btnMasterPlay.innerHTML = `<span>▶</span> Reproduzir`;
+    }
+    if (typeof window.syncGlobalPlayButton === 'function') {
+      window.syncGlobalPlayButton();
+    }
+
+    state.tracks.forEach(track => {
+      if (track._offsetTimer) {
+        clearTimeout(track._offsetTimer);
+        track._offsetTimer = null;
+      }
+      if (track._trimStopTimer) {
+        clearTimeout(track._trimStopTimer);
+        track._trimStopTimer = null;
+      }
+      if (track.videoElement) {
+        track.videoElement.pause();
+      }
+      const card = document.getElementById(`card_${track.id}`);
+      if (card) card.classList.remove('active-playing');
+
+      const reaperRow = document.getElementById(`reaper_row_${track.id}`);
+      if (reaperRow) reaperRow.classList.remove('active-playing');
+    });
+  }
+
   function stopStudioPlayback() {
     state.isPlaying = false;
+    state.isPaused = false;
     if (typeof window.releaseScreenWakeLock === 'function') {
       window.releaseScreenWakeLock();
     }
@@ -2659,6 +3228,7 @@
 
     // Reseta Playhead e Visor Digital LCD
     state.playheadPosSec = 0;
+    state.playbackStartPosSec = 0;
     if (dom.reaperPlayhead) {
       dom.reaperPlayhead.style.left = '0%';
     }
@@ -3170,10 +3740,15 @@
   }
 
   async function restoreSession(projectIdOverride, fallbackBpm) {
+    const isExplicitLoad = Boolean(projectIdOverride);
     if (projectIdOverride) {
       state.projectId = projectIdOverride;
     }
+    const myEpoch = ++sessionEpoch;
     const saved = await loadProjectFromDB(state.projectId);
+    if (!isExplicitLoad && myEpoch !== sessionEpoch) {
+      return;
+    }
     const userAlreadyInRecord = state.viewMode === 'record';
 
     // Revoga URLs antigas se estiver trocando de projeto
@@ -3196,10 +3771,10 @@
         if (!userAlreadyInRecord) state.tracks = [];
         if (fallbackBpm) state.bpm = fallbackBpm;
       } else {
-        state.bpm = saved.bpm || fallbackBpm || 142;
+        state.bpm = saved.bpm || fallbackBpm || 120;
         state.meter = saved.meter || '2/4';
         state.mode = saved.mode || 'free';
-        state.measures = saved.measures || 8;
+        state.measures = saved.measures || 4;
         state.looping = !!saved.looping;
         state.metronomeEnabled = saved.metronomeEnabled !== undefined ? saved.metronomeEnabled : true;
         if (!userAlreadyInRecord) {
@@ -3254,7 +3829,7 @@
     }
   }
 
-  async function loadBrequeProject(projectId, fallbackBpm = 142) {
+  async function loadBrequeProject(projectId, fallbackBpm = 120) {
     stopStudioPlayback();
     stopRecordingView();
     state.viewMode = 'timeline';
@@ -3368,6 +3943,7 @@
     }
 
     stopStudioPlayback();
+    sessionEpoch++;
 
     state.tracks.forEach(tr => {
       if (tr.mediaUrl) URL.revokeObjectURL(tr.mediaUrl);
@@ -3400,21 +3976,22 @@
     if (window.appToast) window.appToast('Novo projeto montado!', 'success');
   }
 
-  async function clearCurrentProjectTracks() {
+  async function clearCurrentProjectTracks(skipConfirm = false) {
     if (state.tracks.length === 0) {
       if (window.appToast) window.appToast('O projeto já está sem faixas.', 'info');
       return;
     }
     const hasMedia = state.tracks.some(t => t.mediaUrl || t.mediaBlob);
-    const msg = hasMedia
-      ? 'Deseja zerar todas as faixas e apagar as gravações do projeto atual?'
-      : 'Deseja zerar todas as faixas do projeto atual?';
-    const ok = window.appConfirm
-      ? await window.appConfirm(msg, 'Zerar Projeto', { isDanger: true, confirmText: 'Zerar Projeto' })
-      : confirm(msg);
-    if (!ok) return;
+    if (!skipConfirm && hasMedia) {
+      const msg = 'Deseja zerar todas as faixas e apagar as gravações do projeto atual?';
+      const ok = window.appConfirm
+        ? await window.appConfirm(msg, 'Zerar Projeto', { isDanger: true, confirmText: 'Zerar Projeto' })
+        : confirm(msg);
+      if (!ok) return;
+    }
 
     stopStudioPlayback();
+    sessionEpoch++;
     state.tracks.forEach(tr => {
       if (tr.mediaUrl) URL.revokeObjectURL(tr.mediaUrl);
     });
@@ -3653,8 +4230,8 @@
       return false;
     }
 
-    if (state.tracks.length >= 9) {
-      alert('O limite máximo de 9 faixas foi atingido. Remova uma faixa para poder dividir em duas.');
+    if (state.tracks.length >= MAX_STUDIO_TRACKS) {
+      alert(`O limite máximo de ${MAX_STUDIO_TRACKS} faixas foi atingido. Remova uma faixa para poder dividir em duas.`);
       return false;
     }
 
@@ -3847,20 +4424,68 @@
     }
   }
 
+  // Dispara Gravação na Faixa Armada ou Auto-arma a selecionada (Feature 15)
+  function triggerMasterRecord() {
+    let targetTrack = state.tracks.find(t => t.armed);
+    if (!targetTrack && state.selectedTrackId) {
+      targetTrack = state.tracks.find(t => t.id === state.selectedTrackId);
+      if (targetTrack) {
+        targetTrack.armed = true;
+        const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
+        if (armBtn) {
+          armBtn.classList.add('armed');
+          armBtn.classList.add('active');
+        }
+      }
+    }
+    if (!targetTrack && state.tracks.length > 0) {
+      targetTrack = state.tracks[0];
+      targetTrack.armed = true;
+      const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
+      if (armBtn) {
+        armBtn.classList.add('armed');
+        armBtn.classList.add('active');
+      }
+    }
+    if (!targetTrack) {
+      targetTrack = addTrack('Faixa 1');
+      if (targetTrack) {
+        targetTrack.armed = true;
+        const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
+        if (armBtn) {
+          armBtn.classList.add('armed');
+          armBtn.classList.add('active');
+        }
+      }
+    }
+    if (targetTrack) {
+      selectTrack(targetTrack.id);
+      openRecordingModal(targetTrack.id, targetTrack.mediaType || 'video');
+    }
+  }
+
   // --- Inicialização e Bind Global ---
   function init() {
     cacheDom();
 
-    // Toolbar Play / Stop Master
-    dom.btnMasterPlay.onclick = () => {
-      if (state.isPlaying) {
-        stopStudioPlayback();
-      } else {
-        startStudioPlayback();
-      }
-    };
+    // Toolbar Play / Stop / Record Master
+    if (dom.btnMasterPlay) {
+      dom.btnMasterPlay.onclick = () => {
+        if (state.isPlaying) {
+          pauseStudioPlayback();
+        } else {
+          startStudioPlayback();
+        }
+      };
+    }
 
-    dom.btnMasterStop.onclick = stopStudioPlayback;
+    if (dom.btnMasterStop) {
+      dom.btnMasterStop.onclick = stopStudioPlayback;
+    }
+
+    if (dom.btnStudioRecord) {
+      dom.btnStudioRecord.onclick = triggerMasterRecord;
+    }
 
     // Botões de Alternar Loop (Toolbar e Timeline)
     if (dom.btnToggleLoop) {
@@ -3939,11 +4564,22 @@
     // Eventos do Modal de Corte de Faixa
     bindCutModalEvents();
 
-    // Atalhos de Teclado: Barra de Espaço = Play/Pause, Tecla S = Cortar na Agulha, Esc = Fechar Modais
-    window.addEventListener('keydown', (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    // Fechamento de dropdowns ao clicar fora, rolar ou redimensionar
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.tcp-kebab-wrap')) {
+        closeAllKebabMenus();
+      }
+    });
+    if (dom.reaperDawScroll) {
+      dom.reaperDawScroll.addEventListener('scroll', closeAllKebabMenus, { passive: true });
+    }
+    window.addEventListener('resize', closeAllKebabMenus, { passive: true });
 
-      if (e.code === 'Escape') {
+    // Atalhos de Teclado: Navegação de Pistas, Mute, Solo, Split e Espaço
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' || e.key === 'Escape') {
+        // Fecha qualquer menu kebab ou popover aberto (inclusive se o foco estiver em <select> do popover)
+        closeStudioMenus();
         if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) {
           e.preventDefault();
           closeTrackCutModal();
@@ -3959,17 +4595,16 @@
           dom.exportModal.classList.remove('active');
           return;
         }
-        if (dom.studioSettingsPopover && dom.studioSettingsPopover.classList.contains('active')) {
-          dom.studioSettingsPopover.classList.remove('active');
-        }
-        if (dom.studioProjectPopover && dom.studioProjectPopover.classList.contains('active')) {
-          dom.studioProjectPopover.classList.remove('active');
-        }
+        return;
       }
+
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
       const tabBeatbox = document.getElementById('tab-beatbox');
       const isStudioActive = tabBeatbox && tabBeatbox.classList.contains('active');
       if (!isStudioActive) return;
+
+      const hasOpenKebabMenu = Array.from(document.querySelectorAll('.tcp-menu-dropdown')).some(m => m.style.display === 'block');
 
       if (e.code === 'Space') {
         e.preventDefault();
@@ -3978,14 +4613,70 @@
           return;
         }
         if (state.isPlaying) {
-          stopStudioPlayback();
+          pauseStudioPlayback();
         } else {
           startStudioPlayback();
         }
+      } else if ((e.code === 'ArrowDown' || e.code === 'KeyJ') && !hasOpenKebabMenu) {
+        if (state.tracks.length > 0) {
+          e.preventDefault();
+          const curIdx = state.tracks.findIndex(t => t.id === state.selectedTrackId);
+          let nextIdx = curIdx + 1;
+          if (curIdx === -1) nextIdx = 0;
+          if (nextIdx < state.tracks.length) {
+            const nextTrack = state.tracks[nextIdx];
+            selectTrack(nextTrack.id);
+            const row = document.getElementById(`reaper_row_${nextTrack.id}`);
+            if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+        }
+      } else if ((e.code === 'ArrowUp' || e.code === 'KeyK') && !hasOpenKebabMenu) {
+        if (state.tracks.length > 0) {
+          e.preventDefault();
+          const curIdx = state.tracks.findIndex(t => t.id === state.selectedTrackId);
+          let prevIdx = curIdx - 1;
+          if (curIdx === -1) prevIdx = state.tracks.length - 1;
+          if (prevIdx >= 0) {
+            const prevTrack = state.tracks[prevIdx];
+            selectTrack(prevTrack.id);
+            const row = document.getElementById(`reaper_row_${prevTrack.id}`);
+            if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+        }
+      } else if (e.code === 'KeyM' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const targetTrack = state.tracks.find(t => t.id === state.selectedTrackId);
+        if (targetTrack) {
+          e.preventDefault();
+          targetTrack.muted = !targetTrack.muted;
+          const row = document.getElementById(`reaper_row_${targetTrack.id}`);
+          if (row) {
+            row.classList.toggle('is-muted', targetTrack.muted);
+            const mBtn = row.querySelector('.tcp-btn-mute');
+            if (mBtn) mBtn.classList.toggle('active', targetTrack.muted);
+          }
+          const mosaicBtn = dom.mosaicGrid ? dom.mosaicGrid.querySelector(`.btn-mute[data-id="${targetTrack.id}"]`) : null;
+          if (mosaicBtn) mosaicBtn.classList.toggle('active', targetTrack.muted);
+          updateAudioMixRouting();
+          saveCurrentSession();
+        }
+      } else if (e.code === 'KeyS' && e.altKey) {
+        // Solo [Alt+S] na faixa selecionada - Não destrutivo (Feature 16)
+        const targetTrack = state.tracks.find(t => t.id === state.selectedTrackId);
+        if (targetTrack) {
+          e.preventDefault();
+          toggleTrackSolo(targetTrack.id);
+        }
       } else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Cortar na agulha [Tecla S padrão REAPER]
         if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) return;
         e.preventDefault();
         splitSelectedTrackAtPlayhead();
+      } else if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Gravar na faixa armada / Master Record (Feature 15)
+        if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) return;
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+        e.preventDefault();
+        triggerMasterRecord();
       }
     });
 
@@ -4051,17 +4742,52 @@
     const btnProjectPop = document.getElementById('btnToggleProjectPopover');
     const menuProjectPop = document.getElementById('studioProjectPopover');
 
+    const resetStudioPopoverBounds = (popEl) => {
+      if (!popEl) return;
+      popEl.style.left = '';
+      popEl.style.right = '';
+      popEl.style.maxHeight = '';
+    };
+
+    const clampStudioPopover = (popEl, triggerBtn) => {
+      if (!popEl || !triggerBtn) return;
+      resetStudioPopoverBounds(popEl);
+      if (window.innerWidth <= 768) return;
+      const pad = 8;
+      const r = popEl.getBoundingClientRect();
+      const tr = triggerBtn.getBoundingClientRect();
+      if (r.left < pad) {
+        popEl.style.right = 'auto';
+        popEl.style.left = `${Math.round(pad - tr.left)}px`;
+      } else if (r.right > window.innerWidth - pad) {
+        popEl.style.left = 'auto';
+        popEl.style.right = `${Math.round(tr.right - (window.innerWidth - pad))}px`;
+      }
+      const availH = Math.max(160, window.innerHeight - Math.round(r.top) - pad);
+      popEl.style.maxHeight = `${availH}px`;
+    };
+
     const closeAllPopovers = () => {
-      if (menuSettingsPop) menuSettingsPop.classList.remove('open');
-      if (menuProjectPop) menuProjectPop.classList.remove('open');
+      if (menuSettingsPop) {
+        menuSettingsPop.classList.remove('open');
+        resetStudioPopoverBounds(menuSettingsPop);
+      }
+      if (menuProjectPop) {
+        menuProjectPop.classList.remove('open');
+        resetStudioPopoverBounds(menuProjectPop);
+      }
     };
 
     if (btnSettingsPop && menuSettingsPop) {
       btnSettingsPop.onclick = (e) => {
         e.stopPropagation();
         const isOpen = menuSettingsPop.classList.contains('open');
+        closeAllKebabMenus();
         closeAllPopovers();
-        if (!isOpen) menuSettingsPop.classList.add('open');
+        if (!isOpen) {
+          menuSettingsPop.classList.add('open');
+          clampStudioPopover(menuSettingsPop, btnSettingsPop);
+        }
       };
       menuSettingsPop.onclick = (e) => e.stopPropagation();
     }
@@ -4070,8 +4796,12 @@
       btnProjectPop.onclick = (e) => {
         e.stopPropagation();
         const isOpen = menuProjectPop.classList.contains('open');
+        closeAllKebabMenus();
         closeAllPopovers();
-        if (!isOpen) menuProjectPop.classList.add('open');
+        if (!isOpen) {
+          menuProjectPop.classList.add('open');
+          clampStudioPopover(menuProjectPop, btnProjectPop);
+        }
       };
       menuProjectPop.onclick = (e) => {
         if (e.target.closest('.popover-action-item')) {
@@ -4083,6 +4813,14 @@
     }
 
     document.addEventListener('click', closeAllPopovers);
+    window.addEventListener('resize', () => {
+      if (menuSettingsPop && menuSettingsPop.classList.contains('open')) {
+        clampStudioPopover(menuSettingsPop, btnSettingsPop);
+      }
+      if (menuProjectPop && menuProjectPop.classList.contains('open')) {
+        clampStudioPopover(menuProjectPop, btnProjectPop);
+      }
+    });
 
     // Ações de Montar Novo Projeto & Zerar
     if (dom.btnToolbarNewProject) {
@@ -4408,6 +5146,7 @@
   // Importa um arranjo/breque ou instrumento renderizado pelo Sequenciador diretamente como pista no Studio Multitrack
   async function importSequencerBounce(wavBlob, durationSec, bpm, meter, measures, customTrackName) {
     stopStudioPlayback();
+    sessionEpoch++;
 
     if (bpm) state.bpm = bpm;
     if (meter) state.meter = meter;
@@ -4419,7 +5158,7 @@
 
     let targetTrack = state.tracks.find(t => !t.mediaUrl && !t.mediaBlob);
     if (!targetTrack) {
-      if (state.tracks.length < 9) {
+      if (state.tracks.length < MAX_STUDIO_TRACKS) {
         targetTrack = createTrack(finalTrackName, state.tracks.length);
         state.tracks.push(targetTrack);
       } else {
@@ -4452,8 +5191,9 @@
   }
 
   // Inicia gravação guiada configurando BPM, metrônomo e modo de captura (sem exigir escolha prévia de instrumento)
-  async function startGuidedRecording({ instrumentName, mode = 'audio', bpm = 142, metronome = true } = {}) {
+  async function startGuidedRecording({ instrumentName, mode = 'audio', bpm = 120, metronome = true, autoStartCountdown = false } = {}) {
     stopStudioPlayback();
+    sessionEpoch++;
 
     if (bpm && !isNaN(bpm)) {
       state.bpm = Math.min(200, Math.max(60, parseInt(bpm, 10)));
@@ -4490,6 +5230,16 @@
 
     renderStudioViews();
     await switchViewMode('record', targetTrack ? targetTrack.id : null, mode);
+
+    if (autoStartCountdown) {
+      setTimeout(async () => {
+        try {
+          await startPreRollCountdown();
+        } catch (err) {
+          console.warn('Erro ao disparar contagem pré-roll automática:', err);
+        }
+      }, 350);
+    }
   }
 
   function getProjectSummary() {
@@ -4499,7 +5249,10 @@
       recordedCount: recordedTracks.length,
       bpm: state.bpm,
       meter: state.meter,
+      viewMode: state.viewMode,
       isPlaying: state.isPlaying,
+      isPaused: !!state.isPaused,
+      playheadPosSec: state.playheadPosSec || 0,
       trackNames: state.tracks.map(t => t.name)
     };
   }
@@ -4508,7 +5261,10 @@
   window.BeatboxStudio = {
     init,
     startStudioPlayback,
+    pauseStudioPlayback,
     stopStudioPlayback,
+    triggerMasterRecord,
+    toggleTrackSolo,
     stopRecordingView,
     openQuickRecord,
     startGuidedRecording,
@@ -4520,7 +5276,13 @@
     switchViewMode,
     openNewProjectModal,
     clearCurrentProjectTracks,
-    addTrack
+    addTrack,
+    duplicateTrack,
+    clearTrackMedia,
+    removeTrack,
+    selectTrack,
+    snapTimeToGrid,
+    closeStudioMenus
   };
 
 })();
