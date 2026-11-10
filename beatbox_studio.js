@@ -696,7 +696,7 @@
           audioStage.innerHTML = `
             <div class="stage-mic-icon">●</div>
             <div style="font-size: 13px; font-weight: 700; color: #fff;">${escapeHtml(track.name)}</div>
-            <div class="stage-audio-badge">Faixa de Áudio (Boca)</div>
+            <div class="stage-audio-badge">Faixa de Áudio</div>
           `;
           const audio = document.createElement('audio');
           audio.src = track.mediaUrl;
@@ -965,6 +965,13 @@
     });
   }
 
+  // Badge de sync do clipe: mantém o texto (lido pelos testes) e esconde quando o offset é 0ms.
+  function setSyncBadge(badge, offsetMs) {
+    const ms = Number(offsetMs) || 0;
+    badge.textContent = `${ms >= 0 ? '+' : ''}${ms}ms`;
+    badge.classList.toggle('is-zero', ms === 0);
+  }
+
   // --- Atualização de Sincronismo (Offset) em Tempo Real sem Recriar o DOM ---
   function updateTrackOffsetInPlace(track) {
     if (!track) return;
@@ -988,7 +995,7 @@
     const mediaItem = document.getElementById(`media_item_${track.id}`);
     if (mediaItem) {
       const badge = mediaItem.querySelector('.item-sync-badge');
-      if (badge) badge.textContent = offsetStr;
+      if (badge) setSyncBadge(badge, track.offsetMs);
 
       const timelineDurSec = getTimelineDurationSec();
       const offsetSec = (track.offsetMs || 0) / 1000;
@@ -1070,7 +1077,7 @@
       const barItem = document.createElement('div');
       barItem.className = 'ruler-bar-item';
       barItem.innerHTML = `
-        <span>Bar ${m}</span>
+        <span>Comp. ${m}</span>
         <span class="ruler-sub-label">.1</span>
         <div class="ruler-bar-beat-ticks">
           ${Array.from({ length: beatsPerMeasure }).map(() => '<div class="ruler-tick"></div>').join('')}
@@ -1232,7 +1239,7 @@
             </div>
             <div class="media-item-badges">
               ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
-              <span class="item-meta-tag item-sync-badge">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
+              <span class="item-meta-tag item-sync-badge${(track.offsetMs || 0) === 0 ? ' is-zero' : ''}">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
               <span class="item-meta-tag item-dur-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
               <button type="button" class="btn-clip-action btn-clip-cut" data-id="${track.id}" title="Abrir editor de corte da faixa">✂ Cortar</button>
               ${isTrimmed ? `<button type="button" class="btn-clip-action btn-clip-restore" data-id="${track.id}" title="Restaurar gravação original inteira">↺</button>` : ''}
@@ -1597,7 +1604,7 @@
         itemEl.style.left = leftPercent + '%';
 
         const syncBadge = itemEl.querySelector('.item-sync-badge');
-        if (syncBadge) syncBadge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+        if (syncBadge) setSyncBadge(syncBadge, track.offsetMs);
 
         const durBadge = itemEl.querySelector('.item-dur-badge');
         if (durBadge) durBadge.textContent = `${effDur.toFixed(1)}s`;
@@ -1653,7 +1660,7 @@
           itemEl.style.left = leftPercent + '%';
 
           const syncBadge = itemEl.querySelector('.item-sync-badge');
-          if (syncBadge) syncBadge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+          if (syncBadge) setSyncBadge(syncBadge, track.offsetMs);
 
           const durBadge = itemEl.querySelector('.item-dur-badge');
           if (durBadge) durBadge.textContent = `${effDur.toFixed(1)}s`;
@@ -1680,7 +1687,7 @@
               const barItem = document.createElement('div');
               barItem.className = 'ruler-bar-item';
               barItem.innerHTML = `
-                <span>Bar ${m}</span>
+                <span>Comp. ${m}</span>
                 <span class="ruler-sub-label">.1</span>
                 <div class="ruler-bar-beat-ticks">
                   ${Array.from({ length: beatsPerMeasure }).map(() => '<div class="ruler-tick"></div>').join('')}
@@ -5705,6 +5712,7 @@
   // Exporta init para ser chamado pelo orquestrador
   window.BeatboxStudio = {
     init,
+    setSyncBadge,
     startStudioPlayback,
     pauseStudioPlayback,
     stopStudioPlayback,

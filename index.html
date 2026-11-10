@@ -1158,7 +1158,7 @@
     <!-- Zona 1 (Esquerda): Identidade do App + Breadcrumb Contextual do Breque -->
     <div class="header-left-zone">
       <div class="brand" id="headerBrandLogo" style="cursor: pointer;" title="Voltar para a Tela Inicial">
-        <img src="assets/logo-naumteria.png" alt="Logo Naumtestudio" class="brand-logo">
+        <img src="assets/logo-naumteria.png" alt="Naumteria Studio" class="brand-logo">
         <div class="brand-text-wrap">
           <h1>NAUMTE<span class="brand-gold">STUDIO</span></h1>
         </div>
@@ -1201,8 +1201,8 @@
 
     <!-- Zona 3 (Direita): Ação Rápida Global & Status -->
     <div class="header-right-zone">
-      <button type="button" id="btnHeaderNewBreque" class="btn-header-new-breque" title="Criar um novo breque">
-        <span class="new-breque-plus">➕</span>
+      <button type="button" id="btnHeaderNewBreque" class="btn-header-new-breque" title="Criar um novo breque" aria-label="Novo breque">
+        <span class="new-breque-plus" aria-hidden="true">➕</span>
         <span class="new-breque-label">Novo Breque</span>
       </button>
 
@@ -2282,7 +2282,12 @@
         toast.className = 'share-toast';
         document.body.appendChild(toast);
       }
-      toast.innerHTML = `<span style="font-size: 16px;">${icon}</span><span>${msg}</span>`;
+      const iconEl = document.createElement('span');
+      iconEl.style.fontSize = '16px';
+      iconEl.textContent = icon;
+      const msgEl = document.createElement('span');
+      msgEl.textContent = String(msg);
+      toast.replaceChildren(iconEl, msgEl);
       toast.style.display = 'flex';
       clearTimeout(toast._timer);
       toast._timer = setTimeout(() => {
