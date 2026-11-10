@@ -157,7 +157,7 @@
     selectedAudioDeviceId: localStorage.getItem('samba_selected_audio_dev') || '',
     selectedVideoDeviceId: localStorage.getItem('samba_selected_video_dev') || '',
     audioProfile: localStorage.getItem('samba_audio_profile') || 'raw', // 'raw' (estúdio/beatbox sem corte de frequências) ou 'filtered' (ruído/eco)
-    latencyCompensationMs: parseInt(localStorage.getItem('samba_latency_compensation') || '80', 10), // Compensação de atraso round-trip (fones/mic)
+    latencyCompensationMs: parseInt(localStorage.getItem('samba_latency_compensation') ?? '0', 10), // Compensação de atraso round-trip (padrão: 0ms direto)
     tracks: []
   };
 
@@ -997,8 +997,13 @@
     }
 
     // 4. Se a reprodução estiver ativa, resincroniza o áudio da faixa em tempo real
-    if (state.isPlaying && track.videoElement) {
-      triggerTrackAtTimelineOffset(track, state.playheadPosSec);
+    if (state.isPlaying && track.videoElement && !track.videoElement.paused) {
+      const offsetSec = (track.offsetMs || 0) / 1000;
+      const trimStartSec = Math.max(0, track.trimStart || 0);
+      const targetMediaTime = trimStartSec + (state.playheadPosSec - offsetSec);
+      if (targetMediaTime >= 0 && targetMediaTime < (track.duration || Infinity)) {
+        try { track.videoElement.currentTime = targetMediaTime; } catch (_) {}
+      }
     }
   }
 
@@ -2824,18 +2829,10 @@
 
     if (relTimelineSec >= 0) {
       const targetMediaTime = trimStartSec + relTimelineSec;
-      const doSeekAndPlay = () => {
-        try {
-          track.videoElement.currentTime = targetMediaTime;
-        } catch (e) {}
-        track.videoElement.play().catch(e => console.warn('Play error:', e));
-      };
-      if (track.videoElement.readyState >= 1) {
-        doSeekAndPlay();
-      } else {
-        track.videoElement.addEventListener('loadedmetadata', doSeekAndPlay, { once: true });
-        try { track.videoElement.load(); } catch (_) {}
-      }
+      try {
+        track.videoElement.currentTime = targetMediaTime;
+      } catch (e) {}
+      track.videoElement.play().catch(e => console.warn('Play error:', e));
       scheduleStopAtTrimEnd(effDurSec - relTimelineSec);
     } else {
       // Atraso positivo (offsetMs > 0): aguarda antes de iniciar o elemento de mídia em trimStartSec
@@ -3003,8 +3000,9 @@
       track.waveformPeaks = null;
 
       // COMPENSAÇÃO DE LATÊNCIA AUTOMÁTICA:
-      // Puxa o áudio gravado para trás (-offsetMs), eliminando o atraso de round-trip (hardware + fones + microfone)
-      const compMs = parseInt(state.latencyCompensationMs, 10) || 80;
+      // Puxa o áudio gravado para trás (-offsetMs), eliminando o atraso de round-trip se configurado (padrão: 0ms direto)
+      const parsedComp = parseInt(state.latencyCompensationMs, 10);
+      const compMs = isNaN(parsedComp) ? 0 : parsedComp;
       track.offsetMs = -compMs;
 
       // Decodifica picos reais e duração precisa em background
@@ -5443,7 +5441,7 @@
 
     // Seletores de Compensação de Latência
     if (dom.recLatencyCompensation) {
-      dom.recLatencyCompensation.value = String(state.latencyCompensationMs || 80);
+      dom.recLatencyCompensation.value = String(state.latencyCompensationMs ?? 0);
       dom.recLatencyCompensation.onchange = (e) => {
         state.latencyCompensationMs = parseInt(e.target.value, 10) || 0;
         localStorage.setItem('samba_latency_compensation', state.latencyCompensationMs);
@@ -5453,7 +5451,7 @@
       };
     }
     if (dom.studioLatencyCompensation) {
-      dom.studioLatencyCompensation.value = String(state.latencyCompensationMs || 80);
+      dom.studioLatencyCompensation.value = String(state.latencyCompensationMs ?? 0);
       dom.studioLatencyCompensation.onchange = (e) => {
         state.latencyCompensationMs = parseInt(e.target.value, 10) || 0;
         localStorage.setItem('samba_latency_compensation', state.latencyCompensationMs);
