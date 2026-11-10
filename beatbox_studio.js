@@ -966,16 +966,20 @@
   }
 
   // Badge de sync do clipe: mantém o texto (lido pelos testes) e esconde quando o offset é 0ms.
-  function setSyncBadge(badge, offsetMs) {
+  function formatSyncOffset(offsetMs) {
     const ms = Number(offsetMs) || 0;
-    badge.textContent = `${ms >= 0 ? '+' : ''}${ms}ms`;
-    badge.classList.toggle('is-zero', ms === 0);
+    return `${ms >= 0 ? '+' : ''}${ms}ms`;
+  }
+
+  function setSyncBadge(badge, offsetMs) {
+    badge.textContent = formatSyncOffset(offsetMs);
+    badge.classList.toggle('is-zero', (Number(offsetMs) || 0) === 0);
   }
 
   // --- Atualização de Sincronismo (Offset) em Tempo Real sem Recriar o DOM ---
   function updateTrackOffsetInPlace(track) {
     if (!track) return;
-    const offsetStr = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+    const offsetStr = formatSyncOffset(track.offsetMs);
 
     // 1. Visor da Pílula no TCP
     const tcpRow = document.getElementById(`reaper_row_${track.id}`);
@@ -1239,7 +1243,7 @@
             </div>
             <div class="media-item-badges">
               ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
-              <span class="item-meta-tag item-sync-badge${(track.offsetMs || 0) === 0 ? ' is-zero' : ''}">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
+              <span class="item-meta-tag item-sync-badge${(Number(track.offsetMs) || 0) === 0 ? ' is-zero' : ''}">${formatSyncOffset(track.offsetMs)}</span>
               <span class="item-meta-tag item-dur-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
               <button type="button" class="btn-clip-action btn-clip-cut" data-id="${track.id}" title="Abrir editor de corte da faixa">✂ Cortar</button>
               ${isTrimmed ? `<button type="button" class="btn-clip-action btn-clip-restore" data-id="${track.id}" title="Restaurar gravação original inteira">↺</button>` : ''}

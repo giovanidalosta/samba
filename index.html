@@ -5231,16 +5231,25 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           const n = Number(v);
           return Number.isFinite(n) && n > 0 ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
         };
-        state.bpm = clampNum(data.b, 40, 240, 120);
+        const slider = document.getElementById('bpmSlider');
+        const bpmMin = slider ? Number(slider.min) || 80 : 80;
+        const bpmMax = slider ? Number(slider.max) || 170 : 170;
+        state.bpm = clampNum(data.b, bpmMin, bpmMax, 120);
         state.meter = typeof data.m === 'string' ? data.m : '2/4';
         state.subdivision = typeof data.s === 'string' ? data.s : 'semicolcheia';
         state.measures = clampNum(data.c, 1, 32, 4);
         if (data.vol && typeof data.vol === 'object') state.volumes = { ...state.volumes, ...data.vol };
         state.beatTuplets = data.t && typeof data.t === 'object' ? { ...data.t } : {};
         state.gridData = data.g;
-        history.replaceState(null, '', window.location.pathname + window.location.search);
+        // Nada do breque anterior pode vazar para o compartilhado.
+        state.stepMeta = {};
+        state.loopGridData = {};
+        state.selectedGroove = {};
+        // O Estúdio também se desliga do breque anterior (sessão própria para o link).
+        if (window.BeatboxStudio && typeof window.BeatboxStudio.loadBrequeProject === 'function') {
+          window.BeatboxStudio.loadBrequeProject('shared_breque', state.bpm).catch(err => console.warn(err));
+        }
 
-        const slider = document.getElementById('bpmSlider');
         const disp = document.getElementById('bpmDisplay');
         if (slider) slider.value = state.bpm;
         if (disp) disp.textContent = state.bpm;
@@ -5253,7 +5262,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
         switchTab('tab-sequencer');
         renderStudio();
-        showShareToast('🥁 Breque carregado via link compartilhado!');
+        showShareToast('Breque compartilhado aberto. Use "Salvar" para guardar em Meus Breques.');
       } catch (err) {
         console.warn('Erro ao carregar breque via hash:', err);
       }
@@ -5978,24 +5987,35 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     window.saveActiveBrequeState = saveActiveBrequeState;
 
     // Autosave do Pad: edições na grade são persistidas sem depender de troca de aba.
+    // Só salva se houve interação pendente (dirty) e apenas no mesmo breque em que ela ocorreu.
     let brequeAutosaveTimer = null;
+    let brequeAutosaveDirtyId = null;
     function flushBrequeAutosave() {
       clearTimeout(brequeAutosaveTimer);
       brequeAutosaveTimer = null;
+      const dirtyId = brequeAutosaveDirtyId;
+      brequeAutosaveDirtyId = null;
+      if (!dirtyId || dirtyId !== state.activeBrequeId) return;
       if (currentActiveTab === 'tab-sequencer') saveActiveBrequeState('pad');
     }
     function scheduleBrequeAutosave() {
+      if (currentActiveTab !== 'tab-sequencer' || !state.activeBrequeId) return;
+      brequeAutosaveDirtyId = state.activeBrequeId;
       clearTimeout(brequeAutosaveTimer);
       brequeAutosaveTimer = setTimeout(flushBrequeAutosave, 400);
     }
     window.flushBrequeAutosave = flushBrequeAutosave;
     window.scheduleBrequeAutosave = scheduleBrequeAutosave;
 
-    const seqTabEl = document.getElementById('tab-sequencer');
-    if (seqTabEl) {
-      ['mouseup', 'touchend', 'pointerup', 'change', 'input', 'keyup'].forEach(evt => {
-        seqTabEl.addEventListener(evt, scheduleBrequeAutosave);
-      });
+    // Escuta no documento: cobre grade, toolbar e popovers anexados ao body.
+    ['pointerup', 'change', 'input', 'keyup'].forEach(evt => {
+      document.addEventListener(evt, scheduleBrequeAutosave);
+    });
+
+    function clearSharedBrequeHash() {
+      if (window.location.hash.startsWith('#breque=')) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
     }
     window.addEventListener('pagehide', flushBrequeAutosave);
     document.addEventListener('visibilitychange', () => {
@@ -6005,6 +6025,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     function createNewBrequeProject({ name, bpm = 120, measures = 4, initialMode = 'pad' }) {
       const cleanName = (name && name.trim()) || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
       const key = 'breque_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+      flushBrequeAutosave();
+      clearSharedBrequeHash();
 
       state.gridData = {};
       state.stepMeta = {};
@@ -6047,6 +6069,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
 
     async function openBrequeProject(brequeId, modeOverride) {
+      flushBrequeAutosave();
+      clearSharedBrequeHash();
       stopPlayback();
       activePreviewPresetId = null;
 

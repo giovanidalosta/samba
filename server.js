@@ -4,6 +4,13 @@ const path = require('path');
 
 const PORT = 3000;
 const PUBLIC_DIR = __dirname;
+const PUBLIC_ROOT_FILES = new Set([
+  'index.html',
+  'beatbox_studio.js',
+  'beatbox_studio.css',
+  'manifest.json',
+  'sw.js'
+]);
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -24,8 +31,15 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  const reqUrl = new URL(req.url, `http://${req.headers.host}`);
-  let pathname = decodeURIComponent(reqUrl.pathname);
+  let pathname;
+  try {
+    const reqUrl = new URL(req.url, 'http://localhost');
+    pathname = decodeURIComponent(reqUrl.pathname);
+  } catch (e) {
+    // URL ou escape % malformado não pode derrubar o servidor
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    return res.end('400 Bad Request');
+  }
 
   if (pathname === '/' || pathname === '') {
     pathname = '/index.html';
@@ -38,9 +52,12 @@ const server = http.createServer((req, res) => {
     return res.end('403 Forbidden');
   }
 
-  // Nunca servir arquivos/pastas ocultos (.git, .gitignore, .playwright-mcp...)
+  // Allowlist: só os arquivos públicos do app. Nada de .git, tests/, docs/, server.js, package.json...
   const relativeSegments = path.relative(PUBLIC_DIR, safePath).split(path.sep);
-  if (relativeSegments.some(seg => seg.startsWith('.'))) {
+  const relPath = relativeSegments.join('/');
+  const isPublic = PUBLIC_ROOT_FILES.has(relPath) ||
+    (relativeSegments[0] === 'assets' && relativeSegments.length > 1);
+  if (!isPublic || relativeSegments.some(seg => seg.startsWith('.') || seg.includes('~'))) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('404 Not Found');
   }

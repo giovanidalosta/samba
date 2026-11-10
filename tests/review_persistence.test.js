@@ -104,21 +104,62 @@ describe('Revisão 2026-11-10: persistência do Pad e link compartilhado', () =>
     assert.equal(res.bpmAfter, res.bpmBefore);
   });
 
-  it('TR2.3 / TR2.4: valores do link são limitados e o hash é removido após carregar', async () => {
+  it('TR2.3: valores do link são limitados à faixa do slider de BPM', async () => {
     const res = await session.evaluate(async () => {
       const payload = { b: 9999, m: '2/4', s: 'semicolcheia', c: 0, g: { surdo1: Array(64).fill(null) } };
       location.hash = 'breque=' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
       await new Promise(r => setTimeout(r, 400));
+      const slider = document.getElementById('bpmSlider');
       return {
         bpm: Number(document.getElementById('bpmDisplay')?.textContent),
+        sliderVal: Number(slider.value), max: Number(slider.max),
         measuresText: document.getElementById('measureCountDisplay')?.textContent,
-        hash: location.hash,
         title: document.getElementById('activeBrequeTitleText')?.textContent
       };
     });
-    assert.ok(res.bpm <= 240 && res.bpm >= 40, `BPM limitado, recebido ${res.bpm}`);
+    assert.equal(res.bpm, res.max, `BPM limitado ao máximo do slider (${res.max}), recebido ${res.bpm}`);
+    assert.equal(res.sliderVal, res.bpm, 'slider e estado concordam');
     assert.match(res.measuresText, /^[1-9]\d* Compassos?$/);
-    assert.equal(res.hash, '', 'hash do link deve ser removido para não reaplicar no reload');
     assert.equal(res.title, 'Breque compartilhado');
+  });
+
+  it('TR2.4: hash do link permanece (reload reabre o compartilhado) e some ao abrir outro breque', async () => {
+    const kept = await session.evaluate(() => location.hash);
+    assert.match(kept, /^#breque=/);
+    await openFreshPadBreque();
+    const cleared = await session.evaluate(() => location.hash);
+    assert.equal(cleared, '');
+  });
+
+  it('TR2.5: dados do breque anterior (stepMeta/loop) não vazam para o compartilhado', async () => {
+    const res = await session.evaluate(async () => {
+      const payload = { b: 120, g: { surdo1: Array(64).fill(null) } };
+      location.hash = 'breque=' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      await new Promise(r => setTimeout(r, 400));
+      return true;
+    });
+    assert.ok(res);
+    // Salvar o compartilhado: o registro novo não pode conter stepMeta/loop herdados
+    const saved = await session.evaluate(async (key) => {
+      window.appPrompt = async () => 'Compartilhado Salvo';
+      document.getElementById('btnSaveToMyBreques').click();
+      await new Promise(r => setTimeout(r, 200));
+      const all = JSON.parse(localStorage.getItem(key) || '{}');
+      return Object.values(all).find(b => b.name === 'Compartilhado Salvo') || null;
+    }, PRESETS_KEY);
+    assert.ok(saved, 'breque compartilhado salvo');
+    const metaCount = Object.values(saved.stepMeta || {}).flat().filter(Boolean).length;
+    assert.equal(metaCount, 0);
+    assert.deepEqual(saved.loopGridData || {}, {});
+  });
+
+  it('TR1.3: apenas visualizar (sem editar) não regrava o breque no pagehide', async () => {
+    await openFreshPadBreque();
+    await session.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+    const before = await readActiveStored();
+    await sleep(30);
+    await session.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+    const after = await readActiveStored();
+    assert.equal(after.entry.updatedAt, before.entry.updatedAt);
   });
 });

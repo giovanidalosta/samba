@@ -141,6 +141,9 @@ e o estado vazio do Estúdio, com três ações, está bem resolvido.
   teste de persistência do Pad**, link compartilhado ou Home. Arquivos duplicados por nome (`m1_challenger_adversarial`
   vs `challenger_m1_adversarial`).
 - **FE5** `PROJECT.md` desatualizado (ver §1).
+- **FE7 [CÓDIGO]** Ao salvar uma levada, `index.html:~4287` faz `POST /__save_custom_grooves`, endpoint que **não existe**
+  em `server.js` (resquício de uma ferramenta em `tools/`, que está no `.gitignore`), e copia o JSON para a área de
+  transferência sem avisar o usuário. Recomendo remover as duas coisas (Task 21).
 - **FE6** `.playwright-mcp/` (artefatos de navegação) não está no `.gitignore`.
 
 ---
