@@ -1282,7 +1282,7 @@
       <div class="home-library-controls">
         <label class="home-search-wrap" for="homeBrequeSearch">
           <span>Buscar por nome ou BPM</span>
-          <input id="homeBrequeSearch" type="search" placeholder="Ex.: virada, 142" autocomplete="off">
+          <input id="homeBrequeSearch" type="search" placeholder="Ex.: virada, 130" autocomplete="off">
         </label>
         <div class="home-filter-group" role="group" aria-label="Filtrar breques">
           <button type="button" class="home-filter-btn active" data-home-filter="all" aria-pressed="true">Todos</button>
@@ -1384,92 +1384,38 @@
        ABA 1: NAUMTERIA STUDIO MULTITRACK & MOSAIC
        ========================================================================= -->
   <div id="tab-beatbox" class="app-tab-content">
-    <!-- Barra Unificada de Transporte & Ações Rápidas (Minimalist DAW Bar) -->
-    <div class="studio-toolbar">
-      <!-- Esquerda: Transporte, Timecode LCD, BPM e Metrônomo -->
-      <div class="studio-toolbar-group transport-left">
-        <div class="transport-btn-cluster">
-          <button id="btnStudioPlay" class="btn studio-btn-primary" title="Reproduzir / Pausar [Espaço]">
-            <span>▶</span> Reproduzir
-          </button>
-          <button id="btnStudioStop" class="btn btn-icon-only" title="Parar e voltar ao início">
-            <span>⏹</span>
-          </button>
-          <button id="btnStudioRecord" class="btn btn-record" title="Gravar na Faixa Armada [R]"><span>●</span> Gravar</button>
-          <button id="btnToggleLoop" class="btn" title="Alternar repetição em Loop">
-            <span id="loopIcon">🔁</span> <span id="loopText">Loop: Off</span>
-          </button>
-        </div>
-
-        <!-- Visor Digital Minimalista Integrado -->
-        <div class="reaper-lcd-rack">
-          <div class="reaper-lcd-cell">
-            <span class="lcd-cell-label">COMPASSO</span>
-            <span class="lcd-cell-value" id="reaperTimeBars">001.01.00</span>
-          </div>
-          <div class="lcd-divider"></div>
-          <div class="reaper-lcd-cell">
-            <span class="lcd-cell-label">TEMPO</span>
-            <span class="lcd-cell-value" id="reaperTimeSeconds">00:00.000</span>
-          </div>
-          <div class="lcd-divider"></div>
-          <div class="reaper-lcd-cell lcd-cell-mode">
-            <span class="lcd-cell-label">MODO</span>
-            <span class="lcd-cell-value" id="reaperLoopInfo">Até o fim</span>
-          </div>
-        </div>
-
-        <!-- BPM Compacto & Tap -->
-        <div class="control-group bpm-compact-group">
-          <button id="btnStudioTap" class="btn-tap-tempo"
-            title="Tap Tempo: Toque no ritmo para definir o BPM">TAP</button>
-          <label for="studioBpm">BPM</label>
-          <button id="btnBpmMinus" class="btn-step" title="Diminuir BPM">−</button>
-          <input type="range" id="studioBpm" min="60" max="200" value="120" step="1" style="width: 72px;">
-          <button id="btnBpmPlus" class="btn-step" title="Aumentar BPM">+</button>
-          <span id="studioBpmVal" class="bpm-value">120</span>
-        </div>
-
-        <!-- Metrônomo com LEDs -->
-        <div class="metronome-box">
-          <button id="btnStudioMetronome" class="btn-metro-toggle" title="Ligar/Desligar clique do metrônomo">
-            Metrônomo
-          </button>
-          <div class="metronome-leds" title="Pulsos do compasso">
-            <div class="metro-led" id="metroLed1"></div>
-            <div class="metro-led" id="metroLed2"></div>
-          </div>
-        </div>
+    <!-- Barra Superior de Navegação do Estúdio (Minimalist Pro Top Bar) -->
+    <div class="studio-toolbar studio-top-bar">
+      <!-- Esquerda: Seletor de Visão Segmentado [Faixas | Mosaico] -->
+      <div class="studio-view-switch" title="Alternar entre Faixas (Timeline) e Mosaico">
+        <button type="button" id="btnViewTimeline" class="view-switch-btn active" data-view="timeline">
+          <span class="view-switch-icon">☰</span>
+          <span class="view-switch-text">Faixas</span>
+        </button>
+        <button type="button" id="btnViewMosaic" class="view-switch-btn" data-view="mosaic">
+          <span class="view-switch-icon">⊞</span>
+          <span class="view-switch-text">Mosaico</span>
+        </button>
+        <!-- Elemento oculto de cabine para compatibilidade com rotas internas -->
+        <button type="button" id="btnViewRecord" style="display: none;" data-view="record"></button>
       </div>
 
-      <!-- Direita: Seletor de Visão, Nova Pista e Popovers Discretos -->
-      <div class="studio-toolbar-group transport-right">
-        <div class="studio-view-switch" title="Alternar entre Faixas (Timeline), Mosaico e Cabine de Gravação">
-          <button type="button" id="btnViewTimeline" class="view-switch-btn active" data-view="timeline">
-            Faixas
-          </button>
-          <button type="button" id="btnViewMosaic" class="view-switch-btn" data-view="mosaic">
-            Mosaico
-          </button>
-          <button type="button" id="btnViewRecord" class="view-switch-btn" data-view="record" title="Abrir Cabine de Gravação (Áudio ou Vídeo)">
-            🎙️ Cabine
-          </button>
-        </div>
-
-        <button type="button" id="btnImportFromPad" class="btn btn-secondary"
+      <!-- Direita: Ações Rápidas (Importar Pad, + Nova Faixa e Menus de Ajustes/Projeto) -->
+      <div class="studio-top-actions">
+        <button type="button" id="btnImportFromPad" class="btn btn-secondary btn-studio-top-action"
           title="Trazer a bateria desenhada no Pad deste Breque como faixa no Estúdio">
           <span>🥁</span> <span class="toolbar-btn-label-long">Importar do Pad</span><span class="toolbar-btn-label-short">Pad</span>
         </button>
 
-        <button type="button" id="btnAddTrack" class="btn" title="Adicionar nova faixa ao estúdio">
-          <span>+</span> <span class="toolbar-btn-label-long">Nova Faixa</span><span class="toolbar-btn-label-short">Faixa</span>
+        <button type="button" id="btnAddTrack" class="btn btn-studio-add" title="Adicionar nova faixa ao estúdio">
+          <span class="btn-add-plus">＋</span> <span class="toolbar-btn-label-long">Nova Faixa</span><span class="toolbar-btn-label-short">Faixa</span>
         </button>
 
         <!-- Popover 1: Ajustes de Grade, Compasso e Zoom -->
         <div class="toolbar-popover-wrap">
-          <button type="button" id="btnToggleSettingsPopover" class="btn btn-popover-trigger"
+          <button type="button" id="btnToggleSettingsPopover" class="btn btn-popover-trigger btn-studio-top-action"
             title="Configurações de Compasso, Extensão e Zoom">
-            <span>⚙</span> Ajustes <span class="caret">▾</span>
+            <span>⚙</span> <span class="toolbar-btn-label-long">Ajustes</span> <span class="caret">▾</span>
           </button>
           <div id="studioSettingsPopover" class="studio-popover-menu">
             <div class="popover-section-title">Grade & Compasso</div>
@@ -1537,9 +1483,9 @@
 
         <!-- Popover 2: Projeto & Exportação -->
         <div class="toolbar-popover-wrap">
-          <button type="button" id="btnToggleProjectPopover" class="btn btn-popover-trigger btn-popover-accent"
+          <button type="button" id="btnToggleProjectPopover" class="btn btn-popover-trigger btn-popover-accent btn-studio-top-action"
             title="Exportar Vídeo/Áudio ou Salvar/Abrir Projeto">
-            Projeto & Exportar <span class="caret">▾</span>
+            <span>✨</span> <span class="toolbar-btn-label-long">Projeto</span> <span class="caret">▾</span>
           </button>
           <div id="studioProjectPopover" class="studio-popover-menu popover-align-right">
             <div class="popover-section-title">Gerenciar Projeto</div>
@@ -1750,6 +1696,60 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARRA INFERIOR DE TRANSPORTE NATIVA (BOTTOM BAR MOBILE-FIRST) -->
+    <div class="studio-bottom-bar" id="studioBottomBar">
+      <div class="studio-bottom-bar-inner">
+        <!-- Elementos técnicos ocultos para manter compatibilidade com JS -->
+        <div style="display: none;" aria-hidden="true">
+          <span id="reaperTimeBars">001.01.00</span>
+          <span id="reaperTimeSeconds">00:00.000</span>
+          <span id="reaperLoopInfo">Até o fim</span>
+        </div>
+
+        <!-- Grupo Central: Controles Hero de Transporte ao alcance do polegar -->
+        <div class="bottom-bar-transport">
+          <button type="button" id="btnStudioStop" class="btn-transport-stop" title="Parar e voltar ao início">
+            <span class="transport-icon">⏹</span>
+          </button>
+
+          <button type="button" id="btnStudioPlay" class="btn-transport-play" title="Reproduzir / Pausar [Espaço]">
+            <span class="play-icon">▶</span>
+            <span class="play-label">Tocar</span>
+          </button>
+
+          <button type="button" id="btnStudioRecord" class="btn-transport-rec" title="Gravar na Faixa Armada [R]">
+            <span class="rec-dot">●</span>
+            <span class="rec-label">Gravar</span>
+          </button>
+
+          <button type="button" id="btnToggleLoop" class="btn-transport-loop" title="Alternar repetição em Loop">
+            <span id="loopIcon">🔁</span>
+            <span id="loopText">Loop</span>
+          </button>
+        </div>
+
+        <!-- Grupo Andamento & Metrônomo Compacto -->
+        <div class="bottom-bar-tempo">
+          <div class="control-group bpm-compact-group">
+            <button type="button" id="btnStudioTap" class="btn-tap-tempo"
+              title="Tap Tempo: Toque no ritmo para definir o BPM">TAP</button>
+            <button type="button" id="btnBpmMinus" class="btn-step" title="Diminuir BPM">−</button>
+            <input type="range" id="studioBpm" min="60" max="200" value="120" step="1" style="width: 50px;">
+            <button type="button" id="btnBpmPlus" class="btn-step" title="Aumentar BPM">+</button>
+            <span id="studioBpmVal" class="bpm-value">120</span>
+          </div>
+
+          <button type="button" id="btnStudioMetronome" class="btn-metro-compact" title="Ligar/Desligar clique do metrônomo">
+            <span class="metro-icon">⏱</span>
+            <span class="metronome-leds" title="Pulsos do compasso">
+              <span class="metro-led" id="metroLed1"></span>
+              <span class="metro-led" id="metroLed2"></span>
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -2638,7 +2638,7 @@
       samba_reto_naumteria: {
         name: 'Samba Reto Naumteria',
         measures: 4,
-        bpm: 142,
+        bpm: 130,
         tracks: {
           surdo1: [
             'abafado', null, null, null, 'aberto', null, null, null,
@@ -6252,7 +6252,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         projects.push({
           id: key,
           name: p.name || key,
-          bpm: p.bpm || 142,
+          bpm: p.bpm || 130,
           measures: p.measures || 4,
           isCustom: false,
           presetObj: p

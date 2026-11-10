@@ -591,6 +591,7 @@
       dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
       dom.btnStartRecord.classList.remove('is-recording');
     }
+    if (dom.btnStudioRecord) dom.btnStudioRecord.classList.remove('is-recording');
     if (dom.recLiveIndicator) dom.recLiveIndicator.classList.remove('active');
     if (dom.recProgressBar) dom.recProgressBar.style.width = '0%';
     if (dom.countdownOverlay) dom.countdownOverlay.classList.remove('active');
@@ -2628,6 +2629,7 @@
 
     dom.btnStartRecord.textContent = '⏹ Cancelar Contagem';
     dom.btnStartRecord.classList.add('is-recording');
+    if (dom.btnStudioRecord) dom.btnStudioRecord.classList.add('is-recording');
 
     dom.countdownOverlay.classList.add('active');
     dom.countdownNumber.textContent = currentBeat;
@@ -2749,6 +2751,7 @@
     dom.recLiveIndicator.classList.add('active');
     dom.btnStartRecord.textContent = '⏹ Parar Gravação';
     dom.btnStartRecord.classList.add('is-recording');
+    if (dom.btnStudioRecord) dom.btnStudioRecord.classList.add('is-recording');
 
     // DISPARA OVERDUB NOS FONES:
     // Toca as outras faixas já gravadas e o metrônomo para o usuário acompanhar perfeitamente
@@ -2894,6 +2897,7 @@
     dom.countdownOverlay.classList.remove('active');
     dom.recLiveIndicator.classList.remove('active');
     dom.btnStartRecord.classList.remove('is-recording');
+    if (dom.btnStudioRecord) dom.btnStudioRecord.classList.remove('is-recording');
 
     if (!hasSuccess) {
       dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
