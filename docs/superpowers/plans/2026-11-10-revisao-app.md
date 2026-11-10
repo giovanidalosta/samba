@@ -44,7 +44,7 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 | 7 | Higiene: `.gitignore`, `PROJECT.md` | FE5, FE6 | [EXECUTADO] `8639ee7` |
 | 8 | Breques órfãos "Ideia N" | U3 | [EXECUTADO] `58ac0a5` (descarta breque vazio do atalho ao voltar para a Home) |
 | 9 | Confirmar antes de substituir um take | U4 | [EXECUTADO] Gravar arma faixa vazia; substituir pergunta, com "Salvar como nova faixa"; gancho `BeatboxStudio.__test` só para testes |
-| 10 | Rotas por hash + botão Voltar | U5 | [AGUARDA APROVAÇÃO] |
+| 10 | Rotas por hash + botão Voltar | U5 | [EXECUTADO] hash `#/`, `#/b/<id>/pad|estudio`, popstate; `#breque=` tem prioridade |
 | 11 | Onboarding do Pad + legenda de articulações | U6 | [AGUARDA APROVAÇÃO] |
 | 12 | Mobile Pad compacto | U7, V8 | [AGUARDA APROVAÇÃO] |
 | 13 | Limpeza de duplicidades e avisos | U8, U9, U10, V10 | [AGUARDA APROVAÇÃO] |

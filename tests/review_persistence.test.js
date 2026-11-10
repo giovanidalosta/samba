@@ -128,7 +128,7 @@ describe('Revisão 2026-11-10: persistência do Pad e link compartilhado', () =>
     assert.match(kept, /^#breque=/);
     await openFreshPadBreque();
     const cleared = await session.evaluate(() => location.hash);
-    assert.equal(cleared, '');
+    assert.doesNotMatch(cleared, /^#breque=/);
   });
 
   it('TR2.5: dados do breque anterior (stepMeta/loop) não vazam para o compartilhado', async () => {

@@ -6243,6 +6243,46 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     }
     ['pointerup', 'change', 'keyup'].forEach(evt => document.addEventListener(evt, () => setTimeout(updatePadHelp, 80)));
 
+    // Rotas por hash: #/ (Home), #/b/<id>/pad e #/b/<id>/estudio. O link compartilhado (#breque=) continua com prioridade.
+    let routeReady = false;
+    let applyingRoute = false;
+    function routeFor(target) {
+      if (target === 'tab-home') return '#/';
+      if (!state.activeBrequeId) return null;
+      return '#/b/' + encodeURIComponent(state.activeBrequeId) + '/' + (target === 'tab-beatbox' ? 'estudio' : 'pad');
+    }
+    function syncRoute(target) {
+      if (!routeReady || applyingRoute) return;
+      const r = routeFor(target);
+      if (!r || window.location.hash === r) return;
+      if (target === 'tab-home' && window.location.hash.startsWith('#breque=')) return;
+      history.pushState(null, '', window.location.pathname + window.location.search + r);
+    }
+    async function applyRoute() {
+      const m = /^#\/b\/([^/]+)\/(pad|estudio)$/.exec(window.location.hash);
+      applyingRoute = true;
+      try {
+        if (m) {
+          const id = decodeURIComponent(m[1]);
+          const tab = m[2] === 'estudio' ? 'tab-beatbox' : 'tab-sequencer';
+          if (id === state.activeBrequeId) {
+            if (currentActiveTab !== tab) switchTab(tab);
+          } else {
+            await openBrequeProject(id, m[2] === 'estudio' ? 'studio' : 'pad');
+            if (state.activeBrequeId !== id) {
+              history.replaceState(null, '', window.location.pathname + window.location.search + '#/');
+              if (currentActiveTab !== 'tab-home') switchTab('tab-home');
+            }
+          }
+        } else if (!window.location.hash.startsWith('#breque=') && currentActiveTab !== 'tab-home') {
+          switchTab('tab-home');
+        }
+      } finally {
+        applyingRoute = false;
+      }
+    }
+    window.addEventListener('popstate', applyRoute);
+
     function switchTab(target) {
       // Se estava em um breque aberto e vai trocar de modo ou voltar para Home, salva estado do breque
       if (currentActiveTab !== 'tab-home' && state.activeBrequeId) {
@@ -6252,6 +6292,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       }
 
       currentActiveTab = target;
+      syncRoute(target);
       closeSeqPopovers();
       updatePadHelp();
       if (typeof setPadSheet === 'function') setPadSheet(null);
@@ -6980,6 +7021,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         window.BeatboxStudio.init();
       }
       switchTab('tab-home');
+      routeReady = true;
+      if (window.location.hash.startsWith('#/b/')) applyRoute();
+      else if (!window.location.hash.startsWith('#breque=')) history.replaceState(null, '', window.location.pathname + window.location.search + '#/');
     });
   </script>
   <script src="beatbox_studio.js"></script>
