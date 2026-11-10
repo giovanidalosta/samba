@@ -483,7 +483,7 @@ describe('Global Menus, Responsive Viewports (390x844 & 1280x800) & Usability Su
       assert.ok(mobileSeq.rulerDelta <= 1.5, `Pad mobile ruler misaligned with step cells by ${mobileSeq.rulerDelta}px`);
       for (const m of mobileSeq.headerMetrics) {
         assert.ok(m.nameWidth >= 55, `Track "${m.name}" collapsed on mobile (${m.nameWidth}px)`);
-        assert.ok(m.grooveWidth >= 65, `Groove select crushed on "${m.name}" (${m.grooveWidth}px)`);
+        // Task 12: levada e volume saem do cabeçalho (≤600px) e vivem no bottom sheet; ver TR12.* em review_pad_ux.test.js
         assert.ok(m.sliderOverflow <= 1, `Volume slider overflowed track header on "${m.name}" by ${m.sliderOverflow}px`);
       }
 

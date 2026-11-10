@@ -5766,3 +5766,44 @@ header#appMainHeader.project-open .brand .brand-subtitle {
     scroll-behavior: auto !important;
   }
 }
+
+/* ===== Pad mobile compacto (≤600px): cabeçalho enxuto + bottom sheet por naipe ===== */
+.track-header-extra { display: contents; }
+.track-header-extra .sheet-close, .track-header-extra .sheet-clear, #padSheetBackdrop { display: none; }
+
+#gridContainer, #tracksWrapper .steps-container {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3946 transparent;
+}
+main { scrollbar-width: thin; scrollbar-color: #3A3946 transparent; }
+
+@media (max-width: 600px) {
+  #tab-sequencer .track-header { width: 112px !important; min-width: 112px !important; transform: none !important; }
+  #tab-sequencer .ruler-row { margin-left: 112px !important; }
+  #tab-sequencer .track-header .btn-clear-track { display: none !important; }
+  #tab-sequencer .track-header .track-header-extra { display: none !important; }
+
+  #tab-sequencer .track-header.sheet-open .track-header-extra {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 1100;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    background: #121117;
+    border-top: 2px solid var(--instrument-color, var(--naum-gold));
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.85);
+  }
+  #tab-sequencer .track-header.sheet-open .track-header-extra .sheet-close {
+    display: inline-flex; align-self: flex-end; min-width: 44px; min-height: 36px; justify-content: center; align-items: center;
+  }
+  #tab-sequencer .track-header.sheet-open .track-header-extra .sheet-clear { display: inline-flex; align-self: flex-start; min-height: 36px; align-items: center; }
+  #tab-sequencer .track-header.sheet-open .track-art-palette { flex-wrap: wrap !important; }
+  #tab-sequencer .track-header.sheet-open .btn-save-groove { display: inline-flex !important; }
+  #tab-sequencer .track-header.sheet-open .inst-vol-box { width: 96px !important; }
+  body.pad-sheet-open #padSheetBackdrop {
+    display: block; position: fixed; inset: 0; z-index: 1090; background: rgba(0, 0, 0, 0.55);
+  }
+}
