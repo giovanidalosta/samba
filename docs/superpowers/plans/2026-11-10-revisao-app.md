@@ -193,5 +193,5 @@ Cada uma traz a recomendação e o motivo de precisar do seu OK.
   É intermitência do harness, não regressão: o arquivo isolado passa. Sugestão: na Task 21, aumentar a espera de
   `launchBrowser()` ou subir o servidor uma vez via `--test-global-setup`.
 - U1 também foi verificado manualmente no navegador: marcar nota → recarregar imediatamente → nota preservada.
-- Os navegadores usados na auditoria tinham perfis temporários; nenhum dado real seu foi tocado.
+- A auditoria usou os perfis do Playwright e do harness, separados do seu Chrome; nenhum breque seu foi tocado.
 - Não foram executadas as Tasks 8–22: elas mudam fluxo, identidade visual ou arquitetura e precisam do seu OK.
