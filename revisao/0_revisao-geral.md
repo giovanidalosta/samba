@@ -95,4 +95,4 @@ Na aba do Pad, 23 botões visíveis não têm texto nem `aria-label`. No Estúdi
 A outra sessão (a do notebook) levantou que quem abre um link compartilhado cai na tela inicial. Isso **não se confirmou**: no teste abre no Pad. As outras três suspeitas dela (rota inexistente, limite de 9 contra 32 faixas, emojis que sobraram) se confirmaram.
 
 ## Capturas de tela
-Em `/tmp/claude-0/-home-user-samba/52b2aac2-5bc3-53c2-b247-320674c0f78d/scratchpad/shots/` (`m_` é celular, `t_` tablet, `d_` desktop).
+Capturas não incluídas (`m_` é celular, `t_` tablet, `d_` desktop).
