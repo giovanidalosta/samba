@@ -33,9 +33,16 @@ const server = http.createServer((req, res) => {
 
   const safePath = path.normalize(path.join(PUBLIC_DIR, pathname));
 
-  if (!safePath.startsWith(PUBLIC_DIR)) {
+  if (safePath !== PUBLIC_DIR && !safePath.startsWith(PUBLIC_DIR + path.sep)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     return res.end('403 Forbidden');
+  }
+
+  // Nunca servir arquivos/pastas ocultos (.git, .gitignore, .playwright-mcp...)
+  const relativeSegments = path.relative(PUBLIC_DIR, safePath).split(path.sep);
+  if (relativeSegments.some(seg => seg.startsWith('.'))) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    return res.end('404 Not Found');
   }
 
   fs.stat(safePath, (err, stats) => {
@@ -47,9 +54,13 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(safePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+    // Áudios e fontes mudam raramente: cache de 1 dia. Código e HTML: sempre revalidar.
+    const relPosix = path.relative(PUBLIC_DIR, safePath).split(path.sep).join('/');
+    const isStaticMedia = relPosix.startsWith('assets/audio/') || relPosix.startsWith('assets/fonts/');
+
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache'
+      'Cache-Control': isStaticMedia ? 'public, max-age=86400' : 'no-cache'
     });
 
     const stream = fs.createReadStream(safePath);

@@ -4,3 +4,4 @@ Thumbs.db
 *.log
 saved_grooves_local.json
 tools/
+.playwright-mcp/

@@ -29,10 +29,10 @@
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | M1: Application-Wide Menu and Navigation Optimization | R1.1, R1.2, R1.3, R1.4 | none | PLANNED |
-| 2 | M2: Multitrack Studio Usability and Track Navigation | R2.1, R2.2, R2.3 | none | PLANNED |
-| 3 | M3: Audio Clip Positioning and Scroll Behavior | R3.1, R3.2, R3.3, R3.4 | none | PLANNED |
-| 4 | M4: Final Acceptance & E2E Test Suite Pass | 100% E2E test suite pass + Tier 5 adversarial coverage hardening | M1, M2, M3 | PLANNED |
+| 1 | M1: Application-Wide Menu and Navigation Optimization | R1.1, R1.2, R1.3, R1.4 | none | DONE |
+| 2 | M2: Multitrack Studio Usability and Track Navigation | R2.1, R2.2, R2.3 | none | DONE |
+| 3 | M3: Audio Clip Positioning and Scroll Behavior | R3.1, R3.2, R3.3, R3.4 | none | DONE |
+| 4 | M4: Final Acceptance & E2E Test Suite Pass | 100% E2E test suite pass + Tier 5 adversarial coverage hardening | M1, M2, M3 | DONE |
 
 ## Interface Contracts & Test Preservation
 1. **DOM Selectors & Classes (Mandatory Preservation)**:
@@ -50,3 +50,8 @@
 - `samba/beatbox_studio.js`: Logic, event handlers, rendering functions, audio graph.
 - `samba/beatbox_studio.css`: Styles, layouts, responsive rules.
 - `samba/tests/`: Automated unit, integration, and CDP browser tests.
+
+## Revisão 2026-11-10
+- Achados: `docs/superpowers/specs/2026-11-10-revisao-app.md`
+- Plano (tarefas executadas e pendentes de aprovação): `docs/superpowers/plans/2026-11-10-revisao-app.md`
+- Testes novos: `tests/review_persistence.test.js`, `tests/review_a11y.test.js`, `tests/review_server.test.js`
