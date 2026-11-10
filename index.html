@@ -6022,7 +6022,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       if (document.visibilityState === 'hidden') flushBrequeAutosave();
     });
 
-    function createNewBrequeProject({ name, bpm = 120, measures = 4, initialMode = 'pad' }) {
+    function createNewBrequeProject({ name, bpm = 120, measures = 4, initialMode = 'pad', quick = false }) {
       const cleanName = (name && name.trim()) || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
       const key = 'breque_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       flushBrequeAutosave();
@@ -6051,6 +6051,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         bpm: state.bpm,
         measures: state.measures,
         lastMode: initialMode,
+        quickCreated: !!quick,
         hasPadNotes: false,
         studioTrackCount: 0,
         studioRecordedCount: 0,
@@ -6125,11 +6126,27 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       switchTab(targetMode === 'studio' ? 'tab-beatbox' : 'tab-sequencer');
     }
 
+    // Breque criado pelo atalho da Home que continua sem notas e sem gravações não deve virar item órfão em Meus Breques.
+    function discardEmptyQuickBreque() {
+      const id = state.activeBrequeId;
+      if (!id || !id.startsWith('custom:')) return;
+      const rawKey = id.replace('custom:', '');
+      customBateriaPresets = loadCustomBateriaPresets();
+      const p = customBateriaPresets[rawKey];
+      if (!p || !p.quickCreated || p.hasPadNotes || (p.studioRecordedCount || 0) > 0) return;
+      delete customBateriaPresets[rawKey];
+      saveCustomBateriaPresetsToStorage(customBateriaPresets);
+      state.activeBrequeId = null;
+      updateBateriaPresetSelect();
+      updateHeaderBrequeTitle();
+    }
+
     function switchTab(target) {
       // Se estava em um breque aberto e vai trocar de modo ou voltar para Home, salva estado do breque
       if (currentActiveTab !== 'tab-home' && state.activeBrequeId) {
         const nextMode = target === 'tab-beatbox' ? 'studio' : (target === 'tab-sequencer' ? 'pad' : undefined);
         saveActiveBrequeState(nextMode);
+        if (target === 'tab-home') discardEmptyQuickBreque();
       }
 
       currentActiveTab = target;
@@ -6283,7 +6300,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       const name = isRecord ? `Ideia ${nextNum}` : `Breque ${nextNum}`;
       const bpm = 120;
       const measures = 4;
-      const brequeId = createNewBrequeProject({ name, bpm, measures, initialMode });
+      const brequeId = createNewBrequeProject({ name, bpm, measures, initialMode, quick: true });
 
       await window.BeatboxStudio.loadBrequeProject(brequeId, bpm);
       if (isRecord) {

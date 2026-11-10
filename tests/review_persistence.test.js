@@ -164,4 +164,24 @@ describe('Revisão 2026-11-10: persistência do Pad e link compartilhado', () =>
     const after = await readActiveStored();
     assert.equal(after.entry.updatedAt, before.entry.updatedAt);
   });
+
+  const countPresets = () => session.evaluate((k) => Object.keys(JSON.parse(localStorage.getItem(k) || '{}')).length, PRESETS_KEY);
+
+  it('TR8.1: breque vazio criado pelo atalho some ao voltar para a Home', async () => {
+    await session.evaluate(() => window.switchTab('tab-home'));
+    const before = await countPresets();
+    await openFreshPadBreque();
+    assert.equal(await countPresets(), before + 1);
+    await session.evaluate(() => window.switchTab('tab-home'));
+    assert.equal(await countPresets(), before, 'breque sem notas nem gravações deve ser descartado');
+  });
+
+  it('TR8.2: breque do atalho com nota marcada permanece ao voltar para a Home', async () => {
+    await session.evaluate(() => window.switchTab('tab-home'));
+    const before = await countPresets();
+    await openFreshPadBreque();
+    await clickCell(4);
+    await session.evaluate(() => window.switchTab('tab-home'));
+    assert.equal(await countPresets(), before + 1);
+  });
 });
