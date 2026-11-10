@@ -412,7 +412,7 @@
     }
     if (dom.btnTimelineLoop) {
       dom.btnTimelineLoop.classList.toggle('loop-active', state.looping);
-      dom.btnTimelineLoop.innerHTML = `<span>🔁</span> Loop: ${state.looping ? 'On' : 'Off'}`;
+      dom.btnTimelineLoop.innerHTML = `<span>↻</span> Loop: ${state.looping ? 'On' : 'Off'}`;
     }
   }
 
@@ -537,7 +537,7 @@
     state.tracks.forEach((t, idx) => {
       const opt = document.createElement('option');
       opt.value = t.id;
-      const statusIcon = t.mediaUrl ? '🎬 ' : '🎙️ ';
+      const statusIcon = t.mediaUrl ? '◫ ' : '● ';
       opt.textContent = `${statusIcon}Faixa ${idx + 1}: ${t.name}${t.mediaUrl ? ' (Gravada)' : ' (Vazia)'}`;
       if (t.id === recordingContext.activeTrackId) {
         opt.selected = true;
@@ -547,7 +547,7 @@
 
     const optNew = document.createElement('option');
     optNew.value = '__new__';
-    optNew.textContent = '➕ Adicionar Nova Faixa...';
+    optNew.textContent = '＋ Adicionar Nova Faixa...';
     dom.recTrackSelect.appendChild(optNew);
 
     const activeTrack = state.tracks.find(t => t.id === recordingContext.activeTrackId);
@@ -588,7 +588,7 @@
     if (dom.recordTipText) dom.recordTipText.style.display = '';
     if (dom.btnStartRecord) {
       dom.btnStartRecord.style.display = 'inline-flex';
-      dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
+      dom.btnStartRecord.textContent = '● Iniciar Gravação';
       dom.btnStartRecord.classList.remove('is-recording');
     }
     if (dom.btnStudioRecord) dom.btnStudioRecord.classList.remove('is-recording');
@@ -649,17 +649,17 @@
       const emptyMosaic = document.createElement('div');
       emptyMosaic.className = 'studio-empty-mosaic-hero';
       emptyMosaic.innerHTML = `
-        <div class="empty-hero-icon">🎬</div>
+        <div class="empty-hero-icon">◫</div>
         <h3 class="empty-hero-title">Mosaico Zerado • Monte suas Faixas</h3>
         <p class="empty-hero-desc">
           Nenhuma faixa no projeto. Grave sua guia ou instrumentos e dê o nome que preferir:
         </p>
         <div class="empty-hero-actions">
           <button class="btn btn-gold btn-hero-add-track" title="Adicionar nova faixa">
-            <span>➕</span> Adicionar Faixa ao Mosaico
+            <span>＋</span> Adicionar Faixa ao Mosaico
           </button>
           <button class="btn btn-secondary btn-hero-new-project" title="Configurar e montar novo projeto">
-            <span>✨</span> Montar Projeto
+            <span>✦</span> Montar Projeto
           </button>
         </div>
       `;
@@ -694,7 +694,7 @@
           const audioStage = document.createElement('div');
           audioStage.className = 'track-audio-stage-card';
           audioStage.innerHTML = `
-            <div class="stage-mic-icon">🎙️</div>
+            <div class="stage-mic-icon">●</div>
             <div style="font-size: 13px; font-weight: 700; color: #fff;">${escapeHtml(track.name)}</div>
             <div class="stage-audio-badge">Faixa de Áudio (Boca)</div>
           `;
@@ -734,18 +734,18 @@
         const emptyState = document.createElement('div');
         emptyState.className = 'track-empty-state';
         emptyState.innerHTML = `
-          <div class="empty-icon">🎙️</div>
+          <div class="empty-icon">●</div>
           <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">Faixa Vazia</div>
           <div style="font-size: 11px; color: var(--text-muted); max-width: 210px;">Grave o som da boca usando sua câmera ou apenas o microfone.</div>
           <div class="track-empty-actions">
             <button class="btn-record-slot" data-id="${track.id}" data-mode="video" title="Gravar vídeo com a webcam e áudio do microfone">
-              <span>📹</span> Câmera & Mic
+              <span>◎</span> Câmera & Mic
             </button>
             <button class="btn-record-audio-slot" data-id="${track.id}" data-mode="audio" title="Gravar apenas o som do microfone sem usar câmera">
-              <span>🎙️</span> Só Microfone
+              <span>●</span> Só Microfone
             </button>
             <label class="btn-upload-slot" title="Enviar arquivo existente">
-              <span>📁</span> Upload
+              <span>↑</span> Upload
               <input type="file" accept="video/*,audio/*" data-id="${track.id}" class="track-file-uploader" style="display:none;">
             </label>
           </div>
@@ -761,7 +761,7 @@
       mixer.innerHTML = `
         <div class="mixer-row-primary">
           <div class="volume-control-box">
-            <span style="font-size: 12px;" title="Volume">🔊</span>
+            <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);" title="Volume">VOL</span>
             <input type="range" class="volume-slider" min="0" max="1.5" step="0.05" value="${track.volume}" data-id="${track.id}" title="Volume: ${volPercent}%">
             <span class="volume-val-badge">${volPercent}%</span>
           </div>
@@ -780,10 +780,10 @@
 
           <div class="track-extra-actions">
             ${track.mediaUrl ? `
-              <button type="button" class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂️ <span class="act-label">Cortar</span></button>
-              <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">📹 <span class="act-label">Câmera</span></button>
-              <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">🎙️ <span class="act-label">Mic</span></button>
-              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">🗑️</button>
+              <button type="button" class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂ <span class="act-label">Cortar</span></button>
+              <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">◎ <span class="act-label">Câmera</span></button>
+              <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">● <span class="act-label">Mic</span></button>
+              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">✕</button>
             ` : ''}
           </div>
         </div>
@@ -801,7 +801,7 @@
       addCard.title = 'Adicionar nova faixa ao estúdio';
       addCard.innerHTML = `
         <div class="track-add-card-content">
-          <span class="track-add-icon">➕</span>
+          <span class="track-add-icon">＋</span>
           <span class="track-add-label">Adicionar Faixa</span>
           <span class="track-add-sub">Pista ${state.tracks.length + 1} de ${MAX_STUDIO_TRACKS}</span>
         </div>
@@ -1091,20 +1091,20 @@
       const emptyProjectHero = document.createElement('div');
       emptyProjectHero.className = 'studio-empty-project-hero';
       emptyProjectHero.innerHTML = `
-        <div class="empty-hero-icon">🎛️</div>
+        <div class="empty-hero-icon">☵</div>
         <h3 class="empty-hero-title">Estúdio Multitrack deste Breque</h3>
         <p class="empty-hero-desc">
           Grave sua guia ou instrumentos ao vivo e dê o nome que quiser depois, ou importe faixas montadas no Pad:
         </p>
         <div class="empty-hero-actions" style="margin-bottom: 4px;">
           <button class="btn btn-gold btn-hero-record-now" title="Abrir gravador de áudio/vídeo agora">
-            <span>🎙️</span> Gravar Faixa Agora
+            <span>●</span> Gravar Faixa Agora
           </button>
           <button class="btn btn-primary btn-hero-import-pad" title="Trazer o instrumento ou bateria desenhada no Pad deste breque como faixa de áudio">
-            <span>🥁</span> Importar do Pad
+            <span>☵</span> Importar do Pad
           </button>
           <button class="btn btn-secondary btn-hero-add-track" title="Adicionar faixa em branco">
-            <span>➕</span> Nova Faixa Vazia
+            <span>＋</span> Nova Faixa Vazia
           </button>
         </div>
       `;
@@ -1139,13 +1139,13 @@
             <button type="button" class="tcp-btn-more" data-id="${track.id}" title="Mais opções da faixa (Carregar, Duplicar, Limpar, Excluir)" aria-label="Mais opções">⋯</button>
             <div class="tcp-menu-dropdown" id="tcp_menu_${track.id}" style="display: none;">
               <button type="button" class="tcp-menu-item tcp-menu-load" data-id="${track.id}">
-                <span class="menu-item-icon">📁</span> Carregar arquivo
+                <span class="menu-item-icon">↑</span> Carregar arquivo
               </button>
               <button type="button" class="tcp-menu-item tcp-menu-duplicate" data-id="${track.id}">
-                <span class="menu-item-icon">🔄</span> Duplicar faixa
+                <span class="menu-item-icon">↻</span> Duplicar faixa
               </button>
               <button type="button" class="tcp-menu-item tcp-menu-clear" data-id="${track.id}" ${track.mediaUrl ? '' : 'disabled'}>
-                <span class="menu-item-icon">🗑️</span> Limpar gravação
+                <span class="menu-item-icon">✕</span> Limpar gravação
               </button>
               <div class="tcp-menu-divider"></div>
               <button type="button" class="tcp-menu-item tcp-menu-delete tcp-menu-danger" data-id="${track.id}">
@@ -1169,14 +1169,14 @@
             ${track.mediaUrl ? (
               track.mediaType === 'video'
                 ? `<video src="${track.mediaUrl}" muted playsinline loop></video>`
-                : `<span class="pip-placeholder">🎙️</span>`
+                : `<span class="pip-placeholder">●</span>`
             ) : `<span class="pip-placeholder" style="color: #475569;">+</span>`}
           </div>
         </div>
 
         <!-- Linha 3: Volume Fader e Offset Temporal Compacto -->
         <div class="tcp-fader-row">
-          <span class="fader-icon" title="Volume">🔊</span>
+          <span class="fader-icon" title="Volume">VOL</span>
           <input type="range" class="tcp-fader-slider" min="0" max="1.5" step="0.05" value="${track.volume}" data-id="${track.id}" title="Volume: ${volPercent}% (${volDb} dB)">
           <span class="tcp-vol-db">${volPercent}%</span>
           <div class="tcp-sync-pill" data-id="${track.id}" title="Ajuste fino de sincronismo temporal (offset)">
@@ -1227,14 +1227,14 @@
           <div class="clip-trim-handle clip-trim-handle-right" data-id="${track.id}" data-side="right" title="Arraste para cortar o final da faixa"></div>
           <div class="media-item-header">
             <div class="item-title">
-              <span>${track.mediaType === 'video' ? '📹' : '🎙️'}</span>
+              <span>${track.mediaType === 'video' ? '◎' : '●'}</span>
               <span>${escapeHtml(track.name)}</span>
             </div>
             <div class="media-item-badges">
-              ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂️ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
+              ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
               <span class="item-meta-tag item-sync-badge">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
               <span class="item-meta-tag item-dur-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
-              <button type="button" class="btn-clip-action btn-clip-cut" data-id="${track.id}" title="Abrir editor de corte da faixa">✂️ Cortar</button>
+              <button type="button" class="btn-clip-action btn-clip-cut" data-id="${track.id}" title="Abrir editor de corte da faixa">✂ Cortar</button>
               ${isTrimmed ? `<button type="button" class="btn-clip-action btn-clip-restore" data-id="${track.id}" title="Restaurar gravação original inteira">↺</button>` : ''}
             </div>
           </div>
@@ -1259,7 +1259,7 @@
         emptyLane.className = 'reaper-empty-lane';
         emptyLane.innerHTML = `
           <button type="button" class="btn-empty-action btn-empty-record" data-id="${track.id}" title="Gravar nesta faixa">
-            <span>🎙️</span> Gravar nesta faixa
+            <span>●</span> Gravar nesta faixa
           </button>
         `;
         lane.appendChild(emptyLane);
@@ -1275,9 +1275,9 @@
     const isAtTrackLimit = state.tracks.length >= MAX_STUDIO_TRACKS;
     addLaneBtn.className = `reaper-add-track-lane${isAtTrackLimit ? ' is-capped' : ''}`;
     if (isAtTrackLimit) {
-      addLaneBtn.innerHTML = `<span class="add-lane-inner"><span>⚠️</span> Limite de ${MAX_STUDIO_TRACKS} faixas atingido</span>`;
+      addLaneBtn.innerHTML = `<span class="add-lane-inner"><span>!</span> Limite de ${MAX_STUDIO_TRACKS} faixas atingido</span>`;
     } else {
-      addLaneBtn.innerHTML = `<span class="add-lane-inner"><span>➕</span> <span class="add-lane-label-desktop">Inserir Nova Pista de Instrumento / Breque Vocal</span><span class="add-lane-label-mobile">Nova Faixa (${state.tracks.length + 1}/${MAX_STUDIO_TRACKS})</span></span>`;
+      addLaneBtn.innerHTML = `<span class="add-lane-inner"><span>＋</span> <span class="add-lane-label-desktop">Inserir Nova Pista de Instrumento / Breque Vocal</span><span class="add-lane-label-mobile">Nova Faixa (${state.tracks.length + 1}/${MAX_STUDIO_TRACKS})</span></span>`;
       addLaneBtn.onclick = () => addTrack();
     }
     dom.reaperTracksStack.appendChild(addLaneBtn);
@@ -2897,7 +2897,7 @@
     if (dom.btnStudioRecord) dom.btnStudioRecord.classList.remove('is-recording');
 
     if (!hasSuccess) {
-      dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
+      dom.btnStartRecord.textContent = '● Iniciar Gravação';
     }
 
     if (wasRecording) {
@@ -3018,7 +3018,7 @@
     if (dom.recordTipText) dom.recordTipText.style.display = '';
     if (dom.btnStartRecord) {
       dom.btnStartRecord.style.display = 'inline-flex';
-      dom.btnStartRecord.textContent = '🔴 Gravar Novo Take';
+      dom.btnStartRecord.textContent = '● Gravar Novo Take';
     }
     if (dom.recProgressBar) dom.recProgressBar.style.width = '0%';
     updateRecTrackPicker();
@@ -3038,7 +3038,7 @@
     dom.reviewActions.classList.remove('active');
     if (dom.recordTipText) dom.recordTipText.style.display = '';
     dom.btnStartRecord.style.display = 'inline-flex';
-    dom.btnStartRecord.textContent = '🔴 Iniciar Gravação';
+    dom.btnStartRecord.textContent = '● Iniciar Gravação';
     dom.recProgressBar.style.width = '0%';
     setRecordingMode(recordingContext.captureMode);
   }
@@ -3393,7 +3393,7 @@
     stopStudioPlayback();
 
     dom.exportModal.classList.add('active');
-    dom.exportTitle.textContent = '🎬 Exportando Vídeo Mosaico Full HD...';
+    dom.exportTitle.textContent = '◫ Exportando Vídeo Mosaico Full HD...';
     dom.exportStatus.textContent = 'Iniciando renderizador de vídeo e mixagem...';
     dom.exportProgressBar.style.width = '5%';
 
@@ -3492,7 +3492,7 @@
             ctx.fillStyle = '#38bdf8';
             ctx.font = '42px "Outfit", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('🎙️', x + cellW / 2, y + cellH / 2 + 12);
+            ctx.fillText('●', x + cellW / 2, y + cellH / 2 + 12);
             ctx.textAlign = 'left';
           } else if (track.videoElement && track.videoElement.readyState >= 2) {
             ctx.drawImage(track.videoElement, x + 4, y + 4, cellW - 8, cellH - 8);
@@ -3540,7 +3540,7 @@
             });
             const finalBlob = new Blob(chunks, { type: mimeType });
             downloadBlob(finalBlob, `samba_breque_mosaico_${state.bpm}bpm.webm`);
-            dom.exportStatus.textContent = '✅ Exportação concluída com sucesso!';
+            dom.exportStatus.textContent = '✓ Exportação concluída com sucesso!';
             dom.exportProgressBar.style.width = '100%';
             setTimeout(() => dom.exportModal.classList.remove('active'), 1500);
           };
@@ -3614,7 +3614,7 @@
     stopStudioPlayback();
 
     dom.exportModal.classList.add('active');
-    dom.exportTitle.textContent = '🎵 Exportando Áudio Master (.wav)...';
+    dom.exportTitle.textContent = '♫ Exportando Áudio Master (.wav)...';
     dom.exportStatus.textContent = 'Renderizando mixdown estéreo em alta fidelidade...';
     dom.exportProgressBar.style.width = '30%';
 
@@ -3670,7 +3670,7 @@
           downloadBlob(wavBlob, `naumteria_master_${state.bpm}bpm.wav`);
 
           dom.exportProgressBar.style.width = '100%';
-          dom.exportStatus.textContent = '✅ Áudio Master (.wav) exportado com sucesso!';
+          dom.exportStatus.textContent = '✓ Áudio Master (.wav) exportado com sucesso!';
           setTimeout(() => dom.exportModal.classList.remove('active'), 1200);
           return;
         }
@@ -3735,7 +3735,7 @@
           const audioBlob = new Blob(chunks, { type: mimeType || 'audio/webm' });
           downloadBlob(audioBlob, `samba_breque_mix_${state.bpm}bpm.webm`);
           dom.exportProgressBar.style.width = '100%';
-          dom.exportStatus.textContent = '✅ Áudio exportado com sucesso!';
+          dom.exportStatus.textContent = '✓ Áudio exportado com sucesso!';
           setTimeout(() => dom.exportModal.classList.remove('active'), 1200);
         };
       }, durationMs);
@@ -3994,8 +3994,8 @@
     }
     if (dom.newProjectConfirmBtn) {
       dom.newProjectConfirmBtn.innerHTML = count === 0
-        ? '<span>✨</span> Criar Projeto Zerado'
-        : `<span>✨</span> Criar Projeto com ${count} Faixa${count > 1 ? 's' : ''}`;
+        ? '<span>✦</span> Criar Projeto Zerado'
+        : `<span>✦</span> Criar Projeto com ${count} Faixa${count > 1 ? 's' : ''}`;
     }
   }
 
@@ -4522,7 +4522,7 @@
     }
     if (dom.btnCalibStart) {
       dom.btnCalibStart.disabled = false;
-      dom.btnCalibStart.innerHTML = '<span>🎯</span> Iniciar Calibração (3 Pings)';
+      dom.btnCalibStart.innerHTML = '<span>◎</span> Iniciar Calibração (3 Pings)';
     }
 
     for (let i = 1; i <= 3; i++) {
@@ -4781,7 +4781,7 @@
           if (!opt) {
             opt = document.createElement('option');
             opt.value = String(finalLatencyMs);
-            opt.textContent = `🎯 Calibrado pelo Teste (${finalLatencyMs}ms)`;
+            opt.textContent = `◎ Calibrado pelo Teste (${finalLatencyMs}ms)`;
             sel.appendChild(opt);
           }
           sel.value = String(finalLatencyMs);
@@ -4802,7 +4802,7 @@
         }
 
         if (dom.calibStatusText) {
-          dom.calibStatusText.textContent = '🎉 Calibração concluída com sucesso!';
+          dom.calibStatusText.textContent = '✓ Calibração concluída com sucesso!';
         }
         if (dom.calibResultValue) {
           dom.calibResultValue.textContent = `${finalLatencyMs}ms`;
@@ -4824,11 +4824,11 @@
       } else {
         // Não detectou pings suficientes
         if (dom.calibStatusText) {
-          dom.calibStatusText.innerHTML = `<span style="color: #EF4444;">⚠️ Microfone não captou o som dos bips.</span><br><span style="font-size: 11px; color: #cbd5e1; font-weight: normal;">Aumente o volume dos alto-falantes e certifique-se de que o microfone selecionado está ativo.</span>`;
+          dom.calibStatusText.innerHTML = `<span style="color: #EF4444;">! Microfone não captou o som dos bips.</span><br><span style="font-size: 11px; color: #cbd5e1; font-weight: normal;">Aumente o volume dos alto-falantes e certifique-se de que o microfone selecionado está ativo.</span>`;
         }
         if (dom.btnCalibStart) {
           dom.btnCalibStart.disabled = false;
-          dom.btnCalibStart.innerHTML = '<span>🎯</span> Tentar Novamente';
+          dom.btnCalibStart.innerHTML = '<span>◎</span> Tentar Novamente';
         }
       }
     } catch (err) {
@@ -4838,7 +4838,7 @@
       }
       if (dom.btnCalibStart) {
         dom.btnCalibStart.disabled = false;
-        dom.btnCalibStart.innerHTML = '<span>🎯</span> Tentar Novamente';
+        dom.btnCalibStart.innerHTML = '<span>◎</span> Tentar Novamente';
       }
     } finally {
       calibContext.isRunning = false;

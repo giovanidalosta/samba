@@ -3195,15 +3195,15 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
      5. WORKSPACES & ESPAÇAMENTO OTIMIZADO
      ------------------------------------------------------------- */
   .timeline-workspace {
-    padding: 8px 6px calc(16px + env(safe-area-inset-bottom, 0px)) 6px !important;
+    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
   }
 
   .mosaic-workspace {
-    padding: 8px 8px calc(16px + env(safe-area-inset-bottom, 0px)) 8px !important;
+    padding: 8px 8px calc(76px + env(safe-area-inset-bottom, 0px)) 8px !important;
   }
 
   .record-workspace {
-    padding: 8px 6px calc(16px + env(safe-area-inset-bottom, 0px)) 6px !important;
+    padding: 8px 6px calc(76px + env(safe-area-inset-bottom, 0px)) 6px !important;
   }
 
   .record-workspace-inner {
