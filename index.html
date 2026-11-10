@@ -1496,6 +1496,7 @@
                 <option value="200">Fones Bluetooth (200ms)</option>
                 <option value="0">Desativado (0ms)</option>
               </select>
+              <button type="button" class="btn-calib-trigger" id="btnCalibTriggerStudio" title="Calibrar latência automaticamente com o microfone e alto-falante">🎯 Calibrar Automaticamente (3 Pings)</button>
             </div>
             <div class="popover-field" id="measuresGroup" style="display: none;">
               <label for="studioMeasures">Quantidade de Compassos</label>
@@ -1669,13 +1670,16 @@
             </div>
             <div class="rec-device-group">
               <label for="recLatencyCompensation">Compensar Latência</label>
-              <select id="recLatencyCompensation" class="rec-device-select" title="Compensação automática de atraso entre o fone e o microfone">
-                <option value="80" selected>Fones c/ Fio (80ms)</option>
-                <option value="50">Alto-falante direto (50ms)</option>
-                <option value="120">Fones USB / Interface (120ms)</option>
-                <option value="200">Fones Bluetooth (200ms)</option>
-                <option value="0">Desativado (0ms)</option>
-              </select>
+              <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+                <select id="recLatencyCompensation" class="rec-device-select" style="flex: 1;" title="Compensação automática de atraso entre o fone e o microfone">
+                  <option value="80" selected>Fones c/ Fio (80ms)</option>
+                  <option value="50">Alto-falante direto (50ms)</option>
+                  <option value="120">Fones USB / Interface (120ms)</option>
+                  <option value="200">Fones Bluetooth (200ms)</option>
+                  <option value="0">Desativado (0ms)</option>
+                </select>
+                <button type="button" class="btn-calib-trigger-rec" id="btnCalibTriggerRec" title="Calibrar latência com teste acústico">🎯 Calibrar</button>
+              </div>
             </div>
           </div>
         </details>
@@ -2041,6 +2045,85 @@
         <button type="button" id="btnCutCancel" class="btn btn-secondary">Cancelar</button>
         <button type="button" id="btnCutApply" class="btn btn-gold">
           <span>✂️</span> Aplicar Corte na Faixa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL DE CALIBRAÇÃO ACÚSTICA AUTOMÁTICA DE LATÊNCIA (3 PINGS LOOPBACK)
+       ========================================================================= -->
+  <div class="modal-overlay" id="latencyCalibrationModal">
+    <div class="project-modal-box latency-calibration-box">
+      <div class="project-modal-header">
+        <div class="project-modal-title-wrap">
+          <span class="project-modal-icon">🎯</span>
+          <div>
+            <h3>Calibração Automática de Latência</h3>
+            <span class="project-modal-subtitle">Mede o atraso real de ida e volta (alto-falante → ar → microfone)</span>
+          </div>
+        </div>
+        <button class="track-delete-btn" id="btnCalibClose" style="font-size: 18px;" title="Fechar">✕</button>
+      </div>
+
+      <div class="project-modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <div class="calib-instructions">
+          <div class="calib-step">
+            <span class="calib-step-icon">🔊</span>
+            <div><strong>1. Alto-falante:</strong> Aumente um pouco o volume do som (para o microfone conseguir ouvir os bips).</div>
+          </div>
+          <div class="calib-step">
+            <span class="calib-step-icon">🎙️</span>
+            <div><strong>2. Silêncio:</strong> Fique em silêncio por 2 segundos enquanto 3 bips curtos são disparados.</div>
+          </div>
+        </div>
+
+        <div class="calib-test-card" id="calibTestCard">
+          <div class="calib-status-text" id="calibStatusText">Pronto para iniciar a calibração acústica</div>
+          
+          <div class="calib-pings-visual">
+            <div class="calib-ping-dot" id="calibPingDot1">
+              <span class="ping-badge">1</span>
+              <span class="ping-label">Ping 1</span>
+            </div>
+            <div class="calib-ping-dot" id="calibPingDot2">
+              <span class="ping-badge">2</span>
+              <span class="ping-label">Ping 2</span>
+            </div>
+            <div class="calib-ping-dot" id="calibPingDot3">
+              <span class="ping-badge">3</span>
+              <span class="ping-label">Ping 3</span>
+            </div>
+          </div>
+
+          <!-- VU Meter da escuta do microfone -->
+          <div class="calib-vu-wrap" title="Nível de captação do microfone">
+            <div class="calib-vu-fill" id="calibVuFill"></div>
+          </div>
+        </div>
+
+        <!-- Card de Resultado (escondido até terminar) -->
+        <div class="calib-result-card" id="calibResultCard" style="display: none;">
+          <div class="calib-result-header">
+            <div class="calib-result-icon">✅</div>
+            <div>
+              <div class="calib-result-value" id="calibResultValue">120ms</div>
+              <div class="calib-result-desc" id="calibResultDesc">Latência física cravada com sucesso!</div>
+            </div>
+          </div>
+          <div class="calib-apply-row" id="calibApplyTrackWrap" style="display: none;">
+            <label class="calib-apply-checkbox">
+              <input type="checkbox" id="calibApplyToCurrentTrack" checked>
+              <span>Aplicar agora na faixa atual (<strong id="calibTrackName">Faixa</strong>)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-modal-footer" style="padding: 14px 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #2A2935;">
+        <button type="button" class="btn btn-secondary" id="btnCalibCancel">Fechar</button>
+        <button type="button" class="btn btn-gold" id="btnCalibStart">
+          <span>🎯</span> Iniciar Calibração (3 Pings)
         </button>
       </div>
     </div>

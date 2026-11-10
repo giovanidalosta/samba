@@ -5195,3 +5195,226 @@ header#appMainHeader.project-open .brand .brand-subtitle {
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
 }
+
+/* =========================================================================
+   CALIBRAÇÃO AUTOMÁTICA DE LATÊNCIA (3 PINGS LOOPBACK)
+   ========================================================================= */
+.btn-calib-trigger {
+  margin-top: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(232, 195, 27, 0.12);
+  border: 1px solid rgba(232, 195, 27, 0.4);
+  color: var(--naum-gold, #E8C31B);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-calib-trigger:hover {
+  background: rgba(232, 195, 27, 0.22);
+  border-color: var(--naum-gold, #E8C31B);
+}
+
+.btn-calib-trigger-rec {
+  padding: 6px 10px;
+  background: rgba(232, 195, 27, 0.15);
+  border: 1px solid rgba(232, 195, 27, 0.45);
+  color: var(--naum-gold, #E8C31B);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-calib-trigger-rec:hover {
+  background: rgba(232, 195, 27, 0.28);
+  border-color: var(--naum-gold, #E8C31B);
+}
+
+.latency-calibration-box {
+  max-width: 540px !important;
+}
+
+.calib-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.calib-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #c9ccd1;
+  line-height: 1.4;
+}
+
+.calib-step-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.calib-test-card {
+  background: #08070B;
+  border: 1px solid #25242D;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.calib-status-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+.calib-pings-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.calib-ping-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.45;
+  transition: all 0.2s ease;
+}
+
+.calib-ping-dot .ping-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #181720;
+  border: 2px solid #3A3945;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.calib-ping-dot .ping-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #8C8E96;
+  font-weight: 700;
+}
+
+.calib-ping-dot.pinging {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.calib-ping-dot.pinging .ping-badge {
+  border-color: #E8C31B;
+  background: rgba(232, 195, 27, 0.25);
+  color: #E8C31B;
+  box-shadow: 0 0 16px rgba(232, 195, 27, 0.6);
+}
+
+.calib-ping-dot.success {
+  opacity: 1;
+}
+
+.calib-ping-dot.success .ping-badge {
+  border-color: #10B981;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.calib-vu-wrap {
+  width: 100%;
+  height: 6px;
+  background: #14131A;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #2A2835;
+}
+
+.calib-vu-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #10B981 0%, #E8C31B 70%, #EF4444 100%);
+  transition: width 0.05s linear;
+}
+
+.calib-result-card {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: modalFadeIn 0.2s ease;
+}
+
+.calib-result-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.calib-result-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.calib-result-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #10B981;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.1;
+}
+
+.calib-result-desc {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin-top: 2px;
+}
+
+.calib-apply-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+}
+
+.calib-apply-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #f1f5f9;
+  cursor: pointer;
+}
+
+.calib-apply-checkbox input {
+  accent-color: #E8C31B;
+  cursor: pointer;
+}

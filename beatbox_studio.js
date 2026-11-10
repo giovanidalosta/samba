@@ -379,6 +379,22 @@
     dom.btnCutResetFull = document.getElementById('btnCutResetFull');
     dom.btnCutCancel = document.getElementById('btnCutCancel');
     dom.btnCutApply = document.getElementById('btnCutApply');
+
+    // Calibração Automática de Latência
+    dom.latencyCalibrationModal = document.getElementById('latencyCalibrationModal');
+    dom.btnCalibTriggerStudio = document.getElementById('btnCalibTriggerStudio');
+    dom.btnCalibTriggerRec = document.getElementById('btnCalibTriggerRec');
+    dom.btnCalibClose = document.getElementById('btnCalibClose');
+    dom.btnCalibCancel = document.getElementById('btnCalibCancel');
+    dom.btnCalibStart = document.getElementById('btnCalibStart');
+    dom.calibStatusText = document.getElementById('calibStatusText');
+    dom.calibVuFill = document.getElementById('calibVuFill');
+    dom.calibResultCard = document.getElementById('calibResultCard');
+    dom.calibResultValue = document.getElementById('calibResultValue');
+    dom.calibResultDesc = document.getElementById('calibResultDesc');
+    dom.calibApplyTrackWrap = document.getElementById('calibApplyTrackWrap');
+    dom.calibTrackName = document.getElementById('calibTrackName');
+    dom.calibApplyToCurrentTrack = document.getElementById('calibApplyToCurrentTrack');
   }
 
   // --- Alternar Modo de Loop (Repetir vs Tocar até o fim) ---
@@ -922,9 +938,7 @@
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           track.offsetMs = Math.max(-5000, Math.min(5000, (track.offsetMs || 0) + delta));
-          const display = btn.parentElement.querySelector('.nudge-val-display');
-          if (display) display.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
-          renderReaperTimeline();
+          updateTrackOffsetInPlace(track);
           saveCurrentSession();
         }
       };
@@ -934,14 +948,57 @@
       valEl.onclick = () => {
         const id = valEl.dataset.id;
         const track = state.tracks.find(t => t.id === id);
-        if (track && track.offsetMs !== 0) {
-          track.offsetMs = 0;
-          valEl.textContent = '+0ms';
-          renderReaperTimeline();
-          saveCurrentSession();
+        if (track) {
+          const current = track.offsetMs || 0;
+          const val = prompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
+          if (val !== null) {
+            const parsed = parseInt(val, 10);
+            if (!isNaN(parsed)) {
+              track.offsetMs = Math.max(-5000, Math.min(5000, parsed));
+              updateTrackOffsetInPlace(track);
+              saveCurrentSession();
+            }
+          }
         }
       };
     });
+  }
+
+  // --- Atualização de Sincronismo (Offset) em Tempo Real sem Recriar o DOM ---
+  function updateTrackOffsetInPlace(track) {
+    if (!track) return;
+    const offsetStr = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+
+    // 1. Visor da Pílula no TCP
+    const tcpRow = document.getElementById(`reaper_row_${track.id}`);
+    if (tcpRow) {
+      const syncVal = tcpRow.querySelector('.tcp-sync-val, .tcp-sync-display');
+      if (syncVal) syncVal.textContent = offsetStr;
+    }
+
+    // 2. Visor no Card do Mosaico
+    const mosaicCard = document.getElementById(`card_${track.id}`);
+    if (mosaicCard) {
+      const display = mosaicCard.querySelector('.nudge-val-display');
+      if (display) display.textContent = offsetStr;
+    }
+
+    // 3. Posição visual do Clip e Badge na Arrange Lane
+    const mediaItem = document.getElementById(`media_item_${track.id}`);
+    if (mediaItem) {
+      const badge = mediaItem.querySelector('.item-sync-badge');
+      if (badge) badge.textContent = offsetStr;
+
+      const timelineDurSec = getTimelineDurationSec();
+      const offsetSec = (track.offsetMs || 0) / 1000;
+      const leftPercent = Math.max(0, Math.min(100, (offsetSec / timelineDurSec) * 100));
+      mediaItem.style.left = leftPercent + '%';
+    }
+
+    // 4. Se a reprodução estiver ativa, resincroniza o áudio da faixa em tempo real
+    if (state.isPlaying && track.videoElement) {
+      triggerTrackAtTimelineOffset(track, state.playheadPosSec);
+    }
   }
 
   // --- Função Unificada de Renderização dos Modos (Faixas REAPER & Mosaico) ---
@@ -2042,23 +2099,30 @@
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           track.offsetMs = Math.max(-5000, Math.min(5000, (track.offsetMs || 0) + delta));
-          renderStudioViews();
+          updateTrackOffsetInPlace(track);
           saveCurrentSession();
         }
       };
     });
 
-    // Reset de Offset ao clicar no valor central
+    // Ajuste direto ou Reset de Offset ao clicar no valor central
     dom.reaperTracksStack.querySelectorAll('.tcp-sync-val').forEach(valSpan => {
       valSpan.onclick = (e) => {
         e.stopPropagation();
         const id = valSpan.dataset.id;
         selectTrack(id);
         const track = state.tracks.find(t => t.id === id);
-        if (track && track.offsetMs !== 0) {
-          track.offsetMs = 0;
-          renderStudioViews();
-          saveCurrentSession();
+        if (track) {
+          const current = track.offsetMs || 0;
+          const val = prompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
+          if (val !== null) {
+            const parsed = parseInt(val, 10);
+            if (!isNaN(parsed)) {
+              track.offsetMs = Math.max(-5000, Math.min(5000, parsed));
+              updateTrackOffsetInPlace(track);
+              saveCurrentSession();
+            }
+          }
         }
       };
     });
@@ -2073,7 +2137,7 @@
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           track.offsetMs = Math.max(-5000, Math.min(5000, (track.offsetMs || 0) + delta));
-          renderStudioViews();
+          updateTrackOffsetInPlace(track);
           saveCurrentSession();
         }
       };
@@ -2757,10 +2821,18 @@
 
     if (relTimelineSec >= 0) {
       const targetMediaTime = trimStartSec + relTimelineSec;
-      try {
-        track.videoElement.currentTime = targetMediaTime;
-      } catch (e) {}
-      track.videoElement.play().catch(e => console.warn('Play error:', e));
+      const doSeekAndPlay = () => {
+        try {
+          track.videoElement.currentTime = targetMediaTime;
+        } catch (e) {}
+        track.videoElement.play().catch(e => console.warn('Play error:', e));
+      };
+      if (track.videoElement.readyState >= 1) {
+        doSeekAndPlay();
+      } else {
+        track.videoElement.addEventListener('loadedmetadata', doSeekAndPlay, { once: true });
+        try { track.videoElement.load(); } catch (_) {}
+      }
       scheduleStopAtTrimEnd(effDurSec - relTimelineSec);
     } else {
       // Atraso positivo (offsetMs > 0): aguarda antes de iniciar o elemento de mídia em trimStartSec
@@ -4424,6 +4496,369 @@
     }
   }
 
+  // =========================================================================
+  // CALIBRAÇÃO ACÚSTICA AUTOMÁTICA DE LATÊNCIA (3 PINGS LOOPBACK)
+  // =========================================================================
+  let calibContext = {
+    isRunning: false,
+    stream: null,
+    audioNodes: []
+  };
+
+  function openLatencyCalibrationModal() {
+    closeStudioMenus();
+    if (!dom.latencyCalibrationModal) return;
+
+    if (dom.calibStatusText) {
+      dom.calibStatusText.textContent = 'Pronto para iniciar a calibração acústica';
+    }
+    if (dom.calibResultCard) {
+      dom.calibResultCard.style.display = 'none';
+    }
+    if (dom.calibVuFill) {
+      dom.calibVuFill.style.width = '0%';
+    }
+    if (dom.btnCalibStart) {
+      dom.btnCalibStart.disabled = false;
+      dom.btnCalibStart.innerHTML = '<span>🎯</span> Iniciar Calibração (3 Pings)';
+    }
+
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById(`calibPingDot${i}`);
+      if (dot) dot.classList.remove('pinging', 'success');
+    }
+
+    // Identifica se há uma faixa gravada ativa para sugerir sincronizar
+    const targetTrack = state.tracks.find(t => t.id === state.selectedTrackId && (t.mediaUrl || t.mediaBlob))
+      || state.tracks.find(t => !!(t.mediaUrl || t.mediaBlob));
+
+    if (targetTrack && dom.calibApplyTrackWrap) {
+      dom.calibApplyTrackWrap.style.display = 'block';
+      if (dom.calibTrackName) dom.calibTrackName.textContent = targetTrack.name;
+      if (dom.calibApplyToCurrentTrack) dom.calibApplyToCurrentTrack.checked = true;
+    } else if (dom.calibApplyTrackWrap) {
+      dom.calibApplyTrackWrap.style.display = 'none';
+    }
+
+    dom.latencyCalibrationModal.classList.add('active');
+  }
+
+  function closeLatencyCalibrationModal() {
+    if (calibContext.isRunning) {
+      calibContext.isRunning = false;
+      if (calibContext.stream) {
+        calibContext.stream.getTracks().forEach(t => t.stop());
+        calibContext.stream = null;
+      }
+      if (calibContext.audioNodes) {
+        calibContext.audioNodes.forEach(n => {
+          try { n.disconnect(); } catch (_) {}
+        });
+        calibContext.audioNodes = [];
+      }
+    }
+    if (dom.latencyCalibrationModal) {
+      dom.latencyCalibrationModal.classList.remove('active');
+    }
+  }
+
+  async function runAcousticLatencyCalibration() {
+    if (calibContext.isRunning) return;
+    calibContext.isRunning = true;
+
+    // Pausa playback se estiver tocando
+    if (state.isPlaying) stopStudioPlayback();
+
+    if (dom.btnCalibStart) {
+      dom.btnCalibStart.disabled = true;
+      dom.btnCalibStart.innerHTML = '<span>⏳</span> Calibrando... Fique em silêncio';
+    }
+    if (dom.calibResultCard) dom.calibResultCard.style.display = 'none';
+    if (dom.calibStatusText) dom.calibStatusText.textContent = 'Iniciando escuta acústica...';
+
+    for (let i = 1; i <= 3; i++) {
+      const dot = document.getElementById(`calibPingDot${i}`);
+      if (dot) dot.classList.remove('pinging', 'success');
+    }
+
+    let stream = null;
+    let micSource = null;
+    let bandpass = null;
+    let processor = null;
+    let silentGain = null;
+
+    try {
+      const ctx = getAudioContext();
+      if (ctx.state === 'suspended') await ctx.resume();
+
+      // 1. Obtém stream do microfone sem filtros destrutivos de eco/ruído
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: state.selectedAudioDeviceId ? { exact: state.selectedAudioDeviceId } : undefined,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1
+        }
+      });
+      calibContext.stream = stream;
+
+      // 2. Grafo Web Audio: Filtro passa-faixa sintonizado no tom do ping (2400 Hz)
+      micSource = ctx.createMediaStreamSource(stream);
+      bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.value = 2400; // 2.4 kHz
+      bandpass.Q.value = 4.0;
+
+      silentGain = ctx.createGain();
+      silentGain.gain.value = 0;
+
+      const bufferSize = 1024;
+      processor = ctx.createScriptProcessor(bufferSize, 1, 1);
+      calibContext.audioNodes = [micSource, bandpass, processor, silentGain];
+
+      const capturedChunks = [];
+      let totalSamplesCount = 0;
+      let firstChunkAudioTime = null;
+
+      processor.onaudioprocess = (e) => {
+        if (!calibContext.isRunning) return;
+        const input = e.inputBuffer.getChannelData(0);
+        const copy = new Float32Array(input.length);
+        copy.set(input);
+
+        if (firstChunkAudioTime === null) {
+          firstChunkAudioTime = ctx.currentTime;
+        }
+
+        capturedChunks.push({
+          startSample: totalSamplesCount,
+          data: copy
+        });
+        totalSamplesCount += input.length;
+
+        // Medidor VU visual
+        let peak = 0;
+        for (let i = 0; i < input.length; i++) {
+          const abs = Math.abs(input[i]);
+          if (abs > peak) peak = abs;
+        }
+        const pct = Math.min(100, Math.round(peak * 300));
+        if (dom.calibVuFill) dom.calibVuFill.style.width = pct + '%';
+      };
+
+      micSource.connect(bandpass);
+      bandpass.connect(processor);
+      processor.connect(silentGain);
+      silentGain.connect(ctx.destination);
+
+      // Pequena pausa para estabilização de buffers do driver de áudio (250ms)
+      await new Promise(r => setTimeout(r, 250));
+      if (!calibContext.isRunning) return;
+
+      const sampleRate = ctx.sampleRate || 48000;
+
+      // 3. Função de emissão de ping sintético curto e penetrante (2400 Hz)
+      function playCalibrationBeep(targetAudioTime) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(2400, targetAudioTime);
+
+        gain.gain.setValueAtTime(0.0001, targetAudioTime);
+        gain.gain.linearRampToValueAtTime(0.85, targetAudioTime + 0.002);
+        gain.gain.setValueAtTime(0.85, targetAudioTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, targetAudioTime + 0.020);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(targetAudioTime);
+        osc.stop(targetAudioTime + 0.025);
+      }
+
+      // 4. Agenda os 3 pings com espaçamento de 450ms
+      const baseAudioTime = ctx.currentTime + 0.15;
+      const pingInterval = 0.45;
+      const scheduledAudioTimes = [
+        baseAudioTime,
+        baseAudioTime + pingInterval,
+        baseAudioTime + pingInterval * 2
+      ];
+
+      scheduledAudioTimes.forEach((t, idx) => {
+        playCalibrationBeep(t);
+        const delayMs = Math.max(0, (t - ctx.currentTime) * 1000);
+        setTimeout(() => {
+          if (!calibContext.isRunning) return;
+          const dot = document.getElementById(`calibPingDot${idx + 1}`);
+          if (dot) dot.classList.add('pinging');
+          if (dom.calibStatusText) {
+            dom.calibStatusText.textContent = `Tocando Ping ${idx + 1} de 3... Escutando retorno...`;
+          }
+        }, delayMs);
+      });
+
+      // Aguarda os 3 pings serem emitidos e captados (+ 400ms após o último)
+      const totalWaitMs = Math.round((scheduledAudioTimes[2] + 0.45 - ctx.currentTime) * 1000);
+      await new Promise(r => setTimeout(r, Math.max(800, totalWaitMs)));
+      if (!calibContext.isRunning) return;
+
+      // 5. Finaliza a captação
+      processor.disconnect();
+      bandpass.disconnect();
+      micSource.disconnect();
+      silentGain.disconnect();
+      stream.getTracks().forEach(t => t.stop());
+      calibContext.stream = null;
+      calibContext.audioNodes = [];
+
+      // 6. Constrói o buffer linear contínuo
+      const fullBuffer = new Float32Array(totalSamplesCount);
+      capturedChunks.forEach(chunk => {
+        fullBuffer.set(chunk.data, chunk.startSample);
+      });
+
+      // Mede o ruído de fundo médio antes do 1º ping
+      const baselineEndSample = Math.min(fullBuffer.length, Math.floor(sampleRate * 0.12));
+      let baselineSum = 0;
+      for (let s = 0; s < baselineEndSample; s++) {
+        baselineSum += Math.abs(fullBuffer[s]);
+      }
+      const baselineNoise = baselineEndSample > 0 ? (baselineSum / baselineEndSample) : 0.005;
+      const detectionThreshold = Math.max(0.035, baselineNoise * 2.8);
+
+      // 7. Detecta a chegada de cada um dos 3 pings
+      const detectedLatenciesMs = [];
+
+      scheduledAudioTimes.forEach((pingAudioTime, idx) => {
+        // Converte o tempo do ping para índice aproximado de amostra
+        const pingSampleOffset = Math.round((pingAudioTime - firstChunkAudioTime) * sampleRate);
+        const windowStartSample = pingSampleOffset + Math.round(0.015 * sampleRate); // Pula 15ms de vazamento inicial
+        const windowEndSample = Math.min(fullBuffer.length, pingSampleOffset + Math.round(0.550 * sampleRate)); // Janela de até 550ms
+
+        let maxVal = 0;
+        let maxSampleIdx = -1;
+
+        for (let s = windowStartSample; s < windowEndSample; s++) {
+          const abs = Math.abs(fullBuffer[s]);
+          if (abs > maxVal) {
+            maxVal = abs;
+            maxSampleIdx = s;
+          }
+        }
+
+        const dot = document.getElementById(`calibPingDot${idx + 1}`);
+        if (maxVal >= detectionThreshold && maxSampleIdx > 0) {
+          const detectedAudioTime = firstChunkAudioTime + (maxSampleIdx / sampleRate);
+          const latencyMs = (detectedAudioTime - pingAudioTime) * 1000;
+          if (latencyMs >= 15 && latencyMs <= 500) {
+            detectedLatenciesMs.push(latencyMs);
+            if (dot) {
+              dot.classList.remove('pinging');
+              dot.classList.add('success');
+            }
+          }
+        }
+      });
+
+      // 8. Avalia o resultado
+      if (detectedLatenciesMs.length >= 2) {
+        // Ordena para pegar a mediana matemática
+        detectedLatenciesMs.sort((a, b) => a - b);
+        const medianMs = detectedLatenciesMs[Math.floor(detectedLatenciesMs.length / 2)];
+        const finalLatencyMs = Math.round(medianMs);
+
+        // Atualiza estado e storage
+        state.latencyCompensationMs = finalLatencyMs;
+        localStorage.setItem('samba_latency_compensation', finalLatencyMs);
+
+        // Atualiza os dropdowns de compensação na UI
+        const updateSelectOptions = (sel) => {
+          if (!sel) return;
+          let opt = sel.querySelector(`option[value="${finalLatencyMs}"]`);
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = String(finalLatencyMs);
+            opt.textContent = `🎯 Calibrado pelo Teste (${finalLatencyMs}ms)`;
+            sel.appendChild(opt);
+          }
+          sel.value = String(finalLatencyMs);
+        };
+        updateSelectOptions(dom.studioLatencyCompensation);
+        updateSelectOptions(dom.recLatencyCompensation);
+
+        // Aplica na faixa atual se solicitado
+        const targetTrack = state.tracks.find(t => t.id === state.selectedTrackId && (t.mediaUrl || t.mediaBlob))
+          || state.tracks.find(t => !!(t.mediaUrl || t.mediaBlob));
+
+        let appliedTrackMsg = '';
+        if (targetTrack && dom.calibApplyToCurrentTrack && dom.calibApplyToCurrentTrack.checked) {
+          targetTrack.offsetMs = -finalLatencyMs;
+          updateTrackOffsetInPlace(targetTrack);
+          saveCurrentSession();
+          appliedTrackMsg = ` e sincronizado em "${targetTrack.name}" (-${finalLatencyMs}ms)`;
+        }
+
+        if (dom.calibStatusText) {
+          dom.calibStatusText.textContent = '🎉 Calibração concluída com sucesso!';
+        }
+        if (dom.calibResultValue) {
+          dom.calibResultValue.textContent = `${finalLatencyMs}ms`;
+        }
+        if (dom.calibResultDesc) {
+          dom.calibResultDesc.textContent = `Latência exata do seu computador cravada${appliedTrackMsg}! O Samba agora compensará este atraso automaticamente.`;
+        }
+        if (dom.calibResultCard) {
+          dom.calibResultCard.style.display = 'flex';
+        }
+        if (dom.btnCalibStart) {
+          dom.btnCalibStart.disabled = false;
+          dom.btnCalibStart.innerHTML = '<span>↺</span> Repetir Calibração';
+        }
+
+        if (window.appToast) {
+          window.appToast(`Latência calibrada com sucesso: ${finalLatencyMs}ms!`, 'success');
+        }
+      } else {
+        // Não detectou pings suficientes
+        if (dom.calibStatusText) {
+          dom.calibStatusText.innerHTML = `<span style="color: #EF4444;">⚠️ Microfone não captou o som dos bips.</span><br><span style="font-size: 11px; color: #cbd5e1; font-weight: normal;">Aumente o volume dos alto-falantes e certifique-se de que o microfone selecionado está ativo.</span>`;
+        }
+        if (dom.btnCalibStart) {
+          dom.btnCalibStart.disabled = false;
+          dom.btnCalibStart.innerHTML = '<span>🎯</span> Tentar Novamente';
+        }
+      }
+    } catch (err) {
+      console.warn('Erro durante a calibração de latência:', err);
+      if (dom.calibStatusText) {
+        dom.calibStatusText.innerHTML = `<span style="color: #EF4444;">Erro ao acessar microfone: ${escapeHtml(err.message || err)}</span>`;
+      }
+      if (dom.btnCalibStart) {
+        dom.btnCalibStart.disabled = false;
+        dom.btnCalibStart.innerHTML = '<span>🎯</span> Tentar Novamente';
+      }
+    } finally {
+      calibContext.isRunning = false;
+      if (stream) {
+        try { stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+      }
+    }
+  }
+
+  function bindLatencyCalibrationEvents() {
+    if (dom.btnCalibTriggerStudio) dom.btnCalibTriggerStudio.onclick = openLatencyCalibrationModal;
+    if (dom.btnCalibTriggerRec) dom.btnCalibTriggerRec.onclick = openLatencyCalibrationModal;
+    if (dom.btnCalibClose) dom.btnCalibClose.onclick = closeLatencyCalibrationModal;
+    if (dom.btnCalibCancel) dom.btnCalibCancel.onclick = closeLatencyCalibrationModal;
+    if (dom.btnCalibStart) dom.btnCalibStart.onclick = runAcousticLatencyCalibration;
+    if (dom.latencyCalibrationModal) {
+      dom.latencyCalibrationModal.onclick = (e) => {
+        if (e.target === dom.latencyCalibrationModal) closeLatencyCalibrationModal();
+      };
+    }
+  }
+
   // Dispara Gravação na Faixa Armada ou Auto-arma a selecionada (Feature 15)
   function triggerMasterRecord() {
     let targetTrack = state.tracks.find(t => t.armed);
@@ -4564,6 +4999,9 @@
     // Eventos do Modal de Corte de Faixa
     bindCutModalEvents();
 
+    // Eventos da Calibração Automática de Latência
+    bindLatencyCalibrationEvents();
+
     // Fechamento de dropdowns ao clicar fora, rolar ou redimensionar
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.tcp-kebab-wrap')) {
@@ -4580,6 +5018,11 @@
       if (e.code === 'Escape' || e.key === 'Escape') {
         // Fecha qualquer menu kebab ou popover aberto (inclusive se o foco estiver em <select> do popover)
         closeStudioMenus();
+        if (dom.latencyCalibrationModal && dom.latencyCalibrationModal.classList.contains('active')) {
+          e.preventDefault();
+          closeLatencyCalibrationModal();
+          return;
+        }
         if (dom.trackCutModal && dom.trackCutModal.classList.contains('active')) {
           e.preventDefault();
           closeTrackCutModal();
@@ -5282,7 +5725,10 @@
     removeTrack,
     selectTrack,
     snapTimeToGrid,
-    closeStudioMenus
+    closeStudioMenus,
+    openLatencyCalibrationModal,
+    closeLatencyCalibrationModal,
+    updateTrackOffsetInPlace
   };
 
 })();
