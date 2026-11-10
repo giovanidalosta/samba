@@ -2643,6 +2643,16 @@
         name: 'Samba Reto Naumteria',
         measures: 4,
         bpm: 130,
+        volumes: {
+          surdo1: 1.0,
+          surdo2: 0.92,
+          surdo3: 0.88,
+          caixa: 1.05,
+          repique: 0.92,
+          tamborim: 0.98,
+          agogo: 0.80,
+          ganza: 0.68
+        },
         tracks: {
           surdo1: [
             'abafado', null, null, null, 'aberto', null, null, null,
@@ -2721,49 +2731,49 @@
           'surdo1:abafado': { url: 'assets/audio/ls_30.mp3', vol: 0.85, rate: 1.0, chokeGroup: 'surdo1' },
 
           // Surdo 2ª (ms = mid surdo): Aberto (_58), Mão na Pele (_68), Abafado (_30)
-          'surdo2:aberto': { url: 'assets/audio/ms_58.mp3', vol: 0.95, rate: 1.0, chokeGroup: 'surdo2' },
-          'surdo2:mao': { url: 'assets/audio/ms_68.mp3', vol: 0.80, rate: 1.0, chokeGroup: 'surdo2' },
-          'surdo2:abafado': { url: 'assets/audio/ms_30.mp3', vol: 0.85, rate: 1.0, chokeGroup: 'surdo2' },
+          'surdo2:aberto': { url: 'assets/audio/ms_58.mp3', vol: 0.78, rate: 1.0, chokeGroup: 'surdo2' },
+          'surdo2:mao': { url: 'assets/audio/ms_68.mp3', vol: 0.68, rate: 1.0, chokeGroup: 'surdo2' },
+          'surdo2:abafado': { url: 'assets/audio/ms_30.mp3', vol: 0.74, rate: 1.0, chokeGroup: 'surdo2' },
 
           // Surdo 3ª (hs = high surdo): Aberto (_58), Abafado (_30), Corte (_73), Aro (_74), Rulo (_72)
-          'surdo3:aberto': { url: 'assets/audio/hs_58.mp3', vol: 0.92, rate: 1.0, chokeGroup: 'surdo3' },
-          'surdo3:abafado': { url: 'assets/audio/hs_30.mp3', vol: 0.85, rate: 1.0, chokeGroup: 'surdo3' },
-          'surdo3:corte': { url: 'assets/audio/hs_73.mp3', vol: 0.92, rate: 1.0, chokeGroup: 'surdo3' },
-          'surdo3:aro': { url: 'assets/audio/hs_74.mp3', vol: 0.90, rate: 1.0, chokeGroup: 'surdo3' },
-          'surdo3:rulo': { url: 'assets/audio/hs_72.mp3', vol: 0.90, rate: 1.0, chokeGroup: 'surdo3' },
+          'surdo3:aberto': { url: 'assets/audio/hs_58.mp3', vol: 0.78, rate: 1.0, chokeGroup: 'surdo3' },
+          'surdo3:abafado': { url: 'assets/audio/hs_30.mp3', vol: 0.70, rate: 1.0, chokeGroup: 'surdo3' },
+          'surdo3:corte': { url: 'assets/audio/hs_73.mp3', vol: 0.78, rate: 1.0, chokeGroup: 'surdo3' },
+          'surdo3:aro': { url: 'assets/audio/hs_74.mp3', vol: 0.78, rate: 1.0, chokeGroup: 'surdo3' },
+          'surdo3:rulo': { url: 'assets/audio/hs_72.mp3', vol: 0.78, rate: 1.0, chokeGroup: 'surdo3' },
 
           // Caixa de Guerra: Forte (_58), Fraco (_2e), Rimshot (_72), Rufado/Flam (_66)
-          'caixa:forte': { url: 'assets/audio/sn_58.mp3', vol: 0.88, rate: 1.0, chokeGroup: 'caixa' },
-          'caixa:fraco': { url: 'assets/audio/sn_2e.mp3', vol: 0.55, rate: 1.0, chokeGroup: 'caixa' },
-          'caixa:ringshot': { url: 'assets/audio/sn_72.mp3', vol: 0.95, rate: 1.0, chokeGroup: 'caixa' },
-          'caixa:rufado': { url: 'assets/audio/sn_66.mp3', vol: 0.88, rate: 1.0, chokeGroup: 'caixa' },
+          'caixa:forte': { url: 'assets/audio/sn_58.mp3', vol: 1.05, rate: 1.0, chokeGroup: 'caixa' },
+          'caixa:fraco': { url: 'assets/audio/sn_2e.mp3', vol: 0.68, rate: 1.0, chokeGroup: 'caixa' },
+          'caixa:ringshot': { url: 'assets/audio/sn_72.mp3', vol: 1.15, rate: 1.0, chokeGroup: 'caixa' },
+          'caixa:rufado': { url: 'assets/audio/sn_66.mp3', vol: 0.95, rate: 1.0, chokeGroup: 'caixa' },
 
           // Repique / Repinique: Kit Oficial Gabriel Policarpo + Rufada (RF)
-          'repique:meio': { url: 'assets/audio/re_policarpo_meio.wav', vol: 0.85, rate: 1.0, chokeGroup: 'repique' },
+          'repique:meio': { url: 'assets/audio/re_policarpo_meio.wav', vol: 0.82, rate: 1.0, chokeGroup: 'repique' },
           'repique:intermedio': { url: 'assets/audio/re_policarpo_intermedio.wav', vol: 0.52, rate: 1.0, chokeGroup: 'repique' },
-          'repique:ringshot': { url: 'assets/audio/re_policarpo_ringshot.wav', vol: 0.95, rate: 1.0, chokeGroup: 'repique' },
-          'repique:open': { url: 'assets/audio/re_policarpo_open.wav', vol: 0.85, rate: 1.0, chokeGroup: 'repique' },
-          'repique:rufado': { url: 'assets/audio/sn_66.mp3', vol: 0.88, rate: 1.0, chokeGroup: 'repique' },
+          'repique:ringshot': { url: 'assets/audio/re_policarpo_ringshot.wav', vol: 0.88, rate: 1.0, chokeGroup: 'repique' },
+          'repique:open': { url: 'assets/audio/re_policarpo_open.wav', vol: 0.82, rate: 1.0, chokeGroup: 'repique' },
+          'repique:rufado': { url: 'assets/audio/sn_66.mp3', vol: 0.95, rate: 1.0, chokeGroup: 'repique' },
 
           // Tamborim: Kit Thalita Santos como padrão oficial
-          'tamborim:forte': { url: 'assets/audio/ta_thalita_grave_forte.wav', vol: 0.82, rate: 1.0, chokeGroup: 'tamborim' },
-          'tamborim:medio': { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.48, rate: 1.0, chokeGroup: 'tamborim' },
-          'tamborim:intermedio': { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.48, rate: 1.0, chokeGroup: 'tamborim' },
-          'tamborim:fraco': { url: 'assets/audio/ta_thalita_grave_fraco.wav', vol: 0.32, rate: 1.0, chokeGroup: 'tamborim' },
-          'tamborim:aro': { url: 'assets/audio/ta_72.mp3', vol: 0.80, rate: 1.0, chokeGroup: 'tamborim' },
-          'tamborim:agudo': { url: 'assets/audio/ta_thalita_agudo.wav', vol: 0.70, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:forte': { url: 'assets/audio/ta_thalita_grave_forte.wav', vol: 0.88, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:medio': { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.52, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:intermedio': { url: 'assets/audio/ta_thalita_grave_medio.wav', vol: 0.52, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:fraco': { url: 'assets/audio/ta_thalita_grave_fraco.wav', vol: 0.35, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:aro': { url: 'assets/audio/ta_72.mp3', vol: 0.78, rate: 1.0, chokeGroup: 'tamborim' },
+          'tamborim:agudo': { url: 'assets/audio/ta_thalita_agudo.wav', vol: 0.72, rate: 1.0, chokeGroup: 'tamborim' },
 
           // Agogô: 4 Bocas (Grave ao Agudo) com volume equilibrado e choke monofônico por campana
-          'agogo:boca1': { url: 'assets/audio/ag_6f.mp3', vol: 0.72, rate: 0.89, chokeGroup: 'agogo' },
-          'agogo:boca2': { url: 'assets/audio/ag_6f.mp3', vol: 0.72, rate: 1.05, chokeGroup: 'agogo' },
-          'agogo:boca3': { url: 'assets/audio/ag_61.mp3', vol: 0.72, rate: 0.95, chokeGroup: 'agogo' },
-          'agogo:boca4': { url: 'assets/audio/ag_61.mp3', vol: 0.72, rate: 1.18, chokeGroup: 'agogo' },
+          'agogo:boca1': { url: 'assets/audio/ag_6f.mp3', vol: 0.65, rate: 0.89, chokeGroup: 'agogo' },
+          'agogo:boca2': { url: 'assets/audio/ag_6f.mp3', vol: 0.65, rate: 1.05, chokeGroup: 'agogo' },
+          'agogo:boca3': { url: 'assets/audio/ag_61.mp3', vol: 0.65, rate: 0.95, chokeGroup: 'agogo' },
+          'agogo:boca4': { url: 'assets/audio/ag_61.mp3', vol: 0.65, rate: 1.18, chokeGroup: 'agogo' },
 
           // Ganzá / Chocalho: Forte e Fraco
-          'ganza:forte': { url: 'assets/audio/sh_58.mp3', vol: 0.75, rate: 1.0, chokeGroup: 'ganza' },
-          'ganza:fraco': { url: 'assets/audio/sh_2e.mp3', vol: 0.48, rate: 1.0, chokeGroup: 'ganza' },
-          'ganza:frente': { url: 'assets/audio/sh_58.mp3', vol: 0.75, rate: 1.0, chokeGroup: 'ganza' },
-          'ganza:tras': { url: 'assets/audio/sh_2e.mp3', vol: 0.48, rate: 1.0, chokeGroup: 'ganza' }
+          'ganza:forte': { url: 'assets/audio/sh_58.mp3', vol: 0.62, rate: 1.0, chokeGroup: 'ganza' },
+          'ganza:fraco': { url: 'assets/audio/sh_2e.mp3', vol: 0.40, rate: 1.0, chokeGroup: 'ganza' },
+          'ganza:frente': { url: 'assets/audio/sh_58.mp3', vol: 0.62, rate: 1.0, chokeGroup: 'ganza' },
+          'ganza:tras': { url: 'assets/audio/sh_2e.mp3', vol: 0.40, rate: 1.0, chokeGroup: 'ganza' }
         };
 
         // Kits únicos oficiais fixos: Tamborim (Thalita Santos) e Repique (Gabriel Policarpo)
@@ -2800,10 +2810,10 @@
         if (!this.ctx || this.masterGain) return;
         try {
           this.masterGain = this.ctx.createGain();
-          this.masterGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
+          this.masterGain.gain.setValueAtTime(0.68, this.ctx.currentTime);
 
           this.masterLimiter = this.ctx.createDynamicsCompressor();
-          this.masterLimiter.threshold.setValueAtTime(-1.0, this.ctx.currentTime);
+          this.masterLimiter.threshold.setValueAtTime(-1.5, this.ctx.currentTime);
           this.masterLimiter.knee.setValueAtTime(3.0, this.ctx.currentTime);
           this.masterLimiter.ratio.setValueAtTime(16.0, this.ctx.currentTime);
           this.masterLimiter.attack.setValueAtTime(0.002, this.ctx.currentTime);
@@ -2815,7 +2825,27 @@
       }
 
       getMasterDestination(targetCtx = null) {
-        if (targetCtx && targetCtx !== this.ctx) return targetCtx.destination;
+        if (targetCtx && targetCtx !== this.ctx) {
+          if (targetCtx._masterBus) return targetCtx._masterBus;
+          try {
+            const mg = targetCtx.createGain();
+            mg.gain.setValueAtTime(0.68, 0);
+
+            const lim = targetCtx.createDynamicsCompressor();
+            lim.threshold.setValueAtTime(-1.5, 0);
+            lim.knee.setValueAtTime(3.0, 0);
+            lim.ratio.setValueAtTime(16.0, 0);
+            lim.attack.setValueAtTime(0.002, 0);
+            lim.release.setValueAtTime(0.08, 0);
+
+            mg.connect(lim);
+            lim.connect(targetCtx.destination);
+            targetCtx._masterBus = mg;
+            return mg;
+          } catch (e) {
+            return targetCtx.destination;
+          }
+        }
         if (!this.masterGain) this.initMasterBus();
         return this.masterGain || (this.ctx ? this.ctx.destination : null);
       }
@@ -3541,6 +3571,26 @@
         }
 
         const renderedBuffer = await offlineCtx.startRendering();
+
+        // Limiter/Ceiling de segurança (-0.35 dBFS / 0.96) para prevenir inter-sample clipping no arquivo de áudio
+        let maxPeak = 0;
+        for (let c = 0; c < renderedBuffer.numberOfChannels; c++) {
+          const chData = renderedBuffer.getChannelData(c);
+          for (let i = 0; i < chData.length; i++) {
+            const abs = Math.abs(chData[i]);
+            if (abs > maxPeak) maxPeak = abs;
+          }
+        }
+        if (maxPeak > 0.96) {
+          const ceilingGain = 0.96 / maxPeak;
+          for (let c = 0; c < renderedBuffer.numberOfChannels; c++) {
+            const chData = renderedBuffer.getChannelData(c);
+            for (let i = 0; i < chData.length; i++) {
+              chData[i] *= ceilingGain;
+            }
+          }
+        }
+
         const wavBlob = this.encodeAudioBufferToWav(renderedBuffer);
         return { wavBlob, durationSec: loopDurationSec };
       }
@@ -4406,6 +4456,9 @@
         state.measures = preset.measures;
         document.getElementById('measureCountDisplay').textContent = `${state.measures} Compassos`;
       }
+      if (preset.volumes && typeof preset.volumes === 'object') {
+        state.volumes = { ...state.volumes, ...preset.volumes };
+      }
       state.beatTuplets = preset.beatTuplets ? { ...preset.beatTuplets } : {};
 
       const totalSteps = getTotalSteps();
@@ -4857,9 +4910,10 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         const volSlider = document.createElement('input');
         volSlider.type = 'range';
         volSlider.className = 'inst-vol-slider';
+        volSlider.dataset.inst = inst.id;
         volSlider.min = '0';
         volSlider.max = '150';
-        volSlider.step = '5';
+        volSlider.step = '1';
         volSlider.value = Math.round((state.volumes[inst.id] ?? 1.0) * 100);
         volSlider.oninput = (e) => {
           e.stopPropagation();
