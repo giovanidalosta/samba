@@ -42,8 +42,8 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 | 5 | Rótulos: "Comp.", "Faixa de Áudio", badge 0ms | V6, V9 | [EXECUTADO] `f560626` |
 | 6 | Servidor não expõe dotfiles | B1 | [EXECUTADO] `8639ee7`, allowlist em `fc67d4b` |
 | 7 | Higiene: `.gitignore`, `PROJECT.md` | FE5, FE6 | [EXECUTADO] `8639ee7` |
-| 8 | Breques órfãos "Ideia N" | U3 | [AGUARDA APROVAÇÃO] |
-| 9 | Confirmar antes de substituir um take | U4 | [AGUARDA APROVAÇÃO] |
+| 8 | Breques órfãos "Ideia N" | U3 | [EXECUTADO] `58ac0a5` (descarta breque vazio do atalho ao voltar para a Home) |
+| 9 | Confirmar antes de substituir um take | U4 | [EXECUTADO] Gravar arma faixa vazia; substituir pergunta, com "Salvar como nova faixa"; gancho `BeatboxStudio.__test` só para testes |
 | 10 | Rotas por hash + botão Voltar | U5 | [AGUARDA APROVAÇÃO] |
 | 11 | Onboarding do Pad + legenda de articulações | U6 | [AGUARDA APROVAÇÃO] |
 | 12 | Mobile Pad compacto | U7, V8 | [AGUARDA APROVAÇÃO] |

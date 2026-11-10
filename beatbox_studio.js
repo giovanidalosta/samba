@@ -2986,9 +2986,21 @@
     }
   }
 
-  function keepCurrentTake() {
+  async function keepCurrentTake() {
     if (!recordingContext.lastRecordedBlob) return;
-    const track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    let track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    if (track && (track.mediaUrl || track.mediaBlob)) {
+      // Faixa já gravada: pergunta antes de sobrescrever. "Salvar como nova faixa" preserva o take antigo.
+      const replace = typeof window.appConfirm === 'function'
+        ? await window.appConfirm(`A faixa "${track.name}" já tem uma gravação. Substituir?`, 'Substituir gravação', { isDanger: true, confirmText: 'Substituir', cancelText: 'Salvar como nova faixa' })
+        : true;
+      if (!replace) {
+        const newTrack = addTrack();
+        if (!newTrack) return;
+        recordingContext.activeTrackId = newTrack.id;
+        track = newTrack;
+      }
+    }
     if (track) {
       if (dom.recTakeNameInput && dom.recTakeNameInput.value.trim()) {
         track.name = dom.recTakeNameInput.value.trim();
@@ -4876,7 +4888,8 @@
   function triggerMasterRecord() {
     let targetTrack = state.tracks.find(t => t.armed);
     if (!targetTrack && state.selectedTrackId) {
-      targetTrack = state.tracks.find(t => t.id === state.selectedTrackId);
+      // Só auto-arma a faixa selecionada se ela estiver vazia: evita gravar por cima de um take existente.
+      targetTrack = state.tracks.find(t => t.id === state.selectedTrackId && !t.mediaUrl && !t.mediaBlob);
       if (targetTrack) {
         targetTrack.armed = true;
         const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
@@ -4887,7 +4900,9 @@
       }
     }
     if (!targetTrack && state.tracks.length > 0) {
-      targetTrack = state.tracks[0];
+      targetTrack = state.tracks.find(t => !t.mediaUrl && !t.mediaBlob) || addTrack();
+    }
+    if (targetTrack && !targetTrack.armed) {
       targetTrack.armed = true;
       const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
       if (armBtn) {
@@ -5742,7 +5757,9 @@
     closeStudioMenus,
     openLatencyCalibrationModal,
     closeLatencyCalibrationModal,
-    updateTrackOffsetInPlace
+    updateTrackOffsetInPlace,
+    // Gancho somente para testes automatizados.
+    __test: { recordingContext, keepCurrentTake, getTracks: () => state.tracks }
   };
 
 })();
