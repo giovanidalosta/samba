@@ -5211,15 +5211,29 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         const b64 = hash.substring(8);
         const jsonStr = decodeURIComponent(escape(atob(b64)));
         const data = JSON.parse(jsonStr);
-        if (!data || !data.g) return;
+        if (!data || !data.g || typeof data.g !== 'object' || Array.isArray(data.g)) return;
+        const gridIsValid = Object.values(data.g).every(row => row === null || Array.isArray(row));
+        if (!gridIsValid) return;
 
-        state.bpm = data.b || 120;
-        state.meter = data.m || '2/4';
-        state.subdivision = data.s || 'semicolcheia';
-        state.measures = data.c || 4;
-        if (data.vol) state.volumes = { ...state.volumes, ...data.vol };
+        // Salva o breque aberto e se desliga dele antes de aplicar o link,
+        // para que o conteúdo recebido nunca seja gravado por cima do trabalho do usuário.
+        if (typeof window.flushBrequeAutosave === 'function') window.flushBrequeAutosave();
+        state.activeBrequeId = null;
+        state.activeBrequeName = 'Breque compartilhado';
+        updateHeaderBrequeTitle();
+
+        const clampNum = (v, min, max, fallback) => {
+          const n = Number(v);
+          return Number.isFinite(n) && n > 0 ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
+        };
+        state.bpm = clampNum(data.b, 40, 240, 120);
+        state.meter = typeof data.m === 'string' ? data.m : '2/4';
+        state.subdivision = typeof data.s === 'string' ? data.s : 'semicolcheia';
+        state.measures = clampNum(data.c, 1, 32, 4);
+        if (data.vol && typeof data.vol === 'object') state.volumes = { ...state.volumes, ...data.vol };
         state.beatTuplets = data.t && typeof data.t === 'object' ? { ...data.t } : {};
         state.gridData = data.g;
+        history.replaceState(null, '', window.location.pathname + window.location.search);
 
         const slider = document.getElementById('bpmSlider');
         const disp = document.getElementById('bpmDisplay');
@@ -5957,6 +5971,31 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       }
     };
     window.saveActiveBrequeState = saveActiveBrequeState;
+
+    // Autosave do Pad: edições na grade são persistidas sem depender de troca de aba.
+    let brequeAutosaveTimer = null;
+    function flushBrequeAutosave() {
+      clearTimeout(brequeAutosaveTimer);
+      brequeAutosaveTimer = null;
+      if (currentActiveTab === 'tab-sequencer') saveActiveBrequeState('pad');
+    }
+    function scheduleBrequeAutosave() {
+      clearTimeout(brequeAutosaveTimer);
+      brequeAutosaveTimer = setTimeout(flushBrequeAutosave, 400);
+    }
+    window.flushBrequeAutosave = flushBrequeAutosave;
+    window.scheduleBrequeAutosave = scheduleBrequeAutosave;
+
+    const seqTabEl = document.getElementById('tab-sequencer');
+    if (seqTabEl) {
+      ['mouseup', 'touchend', 'pointerup', 'change', 'input', 'keyup'].forEach(evt => {
+        seqTabEl.addEventListener(evt, scheduleBrequeAutosave);
+      });
+    }
+    window.addEventListener('pagehide', flushBrequeAutosave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushBrequeAutosave();
+    });
 
     function createNewBrequeProject({ name, bpm = 120, measures = 4, initialMode = 'pad' }) {
       const cleanName = (name && name.trim()) || `Breque ${Object.keys(customBateriaPresets || {}).length + 1}`;
