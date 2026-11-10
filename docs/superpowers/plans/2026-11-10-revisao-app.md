@@ -35,13 +35,13 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 
 | Task | Assunto | IDs da spec | Status |
 |---|---|---|---|
-| 1 | Autosave do Pad | U1 | [EXECUTAR] |
-| 2 | Link compartilhado seguro | U2 | [EXECUTAR] |
-| 3 | Foco visível, movimento reduzido, nomes acessíveis | V1, V3, V5 | [EXECUTAR] |
-| 4 | Toast seguro contra HTML | FE2 | [EXECUTAR] |
-| 5 | Rótulos: "Comp.", "Faixa de Áudio", badge 0ms | V6, V9 | [EXECUTAR] |
-| 6 | Servidor não expõe dotfiles | B1 | [EXECUTAR] |
-| 7 | Higiene: `.gitignore`, `PROJECT.md` | FE5, FE6 | [EXECUTAR] |
+| 1 | Autosave do Pad | U1 | [EXECUTADO] `0e5825c` |
+| 2 | Link compartilhado seguro | U2 | [EXECUTADO] `0e5825c` |
+| 3 | Foco visível, movimento reduzido, nomes acessíveis | V1, V3, V5 | [EXECUTADO] `f560626` |
+| 4 | Toast seguro contra HTML | FE2 | [EXECUTADO] `f560626` |
+| 5 | Rótulos: "Comp.", "Faixa de Áudio", badge 0ms | V6, V9 | [EXECUTADO] `f560626` |
+| 6 | Servidor não expõe dotfiles | B1 | [EXECUTADO] `8639ee7` |
+| 7 | Higiene: `.gitignore`, `PROJECT.md` | FE5, FE6 | [EXECUTADO] `8639ee7` |
 | 8 | Breques órfãos "Ideia N" | U3 | [AGUARDA APROVAÇÃO] |
 | 9 | Confirmar antes de substituir um take | U4 | [AGUARDA APROVAÇÃO] |
 | 10 | Rotas por hash + botão Voltar | U5 | [AGUARDA APROVAÇÃO] |
@@ -71,74 +71,74 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 **Interfaces:**
 - Produces: `scheduleBrequeAutosave(): void` (debounce de 400 ms) e `flushBrequeAutosave(): void` (imediato), ambos em `window`.
 
-- [ ] **Step 1: Teste que falha.** `TR1.1`: cria o breque pelo fluxo real (botão "Montar no Pad" da Home), clica em `#tracksWrapper .step-cell` nº 4, dispara
+- [x] **Step 1: Teste que falha.** `TR1.1`: cria o breque pelo fluxo real (botão "Montar no Pad" da Home), clica em `#tracksWrapper .step-cell` nº 4, dispara
   `window.dispatchEvent(new Event('pagehide'))` e verifica que o breque ativo em `localStorage['naumteria_custom_bateria_presets_v1']`
   tem `gridData.surdo1[4]` não nulo. `TR1.2`: clica na célula nº 8, espera 700 ms sem `pagehide` e verifica que ela está salva.
-- [ ] **Step 2:** `node --test tests/review_persistence.test.js` → FAIL (gridData[4] null).
-- [ ] **Step 3: Implementar.** Listeners delegados `pointerup`, `change` e `input` em `#tab-sequencer` → `scheduleBrequeAutosave()`;
+- [x] **Step 2:** `node --test tests/review_persistence.test.js` → FAIL (gridData[4] null).
+- [x] **Step 3: Implementar.** Listeners delegados `pointerup`, `change` e `input` em `#tab-sequencer` → `scheduleBrequeAutosave()`;
   `pagehide` e `visibilitychange` (estado `hidden`) → `flushBrequeAutosave()`. O flush só salva se `currentActiveTab !== 'tab-home'`.
-- [ ] **Step 4:** teste PASS; `npm test` verde.
-- [ ] **Step 5:** commit `fix(pad): autosave do breque ao editar e ao fechar a página`.
+- [x] **Step 4:** teste PASS; `npm test` verde.
+- [x] **Step 5:** commit `fix(pad): autosave do breque ao editar e ao fechar a página`.
 
 ### Task 2: Link compartilhado seguro (U2)
 
 **Files:** Modify `index.html:5207` (`checkSharedBrequeUrl`); Test `tests/review_persistence.test.js`.
 
-- [ ] **Step 1: Testes.** `TR2.1`: com o breque custom aberto e 1 nota salva, aplica `location.hash = 'breque=' + b64({b:99,g:{caixa:[...]}})`,
+- [x] **Step 1: Testes.** `TR2.1`: com o breque custom aberto e 1 nota salva, aplica `location.hash = 'breque=' + b64({b:99,g:{caixa:[...]}})`,
   volta para a Home → o breque salvo continua com o `bpm` e o `gridData.surdo1` originais e **não** tem `bpm` 99.
   `TR2.2`: hash com base64 inválido → nenhuma exceção, e o título do cabeçalho não muda. `TR2.3`: `b: 9999` → `state.bpm` limitado a 240;
   `c: 0` → `measures` ≥ 1. `TR2.4`: após carregar, `location.hash === ''`.
-- [ ] **Step 2:** FAIL.
-- [ ] **Step 3: Implementar.** Ordem: validar o payload (`g` precisa ser objeto de arrays; `b` limitado a [40, 240]; `c` limitado a [1, 32]);
+- [x] **Step 2:** FAIL.
+- [x] **Step 3: Implementar.** Ordem: validar o payload (`g` precisa ser objeto de arrays; `b` limitado a [40, 240]; `c` limitado a [1, 32]);
   `flushBrequeAutosave()`; `state.activeBrequeId = null`; `state.activeBrequeName = 'Breque compartilhado'`; `updateHeaderBrequeTitle()`;
   aplicar; `history.replaceState(null, '', location.pathname + location.search)`.
-- [ ] **Step 4:** PASS + `npm test`.
-- [ ] **Step 5:** commit `fix(share): link compartilhado não sobrescreve o breque aberto e valida o payload`.
+- [x] **Step 4:** PASS + `npm test`.
+- [x] **Step 5:** commit `fix(share): link compartilhado não sobrescreve o breque aberto e valida o payload`.
 
 ### Task 3: Foco visível, movimento reduzido, nomes acessíveis (V1, V3, V5)
 
 **Files:** Modify `beatbox_studio.css` (final do arquivo), `index.html:1161` (alt) e o botão "+" do cabeçalho mobile; Test `tests/review_a11y.test.js`.
 
-- [ ] **Step 1: Testes.** `TR3.1`: `document.querySelector('#btnHeaderNewBreque')` recebe foco por teclado (Tab via CDP) →
+- [x] **Step 1: Testes.** `TR3.1`: `document.querySelector('#btnHeaderNewBreque')` recebe foco por teclado (Tab via CDP) →
   o `outlineStyle` calculado é diferente de `none`/`auto` e a `outlineColor` é a cor de destaque (`--accent` amarelo).
   `TR3.2`: `img.brand-logo` tem `alt === 'Naumteria Studio'`. `TR3.3`: todo `button` visível da Home tem nome acessível
   (`aria-label` ou texto) sem emojis isolados, ou seja, o nome casa com `/[A-Za-zÀ-ú]{3,}/`.
-- [ ] **Step 2:** FAIL.
-- [ ] **Step 3:** `:focus-visible { outline: 2px solid var(--accent-color…); outline-offset: 2px; }` usando o token de amarelo existente;
+- [x] **Step 2:** FAIL.
+- [x] **Step 3:** `:focus-visible { outline: 2px solid var(--accent-color…); outline-offset: 2px; }` usando o token de amarelo existente;
   bloco `@media (prefers-reduced-motion: reduce)` que zera `animation-duration`/`transition-duration`; corrigir o `alt`;
   `aria-label="Novo breque"` no botão "+".
-- [ ] **Step 4:** PASS + `npm test`.
-- [ ] **Step 5:** commit `fix(a11y): foco visível, movimento reduzido e nomes acessíveis`.
+- [x] **Step 4:** PASS + `npm test`.
+- [x] **Step 5:** commit `fix(a11y): foco visível, movimento reduzido e nomes acessíveis`.
 
 ### Task 4: Toast seguro (FE2)
 
 **Files:** Modify `index.html:2285` (`window.appToast`); Test `tests/review_a11y.test.js`.
 
-- [ ] **Step 1:** `TR4.1`: `appToast('<img src=x onerror="window.__xss=1">')` → nenhum `img` dentro do toast e `window.__xss` indefinido.
-- [ ] **Step 2:** FAIL. **Step 3:** montar os dois `<span>` com `textContent`. **Step 4:** PASS. **Step 5:** commit `fix(ui): toast trata a mensagem como texto`.
+- [x] **Step 1:** `TR4.1`: `appToast('<img src=x onerror="window.__xss=1">')` → nenhum `img` dentro do toast e `window.__xss` indefinido.
+- [x] **Step 2:** FAIL. **Step 3:** montar os dois `<span>` com `textContent`. **Step 4:** PASS. **Step 5:** commit `fix(ui): toast trata a mensagem como texto`.
 
 ### Task 5: Rótulos (V6, V9)
 
 **Files:** Modify `beatbox_studio.js:699, 1073, 1683, 1235, 990, 1599, 1655`, `beatbox_studio.css`; Test `tests/review_a11y.test.js`.
 
-- [ ] **Step 1:** `TR5.1`: com 1 faixa no Estúdio, a régua não contém `/\bBar\b/` e contém `Comp. 1`. `TR5.2`: o card do Mosaico não contém "Boca".
+- [x] **Step 1:** `TR5.1`: com 1 faixa no Estúdio, a régua não contém `/\bBar\b/` e contém `Comp. 1`. `TR5.2`: o card do Mosaico não contém "Boca".
   `TR5.3`: com `offsetMs === 0`, `.item-sync-badge` tem a classe `is-zero` e `display: none`; com `offsetMs = 20`, não tem `is-zero`.
   O texto do badge continua `+0ms`/`+20ms` (os testes M2.2 leem esse texto).
-- [ ] **Step 2:** FAIL. **Step 3:** trocar os textos; alternar `is-zero` nos 4 pontos que escrevem o badge; CSS `.item-sync-badge.is-zero{display:none}`.
-- [ ] **Step 4:** PASS + `npm test`. **Step 5:** commit `fix(studio): rótulos em português e badge de sync escondido com 0ms`.
+- [x] **Step 2:** FAIL. **Step 3:** trocar os textos; alternar `is-zero` nos 4 pontos que escrevem o badge; CSS `.item-sync-badge.is-zero{display:none}`.
+- [x] **Step 4:** PASS + `npm test`. **Step 5:** commit `fix(studio): rótulos em português e badge de sync escondido com 0ms`.
 
 ### Task 6: Servidor não expõe dotfiles (B1)
 
 **Files:** Modify `server.js`; Test `tests/review_server.test.js`.
 
-- [ ] **Step 1:** `TR6.1`: `GET /.git/config` → 404. `TR6.2`: `GET /index.html` → 200. `TR6.3`: `GET /assets/audio/sn_2e.mp3` → 200 com `Cache-Control` contendo `max-age`.
-- [ ] **Step 2:** FAIL. **Step 3:** responder 404 a qualquer segmento do caminho começado com `.`; para `/assets/audio|fonts/` usar `Cache-Control: public, max-age=604800`.
-- [ ] **Step 4:** PASS + `npm test`. **Step 5:** commit `fix(server): bloqueia dotfiles e cacheia assets estáticos`.
+- [x] **Step 1:** `TR6.1`: `GET /.git/config` → 404. `TR6.2`: `GET /index.html` → 200. `TR6.3`: `GET /assets/audio/sn_2e.mp3` → 200 com `Cache-Control` contendo `max-age`.
+- [x] **Step 2:** FAIL. **Step 3:** responder 404 a qualquer segmento do caminho começado com `.`; para `/assets/audio|fonts/` usar `Cache-Control: public, max-age=604800`.
+- [x] **Step 4:** PASS + `npm test`. **Step 5:** commit `fix(server): bloqueia dotfiles e cacheia assets estáticos`.
 
 ### Task 7: Higiene (FE5, FE6)
 
-- [ ] Adicionar `.playwright-mcp/` ao `.gitignore`; em `PROJECT.md`, marcar M1–M3 como DONE e acrescentar a linha "M5: Revisão 2026-11-10 → ver docs/superpowers/plans/2026-11-10-revisao-app.md".
-- [ ] Commit `chore: gitignore de artefatos e status do PROJECT.md`.
+- [x] Adicionar `.playwright-mcp/` ao `.gitignore`; em `PROJECT.md`, marcar M1–M3 como DONE e acrescentar a linha "M5: Revisão 2026-11-10 → ver docs/superpowers/plans/2026-11-10-revisao-app.md".
+- [x] Commit `chore: gitignore de artefatos e status do PROJECT.md`.
 
 ---
 
@@ -183,3 +183,15 @@ Cada uma traz a recomendação e o motivo de precisar do seu OK.
 ## Ordem sugerida após aprovação
 
 1. Tasks 8, 9 (dados/fluxo) → 2. Tasks 11, 12, 13 (UX mobile) → 3. Task 10 (rotas) → 4. Tasks 14, 15, 16 → 5. Tasks 17, 18, 19 → 6. Tasks 20, 21 → 7. Task 22.
+
+---
+
+## Notas de execução (2026-11-10)
+
+- Suíte final: **172 testes** (157 originais + 15 novos). Rodadas: 1ª com 19 testes *cancelados* no `before` do primeiro
+  arquivo (`challenger_m1_adversarial`: subida do Chrome/servidor quando não há servidor rodando), 2ª e 3ª com 172/172.
+  É intermitência do harness, não regressão: o arquivo isolado passa. Sugestão: na Task 21, aumentar a espera de
+  `launchBrowser()` ou subir o servidor uma vez via `--test-global-setup`.
+- U1 também foi verificado manualmente no navegador: marcar nota → recarregar imediatamente → nota preservada.
+- Os navegadores usados na auditoria tinham perfis temporários; nenhum dado real seu foi tocado.
+- Não foram executadas as Tasks 8–22: elas mudam fluxo, identidade visual ou arquitetura e precisam do seu OK.
