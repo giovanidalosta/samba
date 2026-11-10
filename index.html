@@ -175,7 +175,7 @@
 
     .brand-subtitle {
       font-family: var(--font-ui);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.4px;
       color: var(--text-muted);
@@ -396,7 +396,7 @@
       justify-content: space-between;
       padding: 0 8px;
       font-family: var(--font-ui);
-      font-size: 10.5px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--naum-gold);
       background: var(--bg-card-subtle);
@@ -419,7 +419,7 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--text-silver);
       font-family: var(--font-ui);
-      font-size: 9.5px;
+      font-size: 11px;
       font-weight: 700;
       padding: 1px 6px;
       border-radius: 3px;
@@ -444,7 +444,7 @@
       justify-content: space-between;
       padding: 0 6px;
       gap: 4px;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       user-select: none;
       border-right: 1px solid var(--border-color);
@@ -466,7 +466,7 @@
       border: 1px solid rgba(255, 255, 255, 0.14);
       color: var(--text-muted);
       font-family: var(--font-mono);
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 700;
       padding: 0px 5px;
       height: 15px;
@@ -557,7 +557,7 @@
     }
 
     .track-sub {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
@@ -583,7 +583,7 @@
       border: 1px solid var(--border-color);
       color: var(--text-muted);
       font-family: var(--font-mono);
-      font-size: 9.5px;
+      font-size: 11px;
       font-weight: 700;
       padding: 2px 6px;
       border-radius: 3px;
@@ -635,7 +635,7 @@
       border: 1px solid rgba(232, 195, 27, 0.4);
       color: var(--naum-gold);
       font-family: var(--font-ui);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       padding: 3px 7px;
       border-radius: 4px;
@@ -677,7 +677,7 @@
 
     .inst-vol-val {
       font-family: var(--font-mono);
-      font-size: 9.5px;
+      font-size: 11px;
       color: var(--text-muted);
       min-width: 28px;
       text-align: right;
@@ -696,7 +696,7 @@
       cursor: pointer;
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: 10px;
+      font-size: 11px;
       transition: all 0.15s;
     }
 
@@ -776,7 +776,7 @@
       top: 2px;
       right: 3px;
       font-family: var(--font-mono);
-      font-size: 8px;
+      font-size: 11px;
       font-weight: 700;
       color: rgba(232, 195, 27, 0.45);
       pointer-events: none;
@@ -795,7 +795,7 @@
       align-items: center;
       justify-content: center;
       font-family: var(--font-mono);
-      font-size: 10.5px;
+      font-size: 11px;
       font-weight: 700;
       color: #fff;
       transition: transform 0.1s ease;
@@ -909,7 +909,7 @@
     }
 
     .step-hand-tag {
-      font-size: 7px;
+      font-size: 11px;
       font-weight: 800;
       opacity: 0.85;
       letter-spacing: 0;
@@ -1353,8 +1353,8 @@
           <div class="setup-field">
             <label for="selectRecordCaptureMode">Modo de Captura</label>
             <select id="selectRecordCaptureMode" class="setup-input">
-              <option value="audio" selected>🎙️ Só Microfone (Mais rápido e leve)</option>
-              <option value="video">📹 Câmera + Microfone (Para Mosaico de Vídeo)</option>
+              <option value="audio" selected>Só Microfone (Mais rápido e leve)</option>
+              <option value="video">Câmera + Microfone (Para Mosaico de Vídeo)</option>
             </select>
           </div>
           <div class="setup-row-2">
@@ -1366,7 +1366,7 @@
               <label for="selectRecordMetronome">Metrônomo (Fone)</label>
               <select id="selectRecordMetronome" class="setup-input">
                 <option value="true" selected>⏱ Ligado (Contagem 1-2-3-4)</option>
-                <option value="false">🔇 Desligado (Livre)</option>
+                <option value="false">Desligado (Livre)</option>
               </select>
             </div>
           </div>
@@ -1672,7 +1672,7 @@
 
           <!-- VU Meter do Microfone -->
           <div class="mic-meter-bar-wrapper">
-            <span style="font-size: 10px; font-family: var(--font-mono); color: var(--text-silver);">MIC</span>
+            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-silver);">MIC</span>
             <div class="mic-meter-fill">
               <div class="mic-meter-level" id="micMeterLevel"></div>
             </div>
@@ -1819,12 +1819,12 @@
         <!-- Presets da Bateria -->
         <div class="control-group seq-preset-group">
           <select id="bateriaPresetSelect" aria-label="Presets da Bateria" title="Carregar ou salvar presets da bateria completa">
-            <option value="" disabled selected hidden>🥁 Presets...</option>
+            <option value="" disabled selected hidden>Presets...</option>
           </select>
         </div>
 
         <button type="button" id="btnSendToStudio" class="btn btn-primary"
-          title="Renderizar este breque/levada em áudio WAV e abrir como faixa no Studio Multitrack">
+          title="Renderizar este breque/levada em áudio WAV e abrir como faixa no Estúdio">
           ↪ <span class="send-label toolbar-btn-label-long">Enviar p/ Estúdio</span><span class="toolbar-btn-label-short">Estúdio</span>
         </button>
 
@@ -4269,13 +4269,13 @@
       }
 
       let grooveId = 'levada_base_custom';
-      let grooveName = `⭐ Levada Base (${inst.name})`;
+      let grooveName = `Levada Base (${inst.name})`;
 
       if (!asMainBase) {
         const typed = await window.appPrompt(`Digite um nome para salvar esta levada de ${inst.name}:`, `Minha Levada (${inst.name})`, 'Salvar levada');
         if (!typed || !typed.trim()) return;
         grooveId = 'custom_' + Date.now();
-        grooveName = `⭐ ${typed.trim()}`;
+        grooveName = typed.trim();
         customGrooves[inst.id].push({
           id: grooveId,
           name: grooveName,
@@ -4419,7 +4419,7 @@
       defOpt.disabled = true;
       defOpt.selected = true;
       defOpt.hidden = true;
-      defOpt.textContent = '🥁 Presets Bateria...';
+      defOpt.textContent = 'Presets Bateria...';
       select.appendChild(defOpt);
 
       const nativeKeys = Object.keys(BATERIA_PRESETS);
@@ -4429,7 +4429,7 @@
         nativeKeys.forEach(k => {
           const opt = document.createElement('option');
           opt.value = k;
-          opt.textContent = `🥁 ${BATERIA_PRESETS[k].name || k}`;
+          opt.textContent = `${BATERIA_PRESETS[k].name || k}`;
           groupNative.appendChild(opt);
         });
         select.appendChild(groupNative);
@@ -4442,7 +4442,7 @@
         customKeys.forEach(k => {
           const opt = document.createElement('option');
           opt.value = 'custom:' + k;
-          opt.textContent = `⭐ ${customBateriaPresets[k].name || k}`;
+          opt.textContent = `${customBateriaPresets[k].name || k}`;
           groupCustom.appendChild(opt);
         });
         select.appendChild(groupCustom);
@@ -4453,13 +4453,13 @@
 
       const saveOpt = document.createElement('option');
       saveOpt.value = '__save_bateria__';
-      saveOpt.textContent = '💾 Salvar grade atual como Preset...';
+      saveOpt.textContent = 'Salvar grade atual como Preset...';
       groupActions.appendChild(saveOpt);
 
       if (customKeys.length > 0) {
         const clearOpt = document.createElement('option');
         clearOpt.value = '__clear_custom_bateria__';
-        clearOpt.textContent = '🗑 Excluir meus presets salvos';
+        clearOpt.textContent = 'Excluir meus presets salvos';
         groupActions.appendChild(clearOpt);
       }
 
@@ -4960,14 +4960,14 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         defaultOpt.disabled = true;
         defaultOpt.hidden = true;
         defaultOpt.selected = !state.selectedGroove[inst.id];
-        defaultOpt.textContent = '⚡ Preencher levada...';
+        defaultOpt.textContent = 'Preencher levada...';
         grooveSelect.appendChild(defaultOpt);
 
         const instGrooves = getInstrumentGrooves(inst.id);
         instGrooves.forEach(g => {
           const opt = document.createElement('option');
           opt.value = g.id;
-          opt.textContent = g.name;
+          opt.textContent = String(g.name).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}️]\s?/gu, '');
           if (state.selectedGroove[inst.id] === g.id) {
             opt.selected = true;
           }
@@ -4976,13 +4976,13 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
         const saveNamedOpt = document.createElement('option');
         saveNamedOpt.value = '__save_named__';
-        saveNamedOpt.textContent = '➕ Salvar desenho atual com nome...';
+        saveNamedOpt.textContent = 'Salvar desenho atual com nome...';
         grooveSelect.appendChild(saveNamedOpt);
 
         if (Array.isArray(customGrooves[inst.id]) && customGrooves[inst.id].length > 0) {
           const clearCustomOpt = document.createElement('option');
           clearCustomOpt.value = '__clear_custom__';
-          clearCustomOpt.textContent = '🗑 Restaurar levadas padrão';
+          clearCustomOpt.textContent = 'Restaurar levadas padrão';
           grooveSelect.appendChild(clearCustomOpt);
         }
 
@@ -4995,7 +4995,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
         const btnSaveBase = document.createElement('button');
         btnSaveBase.className = 'btn-save-groove';
-        btnSaveBase.textContent = '💾 Base';
+        btnSaveBase.textContent = 'Salvar base';
         btnSaveBase.title = `Salvar o que está desenhado na linha de ${inst.name} como a Levada Base deste instrumento`;
         btnSaveBase.onclick = (e) => {
           e.stopPropagation();
@@ -5718,7 +5718,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           switchTab('tab-beatbox');
         }
       } catch (err) {
-        console.error('Erro ao enviar breque para o Studio Multitrack:', err);
+        console.error('Erro ao enviar breque para o Estúdio:', err);
         window.appAlert('Não foi possível renderizar o breque: ' + err.message);
       } finally {
         if (btn) {

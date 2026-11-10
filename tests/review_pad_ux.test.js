@@ -260,4 +260,36 @@ describe('Revisão 2026-11-10: UX do Pad (U6, U7, U8–U10)', () => {
       assert.equal(tabstops, 1);
     });
   });
+
+  describe('sistema visual (Task 16)', () => {
+    const smallText = () => session.evaluate(() => {
+      const bad = [];
+      for (const el of document.querySelectorAll('body *')) {
+        if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') continue;
+        const direct = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+        if (!direct) continue;
+        const fs = parseFloat(getComputedStyle(el).fontSize);
+        if (fs < 11) bad.push((el.className || el.tagName) + ':' + fs);
+      }
+      return bad.slice(0, 10);
+    });
+
+    it('TR16.1: nenhum texto visível do Pad menor que 11px', async () => {
+      await openFreshPad();
+      assert.deepEqual(await smallText(), []);
+    });
+
+    it('TR16.2: nenhum texto visível do Estúdio menor que 11px', async () => {
+      await session.evaluate(() => window.switchTab('tab-beatbox'));
+      await sleep(200);
+      assert.deepEqual(await smallText(), []);
+    });
+
+    it('TR16.3: opções de seletores não usam emoji', async () => {
+      await openFreshPad();
+      const bad = await session.evaluate(() => [...document.querySelectorAll('option')]
+        .map(o => o.textContent).filter(t => /[🌀-🫿☀-➿⭐]/u.test(t)));
+      assert.deepEqual(bad, []);
+    });
+  });
 });

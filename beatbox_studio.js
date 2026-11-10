@@ -765,7 +765,7 @@
       mixer.innerHTML = `
         <div class="mixer-row-primary">
           <div class="volume-control-box">
-            <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);" title="Volume">VOL</span>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);" title="Volume">VOL</span>
             <input type="range" class="volume-slider" min="0" max="1.5" step="0.05" value="${track.volume}" data-id="${track.id}" title="Volume: ${volPercent}%">
             <span class="volume-val-badge">${volPercent}%</span>
           </div>
@@ -5627,7 +5627,7 @@
     restoreSession();
   }
 
-  // Importa um arranjo/breque ou instrumento renderizado pelo Sequenciador diretamente como pista no Studio Multitrack
+  // Importa um arranjo/breque ou instrumento renderizado pelo Sequenciador diretamente como pista no Estúdio
   async function importSequencerBounce(wavBlob, durationSec, bpm, meter, measures, customTrackName) {
     stopStudioPlayback();
     sessionEpoch++;

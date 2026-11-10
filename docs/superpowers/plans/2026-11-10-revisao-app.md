@@ -49,8 +49,8 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 | 12 | Mobile Pad compacto | U7, V8 | [AGUARDA APROVAÇÃO] |
 | 13 | Limpeza de duplicidades e avisos | U8, U9, U10, V10 | [AGUARDA APROVAÇÃO] |
 | 14 | Diálogos nativos → appDialog | U11 | [EXECUTADO] alert/prompt/confirm nativos → appAlert/appPrompt/appConfirm (offset usa appPrompt, não stepper inline: Ruling) |
-| 15 | Grade acessível por teclado | V2 | [AGUARDA APROVAÇÃO] |
-| 16 | Sistema visual: tamanhos, paleta, emojis, marca | V4, V7, V11, V6 marca | [AGUARDA APROVAÇÃO] |
+| 15 | Grade acessível por teclado | V2 | [EXECUTADO] role=grid, gridcell, tabindex roving, setas + Enter/Espaço |
+| 16 | Sistema visual: tamanhos, paleta, emojis, marca | V4, V7, V11, V6 marca | [EXECUTADO, parcial] piso 11px, sem emoji em seletores, "Estúdio" no lugar de "Studio Multitrack"; cores de transporte e CTA único NÃO feitos (decisão visual) |
 | 17 | Offline real: pré-cache de áudio, soundbank adiado | B2, B3 | [AGUARDA APROVAÇÃO] |
 | 18 | Dados: backup geral, storage.persist, esquema versionado | F, FE3 | [AGUARDA APROVAÇÃO] |
 | 19 | Desfazer/refazer no Pad | F | [AGUARDA APROVAÇÃO] |
