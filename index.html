@@ -6403,6 +6403,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           saveActiveBrequeState('pad');
         }
         const origHtml = btnSaveToMyBreques.innerHTML;
+        // Já salvo em Meus Breques: o link não deve mais ser reaplicado num reload.
+        clearSharedBrequeHash();
         btnSaveToMyBreques.innerHTML = '<span>✓</span> <span>Salvo!</span>';
         setTimeout(() => { btnSaveToMyBreques.innerHTML = origHtml; }, 1800);
       };

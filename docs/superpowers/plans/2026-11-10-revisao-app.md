@@ -35,12 +35,12 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 
 | Task | Assunto | IDs da spec | Status |
 |---|---|---|---|
-| 1 | Autosave do Pad | U1 | [EXECUTADO] `0e5825c` |
-| 2 | Link compartilhado seguro | U2 | [EXECUTADO] `0e5825c` |
+| 1 | Autosave do Pad | U1 | [EXECUTADO] `0e5825c`, revisado em `fc67d4b` |
+| 2 | Link compartilhado seguro | U2 | [EXECUTADO] `0e5825c`, revisado em `fc67d4b` + último commit |
 | 3 | Foco visível, movimento reduzido, nomes acessíveis | V1, V3, V5 | [EXECUTADO] `f560626` |
 | 4 | Toast seguro contra HTML | FE2 | [EXECUTADO] `f560626` |
 | 5 | Rótulos: "Comp.", "Faixa de Áudio", badge 0ms | V6, V9 | [EXECUTADO] `f560626` |
-| 6 | Servidor não expõe dotfiles | B1 | [EXECUTADO] `8639ee7` |
+| 6 | Servidor não expõe dotfiles | B1 | [EXECUTADO] `8639ee7`, allowlist em `fc67d4b` |
 | 7 | Higiene: `.gitignore`, `PROJECT.md` | FE5, FE6 | [EXECUTADO] `8639ee7` |
 | 8 | Breques órfãos "Ideia N" | U3 | [AGUARDA APROVAÇÃO] |
 | 9 | Confirmar antes de substituir um take | U4 | [AGUARDA APROVAÇÃO] |
@@ -60,7 +60,7 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 
 ---
 
-## Tarefas a executar agora
+## Tarefas executadas
 
 ### Task 1: Autosave do Pad (U1)
 
@@ -75,8 +75,10 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
   `window.dispatchEvent(new Event('pagehide'))` e verifica que o breque ativo em `localStorage['naumteria_custom_bateria_presets_v1']`
   tem `gridData.surdo1[4]` não nulo. `TR1.2`: clica na célula nº 8, espera 700 ms sem `pagehide` e verifica que ela está salva.
 - [x] **Step 2:** `node --test tests/review_persistence.test.js` → FAIL (gridData[4] null).
-- [x] **Step 3: Implementar.** Listeners delegados `pointerup`, `change` e `input` em `#tab-sequencer` → `scheduleBrequeAutosave()`;
-  `pagehide` e `visibilitychange` (estado `hidden`) → `flushBrequeAutosave()`. O flush só salva se `currentActiveTab !== 'tab-home'`.
+- [x] **Step 3: Implementar.** Listeners `pointerup`, `change`, `input` e `keyup` no `document` → `scheduleBrequeAutosave()`
+  (só com o Pad aberto; marca o breque atual como *dirty*). `pagehide`, `visibilitychange` (estado `hidden`), `openBrequeProject`
+  e `createNewBrequeProject` → `flushBrequeAutosave()`, que só salva se houver um *dirty* pendente **e** ele for o breque ativo.
+  `TR1.3`: só visualizar não regrava o breque.
 - [x] **Step 4:** teste PASS; `npm test` verde.
 - [x] **Step 5:** commit `fix(pad): autosave do breque ao editar e ao fechar a página`.
 
@@ -86,12 +88,15 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 
 - [x] **Step 1: Testes.** `TR2.1`: com o breque custom aberto e 1 nota salva, aplica `location.hash = 'breque=' + b64({b:99,g:{caixa:[...]}})`,
   volta para a Home → o breque salvo continua com o `bpm` e o `gridData.surdo1` originais e **não** tem `bpm` 99.
-  `TR2.2`: hash com base64 inválido → nenhuma exceção, e o título do cabeçalho não muda. `TR2.3`: `b: 9999` → `state.bpm` limitado a 240;
-  `c: 0` → `measures` ≥ 1. `TR2.4`: após carregar, `location.hash === ''`.
+  `TR2.2`: hash com base64 inválido → nenhuma exceção, e o título do cabeçalho não muda. `TR2.3`: `b: 9999` → `state.bpm` limitado ao `max` do
+  `#bpmSlider` (80–170), com o slider concordando; `c: 0` → `measures` ≥ 1. `TR2.4`: o hash **permanece** após carregar (o reload
+  reabre o breque compartilhado ainda não salvo) e some ao abrir ou criar outro breque. `TR2.5`: ao salvar o compartilhado, o hash some
+  e o registro não herda `stepMeta`/`loopGridData` do breque anterior.
 - [x] **Step 2:** FAIL.
-- [x] **Step 3: Implementar.** Ordem: validar o payload (`g` precisa ser objeto de arrays; `b` limitado a [40, 240]; `c` limitado a [1, 32]);
+- [x] **Step 3: Implementar.** Ordem: validar o payload (`g` precisa ser objeto de arrays; `b` limitado ao min/max do slider; `c` limitado a [1, 32]);
   `flushBrequeAutosave()`; `state.activeBrequeId = null`; `state.activeBrequeName = 'Breque compartilhado'`; `updateHeaderBrequeTitle()`;
-  aplicar; `history.replaceState(null, '', location.pathname + location.search)`.
+  aplicar; zerar `stepMeta`/`loopGridData`/`selectedGroove`; `BeatboxStudio.loadBrequeProject('shared_breque')`. `clearSharedBrequeHash()`
+  em `openBrequeProject`, `createNewBrequeProject` e no "Salvar" de Meus Breques.
 - [x] **Step 4:** PASS + `npm test`.
 - [x] **Step 5:** commit `fix(share): link compartilhado não sobrescreve o breque aberto e valida o payload`.
 
@@ -188,10 +193,28 @@ Cada uma traz a recomendação e o motivo de precisar do seu OK.
 
 ## Notas de execução (2026-11-10)
 
-- Suíte final: **172 testes** (157 originais + 15 novos). Rodadas: 1ª com 19 testes *cancelados* no `before` do primeiro
+- Suíte final: **177 testes** (157 originais + 20 novos), 177/177 após as correções do code-review. Rodadas: 1ª com 19 testes *cancelados* no `before` do primeiro
   arquivo (`challenger_m1_adversarial`: subida do Chrome/servidor quando não há servidor rodando), 2ª e 3ª com 172/172.
   É intermitência do harness, não regressão: o arquivo isolado passa. Sugestão: na Task 21, aumentar a espera de
   `launchBrowser()` ou subir o servidor uma vez via `--test-global-setup`.
 - U1 também foi verificado manualmente no navegador: marcar nota → recarregar imediatamente → nota preservada.
 - A auditoria usou os perfis do Playwright e do harness, separados do seu Chrome; nenhum breque seu foi tocado.
 - Não foram executadas as Tasks 8–22: elas mudam fluxo, identidade visual ou arquitetura e precisam do seu OK.
+
+### Code-review do branch (skill `code-review`, nível medium)
+
+Os 10 achados foram avaliados e corrigidos em `fc67d4b` e no commit seguinte: autosave com *dirty flag* por breque,
+flush ao trocar de breque, link compartilhado sem vazamento de stepMeta/loop e com o Estúdio desligado do breque anterior,
+BPM limitado ao slider, hash mantido até salvar ou abrir outro breque, allowlist no servidor (inclui nomes 8.3 do Windows),
+URL malformada → 400 e formatação de offset centralizada.
+
+### Limitações conhecidas
+
+- O *dirty flag* do autosave é marcado por qualquer interação no Pad (por exemplo, apertar Play), não só por mudanças na grade.
+  Apertar Play e depois sair da aba ainda regrava o `updatedAt`. Para refinar, chamar `scheduleBrequeAutosave()` só nos pontos de
+  mutação (junto da Task 19, undo).
+- A sessão do Estúdio para links compartilhados usa um id único, `shared_breque`: gravações feitas sobre o link A reaparecem ao abrir
+  o link B, e salvar o compartilhado em Meus Breques não leva essas gravações junto. Isso vai para as Tasks 9 e 18.
+- O `TR2.5` é um teste fraco: o breque recém-criado já tem `stepMeta` vazio, então ele não prova o vazamento. O teste forte exige
+  expor `state` ou criar uma nota com velocidade via UI (Task 21).
+- O FE7 (`POST /__save_custom_grooves` morto + cópia para a área de transferência) foi encontrado, mas não removido.

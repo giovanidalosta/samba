@@ -145,9 +145,11 @@ describe('Revisão 2026-11-10: persistência do Pad e link compartilhado', () =>
       document.getElementById('btnSaveToMyBreques').click();
       await new Promise(r => setTimeout(r, 200));
       const all = JSON.parse(localStorage.getItem(key) || '{}');
-      return Object.values(all).find(b => b.name === 'Compartilhado Salvo') || null;
+      const entry = Object.values(all).find(b => b.name === 'Compartilhado Salvo') || null;
+      return entry && { ...entry, hashAfterSave: location.hash };
     }, PRESETS_KEY);
     assert.ok(saved, 'breque compartilhado salvo');
+    assert.equal(saved.hashAfterSave, '', 'após salvar, o link não deve ser reaplicado no reload');
     const metaCount = Object.values(saved.stepMeta || {}).flat().filter(Boolean).length;
     assert.equal(metaCount, 0);
     assert.deepEqual(saved.loopGridData || {}, {});

@@ -2,7 +2,7 @@
 
 > Data: 2026-11-10 · Branch: `review/plano-revisao` · Base: `main@8c03a2f`
 > Método: app rodando localmente (`node server.js`), navegado com Playwright em 390×844 (mobile) e 1280×800 (desktop),
-> leitura do código (`index.html`, `beatbox_studio.js`, `beatbox_studio.css`, `sw.js`, `server.js`), suíte `npm test` (157/157 passando),
+> leitura do código (`index.html`, `beatbox_studio.js`, `beatbox_studio.css`, `sw.js`, `server.js`), suíte `npm test` (157/157 passando antes; 177/177 após a revisão),
 > checklist da skill `ui-design-review:ui-review`.
 > Cada achado marcado **[REPRODUZIDO]** foi confirmado no navegador; **[CÓDIGO]** foi visto só no código.
 
