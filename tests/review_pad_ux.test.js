@@ -214,4 +214,50 @@ describe('Revisão 2026-11-10: UX do Pad (U6, U7, U8–U10)', () => {
     assert.equal(r.native, 0);
     assert.ok(r.app >= 1, 'o aviso deve passar por appAlert');
   });
+
+  describe('grade acessível por teclado (Task 15)', () => {
+    it('TR15.1: grade tem role=grid, células gridcell com rótulo e um único tabstop', async () => {
+      await openFreshPad();
+      const r = await session.evaluate(() => {
+        const cells = [...document.querySelectorAll('#tracksWrapper .step-cell')];
+        return {
+          grid: document.getElementById('tracksWrapper').getAttribute('role'),
+          roles: new Set(cells.map(c => c.getAttribute('role'))).size === 1 && cells[0].getAttribute('role'),
+          label: cells[0].getAttribute('aria-label'),
+          label5: cells[5].getAttribute('aria-label'),
+          tabstops: cells.filter(c => c.tabIndex === 0).length,
+        };
+      });
+      assert.equal(r.grid, 'grid');
+      assert.equal(r.roles, 'gridcell');
+      assert.match(r.label, /^Surdo de 1ª, compasso 1, tempo 1, semicolcheia 1: vazio$/);
+      assert.match(r.label5, /compasso 1, tempo 2, semicolcheia 2/);
+      assert.equal(r.tabstops, 1);
+    });
+
+    it('TR15.2: setas navegam, Enter marca e atualiza o rótulo, Espaço alterna de novo', async () => {
+      await openFreshPad();
+      await session.evaluate(() => document.querySelector('#tracksWrapper .step-cell[data-instrument="surdo1"][data-step="0"]').focus());
+      const key = (k) => session.evaluate((key) => {
+        const el = document.activeElement;
+        el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      }, k);
+      await key('ArrowRight');
+      await key('ArrowRight');
+      let at = await session.evaluate(() => ({ step: document.activeElement.dataset.step, inst: document.activeElement.dataset.instrument }));
+      assert.deepEqual(at, { step: '2', inst: 'surdo1' });
+      await key('ArrowDown');
+      at = await session.evaluate(() => ({ step: document.activeElement.dataset.step, inst: document.activeElement.dataset.instrument }));
+      assert.equal(at.step, '2');
+      assert.notEqual(at.inst, 'surdo1');
+      await key('ArrowUp');
+      await key('Enter');
+      const lbl = await session.evaluate(() => document.activeElement.getAttribute('aria-label'));
+      assert.match(lbl, /: (AB|MP|AF)$/);
+      await key(' ');
+      await key(' ');
+      const tabstops = await session.evaluate(() => [...document.querySelectorAll('#tracksWrapper .step-cell')].filter(c => c.tabIndex === 0).length);
+      assert.equal(tabstops, 1);
+    });
+  });
 });
