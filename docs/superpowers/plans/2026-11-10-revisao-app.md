@@ -1,4 +1,4 @@
-# Plano de Revisão — Naumteria Studio
+# Plano de Revisão — Naumteria[EXECUTADO] faixa de ajuda `#padHelpStrip` + legenda `?` com[EXECUTADO] ≤600px: cabeçalho de 112px, pílulas/levada/limpar num bottom sheet, scrollbars[EXECUTADO, parcial] ver nota abaixofinasaudiçãoStudio
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -184,6 +184,15 @@ Cada uma traz a recomendação e o motivo de precisar do seu OK.
   estático versionado no próprio repositório). Recomendo o JSON estático (`repertorio.json`) antes de qualquer back-end.
 
 ---
+
+### Notas das Tasks 11–13
+
+- Task 12: tocar no nome do naipe continua tocando o timbre e, no celular, também abre o sheet.
+- Task 13, **Ruling:** o botão "Importar do Pad" faz algo diferente do seletor de modo "Pad"; em vez de removê-lo, o rótulo curto do celular
+  ("Pad") foi removido (fica só o ícone, com `aria-label`). Custo se errado: trocar por texto curto.
+- Task 13: um só "✕" por card do Mosaico (o de remover gravação virou "⌫ Limpar gravação"); "Cortar [S]" só com faixas gravadas e sem o "[S]" em telas sem hover;
+  o botão Gravar do dock some na Cabine (resta "Iniciar Gravação"); aviso de fones tem prioridade sobre "Gire o celular", que já não aparecia na Cabine.
+- Task 13 **não feita:** sobreposição MIC/selo (V10) — precisa de verificação visual no celular.
 
 ## Ordem sugerida após aprovação
 

@@ -507,6 +507,10 @@
     if (dom.recordWorkspace) {
       dom.recordWorkspace.style.display = state.viewMode === 'record' ? 'flex' : 'none';
     }
+    // Na Cabine o controle de gravar é o "Iniciar Gravação"; o botão do dock some para não haver dois.
+    if (dom.btnStudioRecord) {
+      dom.btnStudioRecord.style.display = state.viewMode === 'record' ? 'none' : '';
+    }
 
     closeStudioMenus();
     updateQuickStats();
@@ -783,7 +787,7 @@
               <button type="button" class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂ <span class="act-label">Cortar</span></button>
               <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">◎ <span class="act-label">Câmera</span></button>
               <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">● <span class="act-label">Mic</span></button>
-              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">✕</button>
+              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Limpar gravação (mantém a faixa vazia)">⌫</button>
             ` : ''}
           </div>
         </div>
@@ -1020,6 +1024,9 @@
 
   // --- Função Unificada de Renderização dos Modos (Faixas REAPER & Mosaico) ---
   function renderStudioViews() {
+    if (dom.btnSplitAtPlayhead) {
+      dom.btnSplitAtPlayhead.style.display = state.tracks.some(t => t.mediaUrl || t.mediaBlob) ? '' : 'none';
+    }
     renderReaperTimeline();
     renderMosaic();
     updateQuickStats();

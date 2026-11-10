@@ -113,4 +113,82 @@ describe('Revisão 2026-11-10: UX do Pad (U6, U7, U8–U10)', () => {
     const sw = await session.evaluate(() => getComputedStyle(document.getElementById('gridContainer')).scrollbarWidth);
     assert.equal(sw, 'thin');
   });
+
+  describe('Estúdio: duplicidades e avisos (Task 13)', () => {
+    async function openStudio() {
+      await openFreshPad();
+      await session.evaluate(async () => {
+        window.switchTab('tab-beatbox');
+        await new Promise(r => setTimeout(r, 500));
+        const S = window.BeatboxStudio;
+        for (const t of [...S.__test.getTracks()]) S.removeTrack(t.id);
+        await S.switchViewMode('timeline');
+      });
+    }
+    const shown = (sel) => session.evaluate((q) => {
+      const el = document.querySelector(q);
+      return !!el && getComputedStyle(el).display !== 'none' && el.getClientRects().length > 0;
+    }, sel);
+
+    it('TR13.1: o botão de importar não se chama "Pad" (duplicava o seletor de modo)', async () => {
+      await openStudio();
+      const shortLabel = await session.evaluate(() => document.querySelector('#btnImportFromPad .toolbar-btn-label-short').textContent.trim());
+      assert.notEqual(shortLabel, 'Pad');
+    });
+
+    it('TR13.2: cada card do Mosaico tem um único "✕"', async () => {
+      await openStudio();
+      const n = await session.evaluate(() => {
+        const S = window.BeatboxStudio;
+        const t = S.addTrack('Teste'); t.mediaUrl = 'blob:x'; t.duration = 2;
+        S.renderStudioViews();
+        const card = document.querySelector('#mosaicGrid .track-card:not(.track-add-card)');
+        return [...card.querySelectorAll('button')].filter(b => /[✕×]/.test(b.textContent)).length;
+      });
+      assert.equal(n, 1);
+    });
+
+    it('TR13.3: "Cortar [S]" só aparece com faixas gravadas e o atalho tem classe própria', async () => {
+      await openStudio();
+      assert.equal(await shown('#btnSplitAtPlayhead'), false);
+      await session.evaluate(() => {
+        const t = window.BeatboxStudio.addTrack('G'); t.mediaUrl = 'blob:y'; t.duration = 2;
+        window.BeatboxStudio.renderStudioViews();
+      });
+      assert.equal(await shown('#btnSplitAtPlayhead'), true);
+      assert.equal(await session.evaluate(() => !!document.querySelector('#btnSplitAtPlayhead .kbd-hint')), true);
+    });
+
+    it('TR13.4: na Cabine só existe um controle de gravar (o do dock some)', async () => {
+      await openStudio();
+      assert.equal(await shown('#btnStudioRecord'), true);
+      await session.evaluate(() => window.BeatboxStudio.switchViewMode('record'));
+      await sleep(100);
+      assert.equal(await shown('#btnStudioRecord'), false);
+      assert.equal(await shown('#btnStartRecord'), true);
+      await session.evaluate(() => window.BeatboxStudio.switchViewMode('timeline'));
+    });
+
+    it('TR13.5: aviso "Gire o celular" nunca aparece na Cabine nem junto do aviso de fones', async () => {
+      await session.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+      try {
+        await session.evaluate(() => { sessionStorage.removeItem('orient_hint_dismissed'); });
+        await openStudio();
+        await session.evaluate(() => { window.checkOrientation(); });
+        assert.equal(await shown('#mobileOrientHint'), true, 'precondição: aviso aparece na timeline');
+        await session.evaluate(() => window.showHeadphonesToast && window.showHeadphonesToast());
+        const both = await session.evaluate(() => {
+          const vis = (id) => getComputedStyle(document.getElementById(id)).display !== 'none';
+          return { orient: vis('mobileOrientHint'), hp: vis('mobileHeadphonesToast') };
+        });
+        assert.equal(both.orient && both.hp, false, 'no máximo um aviso por vez');
+        await session.evaluate(() => window.BeatboxStudio.switchViewMode('record'));
+        await session.evaluate(() => { window.checkOrientation(); });
+        assert.equal(await shown('#mobileOrientHint'), false);
+      } finally {
+        await session.send('Emulation.clearDeviceMetricsOverride');
+        await session.evaluate(() => window.BeatboxStudio.switchViewMode('timeline'));
+      }
+    });
+  });
 });

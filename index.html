@@ -1421,8 +1421,9 @@
       <!-- Direita: Ações Rápidas (Importar Pad, + Nova Faixa e Menus de Ajustes/Projeto) -->
       <div class="studio-top-actions">
         <button type="button" id="btnImportFromPad" class="btn btn-secondary btn-studio-top-action"
+          aria-label="Importar do Pad"
           title="Trazer a bateria desenhada no Pad deste Breque como faixa no Estúdio">
-          <span class="btn-action-icon">☵</span> <span class="toolbar-btn-label-long">Importar do Pad</span><span class="toolbar-btn-label-short">Pad</span>
+          <span class="btn-action-icon">☵</span> <span class="toolbar-btn-label-long">Importar do Pad</span><span class="toolbar-btn-label-short" aria-hidden="true"></span>
         </button>
 
         <button type="button" id="btnAddTrack" class="btn btn-studio-add" title="Adicionar nova faixa ao estúdio">
@@ -1548,7 +1549,7 @@
             <div class="reaper-tcp-corner">
               <span class="corner-label">PISTAS / NAIPES</span>
               <button type="button" id="btnSplitAtPlayhead" class="btn-ruler-split" title="Dividir a faixa selecionada na posição da agulha [Tecla S]">
-                <span>✂</span> Cortar [S]
+                <span>✂</span> Cortar <span class="kbd-hint">[S]</span>
               </button>
             </div>
             <div class="reaper-ruler-track" id="reaperRulerTrack">
@@ -6830,11 +6831,14 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
     // Notificação de Fones de Ouvido ao Gravar
     function showHeadphonesToast() {
       if (!mobileHeadphonesToast) return;
+      // No máximo um aviso por vez: o de fones tem prioridade sobre a dica de orientação.
+      if (mobileOrientHint) mobileOrientHint.style.display = 'none';
       mobileHeadphonesToast.style.display = 'flex';
       setTimeout(() => {
         if (mobileHeadphonesToast) mobileHeadphonesToast.style.display = 'none';
       }, 5000);
     }
+    window.showHeadphonesToast = showHeadphonesToast;
     if (btnDismissHp) {
       btnDismissHp.onclick = () => {
         if (mobileHeadphonesToast) mobileHeadphonesToast.style.display = 'none';
@@ -6861,7 +6865,8 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       const isPortrait = window.innerHeight > window.innerWidth;
       const dismissed = sessionStorage.getItem('orient_hint_dismissed');
 
-      if (isMobile && isPortrait && !dismissed && isTimelineViewActive()) {
+      const headphonesShowing = mobileHeadphonesToast && mobileHeadphonesToast.style.display !== 'none';
+      if (isMobile && isPortrait && !dismissed && !headphonesShowing && isTimelineViewActive()) {
         mobileOrientHint.style.display = 'flex';
         clearTimeout(orientTimer);
         orientTimer = setTimeout(() => {
