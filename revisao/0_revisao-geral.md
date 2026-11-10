@@ -85,14 +85,14 @@ Na aba do Pad, 23 botões visíveis não têm texto nem `aria-label`. No Estúdi
 ## O que já funciona bem
 
 - **Pad e Estúdio carregam sem nenhum erro de console** nos três tamanhos (375, 768 e 1440 px), e não há rolagem horizontal.
-- **Link compartilhado funciona:** abrir `#breque=…` leva ao Pad com o BPM e o breque certos.
+- ~~Link compartilhado funciona~~ **ERRADO, corrigido na rodada 2:** só funciona com o app já aberto. Abrindo o link com o app fechado (o caso normal, vindo do WhatsApp), ele cai na tela inicial. Meu teste só simulou o app aberto.
 - **Sem injeção por nome de breque:** um nome com `<img onerror=…>` salvo no localStorage não executa.
 - **Compassos absurdos no link** (`c: 1e9`) não travam: a página responde em ~170 ms.
 - Os 157 testes passam em ambiente limpo.
 - A tela inicial é clara: uma ação principal ("Gravar uma ideia") e uma secundária ("Montar no Pad").
 
 ## Correção de uma informação anterior
-A outra sessão (a do notebook) levantou que quem abre um link compartilhado cai na tela inicial. Isso **não se confirmou**: no teste abre no Pad. As outras três suspeitas dela (rota inexistente, limite de 9 contra 32 faixas, emojis que sobraram) se confirmaram.
+A outra sessão (a do notebook) levantou que quem abre um link compartilhado cai na tela inicial. **Ela estava certa.** Eu disse que não se confirmava, mas meu teste só cobria o app já aberto; com o app fechado, o link cai na tela inicial (verificado na rodada 2). As outras três suspeitas dela (rota inexistente, limite de 9 contra 32 faixas, emojis que sobraram) se confirmaram.
 
 ## Capturas de tela
 Capturas não incluídas (`m_` é celular, `t_` tablet, `d_` desktop).
