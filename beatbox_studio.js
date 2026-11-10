@@ -818,6 +818,12 @@
     updateAudioMixRouting();
   }
 
+  // Diálogos do app (em vez dos nativos do navegador), com fallback caso o index ainda não os tenha definido.
+  function uiAlert(msg) { return window.appAlert ? window.appAlert(msg) : window.alert(msg); }
+  function uiPrompt(msg, def) {
+    return window.appPrompt ? window.appPrompt(msg, String(def), 'Ajuste de offset') : Promise.resolve(window.prompt(msg, def));
+  }
+
   function escapeHtml(str) {
     if (str === null || str === undefined || typeof str === 'object') return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -950,12 +956,12 @@
     });
 
     dom.mosaicGrid.querySelectorAll('.nudge-val-display').forEach(valEl => {
-      valEl.onclick = () => {
+      valEl.onclick = async () => {
         const id = valEl.dataset.id;
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           const current = track.offsetMs || 0;
-          const val = prompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
+          const val = await uiPrompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
           if (val !== null) {
             const parsed = parseInt(val, 10);
             if (!isNaN(parsed)) {
@@ -2131,14 +2137,14 @@
 
     // Ajuste direto ou Reset de Offset ao clicar no valor central
     dom.reaperTracksStack.querySelectorAll('.tcp-sync-val').forEach(valSpan => {
-      valSpan.onclick = (e) => {
+      valSpan.onclick = async (e) => {
         e.stopPropagation();
         const id = valSpan.dataset.id;
         selectTrack(id);
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           const current = track.offsetMs || 0;
-          const val = prompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
+          const val = await uiPrompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
           if (val !== null) {
             const parsed = parseInt(val, 10);
             if (!isNaN(parsed)) {
@@ -2214,7 +2220,7 @@
   function addTrack(name) {
     if (state.tracks.length >= MAX_STUDIO_TRACKS) {
       if (window.appToast) window.appToast(`Limite máximo de ${MAX_STUDIO_TRACKS} faixas atingido.`, 'warn');
-      else alert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
+      else uiAlert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
       return null;
     }
     sessionEpoch++;
@@ -2233,7 +2239,7 @@
   function duplicateTrack(trackId) {
     if (state.tracks.length >= MAX_STUDIO_TRACKS) {
       if (window.appToast) window.appToast(`Limite máximo de ${MAX_STUDIO_TRACKS} faixas atingido.`, 'warn');
-      else alert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
+      else uiAlert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
       return null;
     }
     const source = state.tracks.find(t => t.id === trackId);
@@ -2501,7 +2507,7 @@
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
       console.warn('navigator.mediaDevices.getUserMedia indisponível neste contexto.');
       if (typeof alert === 'function') {
-        alert('O acesso ao microfone/câmera requer conexão segura (HTTPS ou localhost).');
+        uiAlert('O acesso ao microfone/câmera requer conexão segura (HTTPS ou localhost).');
       }
       return;
     }
@@ -2575,7 +2581,7 @@
       await populateMediaDevices();
     } catch (err) {
       console.error('Erro ao acessar dispositivo no modo ' + mode, err);
-      alert(`Não foi possível acessar seu dispositivo no modo ${mode === 'audio' ? 'apenas microfone' : 'câmera'}. Verifique as permissões do navegador.`);
+      uiAlert(`Não foi possível acessar seu dispositivo no modo ${mode === 'audio' ? 'apenas microfone' : 'câmera'}. Verifique as permissões do navegador.`);
     }
   }
 
@@ -2637,7 +2643,7 @@
     if (!recordingContext.stream) {
       await setRecordingMode(recordingContext.captureMode || 'audio');
       if (!recordingContext.stream) {
-        alert('Microfone não detectado ou sem permissão ativa.');
+        uiAlert('Microfone não detectado ou sem permissão ativa.');
         return;
       }
     }
@@ -2755,7 +2761,7 @@
       const finalMime = recorder.mimeType || mimeType || (recordingContext.captureMode === 'audio' ? 'audio/webm' : 'video/webm');
       const blob = new Blob(recordingContext.recordedChunks, { type: finalMime });
       if (!blob || blob.size === 0) {
-        alert('Nenhum dado de áudio foi capturado pelo navegador. Verifique se o microfone selecionado está ativo.');
+        uiAlert('Nenhum dado de áudio foi capturado pelo navegador. Verifique se o microfone selecionado está ativo.');
         discardAndRetry();
         return;
       }
@@ -3183,13 +3189,13 @@
     }
     if (state.tracks.length === 0) {
       if (window.appToast) window.appToast('Seu projeto está zerado. Adicione uma faixa ou importe do Pad!', 'warn');
-      else alert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
+      else uiAlert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
       return;
     }
     const hasMedia = state.tracks.some(t => t.videoElement);
     if (!hasMedia && !state.metronomeEnabled) {
       if (window.appToast) window.appToast('Grave pelo menos um instrumento ou ative o metrônomo para ouvir!', 'info');
-      else alert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
+      else uiAlert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
       return;
     }
 
@@ -3416,7 +3422,7 @@
   async function exportMosaicVideo() {
     const recordedTracks = state.tracks.filter(t => t.videoElement);
     if (recordedTracks.length === 0) {
-      alert('Grave ou importe ao menos uma faixa para poder exportar o vídeo mosaico!');
+      uiAlert('Grave ou importe ao menos uma faixa para poder exportar o vídeo mosaico!');
       return;
     }
 
@@ -3580,7 +3586,7 @@
       drawFrame();
     } catch (err) {
       console.error('Erro na exportação de vídeo:', err);
-      alert('Ocorreu um erro durante a renderização do vídeo mosaico: ' + err.message);
+      uiAlert('Ocorreu um erro durante a renderização do vídeo mosaico: ' + err.message);
       dom.exportModal.classList.remove('active');
     }
   }
@@ -3637,7 +3643,7 @@
   async function exportMixedAudio() {
     const recordedTracks = state.tracks.filter(t => t.videoElement);
     if (recordedTracks.length === 0) {
-      alert('Nenhuma gravação encontrada para exportar o áudio!');
+      uiAlert('Nenhuma gravação encontrada para exportar o áudio!');
       return;
     }
 
@@ -3770,7 +3776,7 @@
         };
       }, durationMs);
     } catch (e) {
-      alert('Erro na exportação de áudio: ' + e.message);
+      uiAlert('Erro na exportação de áudio: ' + e.message);
       dom.exportModal.classList.remove('active');
     }
   }
@@ -4330,12 +4336,12 @@
     const endMediaSec = Math.max(curTrimStart + 0.1, rawDur - curTrimEnd);
 
     if (splitMediaSec <= curTrimStart + 0.08 || splitMediaSec >= endMediaSec - 0.08) {
-      alert('Posicione a agulha dentro da área ativa da faixa para dividi-la em 2 partes!');
+      uiAlert('Posicione a agulha dentro da área ativa da faixa para dividi-la em 2 partes!');
       return false;
     }
 
     if (state.tracks.length >= MAX_STUDIO_TRACKS) {
-      alert(`O limite máximo de ${MAX_STUDIO_TRACKS} faixas foi atingido. Remova uma faixa para poder dividir em duas.`);
+      uiAlert(`O limite máximo de ${MAX_STUDIO_TRACKS} faixas foi atingido. Remova uma faixa para poder dividir em duas.`);
       return false;
     }
 
@@ -4376,7 +4382,7 @@
       targetTrack = state.tracks.find(t => t.mediaUrl);
     }
     if (!targetTrack) {
-      alert('Grave ou importe uma faixa primeiro para poder cortá-la!');
+      uiAlert('Grave ou importe uma faixa primeiro para poder cortá-la!');
       return;
     }
 
@@ -5605,10 +5611,10 @@
               switchViewMode(state.viewMode);
               renderStudioViews();
               saveCurrentSession();
-              alert('Projeto carregado com sucesso!');
+              uiAlert('Projeto carregado com sucesso!');
             }
           } catch (err) {
-            alert('Arquivo de projeto inválido: ' + err.message);
+            uiAlert('Arquivo de projeto inválido: ' + err.message);
           } finally {
             dom.projectFileInput.value = '';
           }

@@ -191,4 +191,27 @@ describe('Revisão 2026-11-10: UX do Pad (U6, U7, U8–U10)', () => {
       }
     });
   });
+
+  it('TR14.1: avisos do Pad usam o diálogo do app, não o nativo do navegador', async () => {
+    await openFreshPad();
+    const r = await session.evaluate(async () => {
+      window.__native = 0;
+      window.alert = () => { window.__native++; };
+      window.prompt = () => { window.__native++; return null; };
+      window.confirm = () => { window.__native++; return false; };
+      const orig = window.appAlert;
+      window.__appAlerts = [];
+      window.appAlert = (m) => { window.__appAlerts.push(m); return Promise.resolve(); };
+      // grade vazia: salvar preset da bateria deve avisar
+      document.getElementById('bateriaPresetSelect').value = '';
+      await window.saveCurrentBateriaAsPreset?.();
+      const btn = [...document.querySelectorAll('.btn-save-groove')][0];
+      btn && btn.click();
+      await new Promise(r => setTimeout(r, 200));
+      window.appAlert = orig;
+      return { native: window.__native, app: window.__appAlerts.length };
+    });
+    assert.equal(r.native, 0);
+    assert.ok(r.app >= 1, 'o aviso deve passar por appAlert');
+  });
 });

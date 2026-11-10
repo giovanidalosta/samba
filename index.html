@@ -4242,11 +4242,11 @@
       return result;
     }
 
-    function saveCurrentTrackAsGroove(inst, asMainBase = true, flashBtn = null) {
+    async function saveCurrentTrackAsGroove(inst, asMainBase = true, flashBtn = null) {
       const trackData = state.gridData[inst.id] || [];
       const hasAnyNote = trackData.some(n => n !== null);
       if (!hasAnyNote) {
-        alert(`Desenhe os toques de ${inst.name} na grade antes de salvar a levada.`);
+        window.appAlert(`Desenhe os toques de ${inst.name} na grade antes de salvar a levada.`);
         return;
       }
 
@@ -4272,7 +4272,7 @@
       let grooveName = `⭐ Levada Base (${inst.name})`;
 
       if (!asMainBase) {
-        const typed = prompt(`Digite um nome para salvar esta levada de ${inst.name}:`, `Minha Levada (${inst.name})`);
+        const typed = await window.appPrompt(`Digite um nome para salvar esta levada de ${inst.name}:`, `Minha Levada (${inst.name})`, 'Salvar levada');
         if (!typed || !typed.trim()) return;
         grooveId = 'custom_' + Date.now();
         grooveName = `⭐ ${typed.trim()}`;
@@ -4332,7 +4332,7 @@
       }
     }
 
-    function applyInstrumentGroove(instId, grooveId) {
+    async function applyInstrumentGroove(instId, grooveId) {
       if (grooveId === '__save_named__') {
         const inst = INSTRUMENTS.find(i => i.id === instId);
         if (inst) saveCurrentTrackAsGroove(inst, false, null);
@@ -4340,7 +4340,7 @@
         return;
       }
       if (grooveId === '__clear_custom__') {
-        if (confirm('Deseja remover as levadas personalizadas deste instrumento e restaurar apenas as de fábrica?')) {
+        if (await window.appConfirm('Deseja remover as levadas personalizadas deste instrumento e restaurar apenas as de fábrica?', 'Restaurar levadas', { isDanger: true, confirmText: 'Restaurar' })) {
           delete customGrooves[instId];
           saveCustomGroovesToStorage(customGrooves);
           state.selectedGroove[instId] = '';
@@ -4529,16 +4529,16 @@
       }
     }
 
-    function saveCurrentBateriaAsPreset() {
+    async function saveCurrentBateriaAsPreset() {
       const hasAnyNote = INSTRUMENTS.some(inst =>
         (state.gridData[inst.id] || []).some(n => n !== null)
       );
       if (!hasAnyNote) {
-        alert('Desenhe os toques dos instrumentos na grade antes de salvar o preset da bateria.');
+        window.appAlert('Desenhe os toques dos instrumentos na grade antes de salvar o preset da bateria.');
         return;
       }
 
-      const typed = prompt('Digite o nome deste Preset de Bateria:', 'Novo Preset de Bateria');
+      const typed = await window.appPrompt('Digite o nome deste Preset de Bateria:', 'Novo Preset de Bateria', 'Salvar preset');
       if (!typed || !typed.trim()) return;
 
       const presetName = typed.trim();
@@ -4586,7 +4586,7 @@
       a.click();
       URL.revokeObjectURL(url);
 
-      alert(`Preset "${presetName}" salvo com sucesso!
+      window.appAlert(`Preset "${presetName}" salvo com sucesso!
 
 O arquivo JSON foi baixado e também copiado para a Área de Transferência para você me enviar.`);
     }
@@ -5245,13 +5245,13 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           navigator.clipboard.writeText(shareUrl).then(() => {
             showShareToast('✅ Link do breque copiado! Cole no WhatsApp da bateria.');
           }).catch(() => {
-            prompt('Copie o link abaixo para enviar:', shareUrl);
+            window.appPrompt('Copie o link abaixo para enviar:', shareUrl, 'Link do breque');
           });
         } else {
-          prompt('Copie o link abaixo para enviar:', shareUrl);
+          window.appPrompt('Copie o link abaixo para enviar:', shareUrl, 'Link do breque');
         }
       } catch (e) {
-        alert('Erro ao gerar link de compartilhamento: ' + e.message);
+        window.appAlert('Erro ao gerar link de compartilhamento: ' + e.message);
       }
     }
 
@@ -5554,7 +5554,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           }
 
           if (!data.gridData || !data.settings) {
-            alert('Arquivo JSON inválido para o Naumteria Studio.');
+            window.appAlert('Arquivo JSON inválido para o Naumteria Studio.');
             return;
           }
 
@@ -5586,7 +5586,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
 
           renderStudio();
         } catch (err) {
-          alert('Erro ao processar o arquivo: ' + err.message);
+          window.appAlert('Erro ao processar o arquivo: ' + err.message);
         }
       };
       reader.readAsText(file);
@@ -5598,11 +5598,11 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       );
       if (!hasAnyNote) {
         if (currentActiveTab === 'tab-beatbox') {
-          if (confirm('O Pad deste breque ainda não tem notas desenhadas. Deseja ir para o Pad agora para montar a levada?')) {
+          if (await window.appConfirm('O Pad deste breque ainda não tem notas desenhadas. Deseja ir para o Pad agora para montar a levada?', 'Pad vazio', { confirmText: 'Ir para o Pad' })) {
             switchTab('tab-sequencer');
           }
         } else {
-          alert('Desenhe algumas notas ou escolha uma Levada no Pad antes de importar para o Estúdio.');
+          window.appAlert('Desenhe algumas notas ou escolha uma Levada no Pad antes de importar para o Estúdio.');
         }
         return;
       }
@@ -5661,7 +5661,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
         }
       } catch (err) {
         console.error('Erro ao enviar breque para o Studio Multitrack:', err);
-        alert('Não foi possível renderizar o breque: ' + err.message);
+        window.appAlert('Não foi possível renderizar o breque: ' + err.message);
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -6964,7 +6964,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
           deferredPrompt = null;
           mobHeaderInstall.style.display = 'none';
         } else {
-          alert('Para instalar no celular: toque no menu de 3 pontinhos do navegador e selecione "Adicionar à tela de início" ou "Instalar aplicativo".');
+          window.appAlert('Para instalar no celular: toque no menu de 3 pontinhos do navegador e selecione "Adicionar à tela de início" ou "Instalar aplicativo".');
         }
       };
     }

@@ -247,6 +247,8 @@ class BrowserSession {
       window.confirm = () => true;
       window.appConfirm = async () => true;
       window.alert = () => {};
+      window.appAlert = async () => {};
+      window.appPrompt = async (msg, def) => def;
 
       // Switch to studio tab
       if (typeof window.switchTab === 'function') {
