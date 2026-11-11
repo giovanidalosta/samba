@@ -507,6 +507,10 @@
     if (dom.recordWorkspace) {
       dom.recordWorkspace.style.display = state.viewMode === 'record' ? 'flex' : 'none';
     }
+    // Na Cabine o controle de gravar é o "Iniciar Gravação"; o botão do dock some para não haver dois.
+    if (dom.btnStudioRecord) {
+      dom.btnStudioRecord.style.display = state.viewMode === 'record' ? 'none' : '';
+    }
 
     closeStudioMenus();
     updateQuickStats();
@@ -696,7 +700,7 @@
           audioStage.innerHTML = `
             <div class="stage-mic-icon">●</div>
             <div style="font-size: 13px; font-weight: 700; color: #fff;">${escapeHtml(track.name)}</div>
-            <div class="stage-audio-badge">Faixa de Áudio (Boca)</div>
+            <div class="stage-audio-badge">Faixa de Áudio</div>
           `;
           const audio = document.createElement('audio');
           audio.src = track.mediaUrl;
@@ -761,7 +765,7 @@
       mixer.innerHTML = `
         <div class="mixer-row-primary">
           <div class="volume-control-box">
-            <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);" title="Volume">VOL</span>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);" title="Volume">VOL</span>
             <input type="range" class="volume-slider" min="0" max="1.5" step="0.05" value="${track.volume}" data-id="${track.id}" title="Volume: ${volPercent}%">
             <span class="volume-val-badge">${volPercent}%</span>
           </div>
@@ -783,7 +787,7 @@
               <button type="button" class="btn-track-action btn-cut-track" data-id="${track.id}" title="Cortar / Aparar início e fim ou dividir esta faixa">✂ <span class="act-label">Cortar</span></button>
               <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="video" title="Regravar com a webcam">◎ <span class="act-label">Câmera</span></button>
               <button type="button" class="btn-track-action btn-re-record" data-id="${track.id}" data-mode="audio" title="Regravar apenas com o microfone">● <span class="act-label">Mic</span></button>
-              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Remover gravação">✕</button>
+              <button type="button" class="btn-track-action btn-clear-media" data-id="${track.id}" title="Limpar gravação (mantém a faixa vazia)">⌫</button>
             ` : ''}
           </div>
         </div>
@@ -812,6 +816,12 @@
 
     bindTrackEvents();
     updateAudioMixRouting();
+  }
+
+  // Diálogos do app (em vez dos nativos do navegador), com fallback caso o index ainda não os tenha definido.
+  function uiAlert(msg) { return window.appAlert ? window.appAlert(msg) : window.alert(msg); }
+  function uiPrompt(msg, def) {
+    return window.appPrompt ? window.appPrompt(msg, String(def), 'Ajuste de offset') : Promise.resolve(window.prompt(msg, def));
   }
 
   function escapeHtml(str) {
@@ -946,12 +956,12 @@
     });
 
     dom.mosaicGrid.querySelectorAll('.nudge-val-display').forEach(valEl => {
-      valEl.onclick = () => {
+      valEl.onclick = async () => {
         const id = valEl.dataset.id;
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           const current = track.offsetMs || 0;
-          const val = prompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
+          const val = await uiPrompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
           if (val !== null) {
             const parsed = parseInt(val, 10);
             if (!isNaN(parsed)) {
@@ -965,10 +975,21 @@
     });
   }
 
+  // Badge de sync do clipe: mantém o texto (lido pelos testes) e esconde quando o offset é 0ms.
+  function formatSyncOffset(offsetMs) {
+    const ms = Number(offsetMs) || 0;
+    return `${ms >= 0 ? '+' : ''}${ms}ms`;
+  }
+
+  function setSyncBadge(badge, offsetMs) {
+    badge.textContent = formatSyncOffset(offsetMs);
+    badge.classList.toggle('is-zero', (Number(offsetMs) || 0) === 0);
+  }
+
   // --- Atualização de Sincronismo (Offset) em Tempo Real sem Recriar o DOM ---
   function updateTrackOffsetInPlace(track) {
     if (!track) return;
-    const offsetStr = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+    const offsetStr = formatSyncOffset(track.offsetMs);
 
     // 1. Visor da Pílula no TCP
     const tcpRow = document.getElementById(`reaper_row_${track.id}`);
@@ -988,7 +1009,7 @@
     const mediaItem = document.getElementById(`media_item_${track.id}`);
     if (mediaItem) {
       const badge = mediaItem.querySelector('.item-sync-badge');
-      if (badge) badge.textContent = offsetStr;
+      if (badge) setSyncBadge(badge, track.offsetMs);
 
       const timelineDurSec = getTimelineDurationSec();
       const offsetSec = (track.offsetMs || 0) / 1000;
@@ -1009,6 +1030,9 @@
 
   // --- Função Unificada de Renderização dos Modos (Faixas REAPER & Mosaico) ---
   function renderStudioViews() {
+    if (dom.btnSplitAtPlayhead) {
+      dom.btnSplitAtPlayhead.style.display = state.tracks.some(t => t.mediaUrl || t.mediaBlob) ? '' : 'none';
+    }
     renderReaperTimeline();
     renderMosaic();
     updateQuickStats();
@@ -1070,7 +1094,7 @@
       const barItem = document.createElement('div');
       barItem.className = 'ruler-bar-item';
       barItem.innerHTML = `
-        <span>Bar ${m}</span>
+        <span>Comp. ${m}</span>
         <span class="ruler-sub-label">.1</span>
         <div class="ruler-bar-beat-ticks">
           ${Array.from({ length: beatsPerMeasure }).map(() => '<div class="ruler-tick"></div>').join('')}
@@ -1232,7 +1256,7 @@
             </div>
             <div class="media-item-badges">
               ${isTrimmed ? `<span class="item-meta-tag item-trim-badge" title="Trecho cortado ativo">✂ ${(track.trimStart || 0).toFixed(1)}s–${trimEndTime.toFixed(1)}s</span>` : ''}
-              <span class="item-meta-tag item-sync-badge">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
+              <span class="item-meta-tag item-sync-badge${(Number(track.offsetMs) || 0) === 0 ? ' is-zero' : ''}">${formatSyncOffset(track.offsetMs)}</span>
               <span class="item-meta-tag item-dur-badge" style="background: rgba(255,255,255,0.08); color: #cbd5e1;">${trackDur.toFixed(1)}s</span>
               <button type="button" class="btn-clip-action btn-clip-cut" data-id="${track.id}" title="Abrir editor de corte da faixa">✂ Cortar</button>
               ${isTrimmed ? `<button type="button" class="btn-clip-action btn-clip-restore" data-id="${track.id}" title="Restaurar gravação original inteira">↺</button>` : ''}
@@ -1597,7 +1621,7 @@
         itemEl.style.left = leftPercent + '%';
 
         const syncBadge = itemEl.querySelector('.item-sync-badge');
-        if (syncBadge) syncBadge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+        if (syncBadge) setSyncBadge(syncBadge, track.offsetMs);
 
         const durBadge = itemEl.querySelector('.item-dur-badge');
         if (durBadge) durBadge.textContent = `${effDur.toFixed(1)}s`;
@@ -1653,7 +1677,7 @@
           itemEl.style.left = leftPercent + '%';
 
           const syncBadge = itemEl.querySelector('.item-sync-badge');
-          if (syncBadge) syncBadge.textContent = `${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms`;
+          if (syncBadge) setSyncBadge(syncBadge, track.offsetMs);
 
           const durBadge = itemEl.querySelector('.item-dur-badge');
           if (durBadge) durBadge.textContent = `${effDur.toFixed(1)}s`;
@@ -1680,7 +1704,7 @@
               const barItem = document.createElement('div');
               barItem.className = 'ruler-bar-item';
               barItem.innerHTML = `
-                <span>Bar ${m}</span>
+                <span>Comp. ${m}</span>
                 <span class="ruler-sub-label">.1</span>
                 <div class="ruler-bar-beat-ticks">
                   ${Array.from({ length: beatsPerMeasure }).map(() => '<div class="ruler-tick"></div>').join('')}
@@ -2113,14 +2137,14 @@
 
     // Ajuste direto ou Reset de Offset ao clicar no valor central
     dom.reaperTracksStack.querySelectorAll('.tcp-sync-val').forEach(valSpan => {
-      valSpan.onclick = (e) => {
+      valSpan.onclick = async (e) => {
         e.stopPropagation();
         const id = valSpan.dataset.id;
         selectTrack(id);
         const track = state.tracks.find(t => t.id === id);
         if (track) {
           const current = track.offsetMs || 0;
-          const val = prompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
+          const val = await uiPrompt(`Ajuste fino de offset (ms) para "${track.name}":\nDigite o valor em ms (ex: -120 para adiantar, +50 para atrasar, ou 0 para zerar):`, current);
           if (val !== null) {
             const parsed = parseInt(val, 10);
             if (!isNaN(parsed)) {
@@ -2196,7 +2220,7 @@
   function addTrack(name) {
     if (state.tracks.length >= MAX_STUDIO_TRACKS) {
       if (window.appToast) window.appToast(`Limite máximo de ${MAX_STUDIO_TRACKS} faixas atingido.`, 'warn');
-      else alert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
+      else uiAlert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
       return null;
     }
     sessionEpoch++;
@@ -2215,7 +2239,7 @@
   function duplicateTrack(trackId) {
     if (state.tracks.length >= MAX_STUDIO_TRACKS) {
       if (window.appToast) window.appToast(`Limite máximo de ${MAX_STUDIO_TRACKS} faixas atingido.`, 'warn');
-      else alert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
+      else uiAlert(`Limite de ${MAX_STUDIO_TRACKS} faixas no projeto atingido.`);
       return null;
     }
     const source = state.tracks.find(t => t.id === trackId);
@@ -2483,7 +2507,7 @@
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
       console.warn('navigator.mediaDevices.getUserMedia indisponível neste contexto.');
       if (typeof alert === 'function') {
-        alert('O acesso ao microfone/câmera requer conexão segura (HTTPS ou localhost).');
+        uiAlert('O acesso ao microfone/câmera requer conexão segura (HTTPS ou localhost).');
       }
       return;
     }
@@ -2557,7 +2581,7 @@
       await populateMediaDevices();
     } catch (err) {
       console.error('Erro ao acessar dispositivo no modo ' + mode, err);
-      alert(`Não foi possível acessar seu dispositivo no modo ${mode === 'audio' ? 'apenas microfone' : 'câmera'}. Verifique as permissões do navegador.`);
+      uiAlert(`Não foi possível acessar seu dispositivo no modo ${mode === 'audio' ? 'apenas microfone' : 'câmera'}. Verifique as permissões do navegador.`);
     }
   }
 
@@ -2619,7 +2643,7 @@
     if (!recordingContext.stream) {
       await setRecordingMode(recordingContext.captureMode || 'audio');
       if (!recordingContext.stream) {
-        alert('Microfone não detectado ou sem permissão ativa.');
+        uiAlert('Microfone não detectado ou sem permissão ativa.');
         return;
       }
     }
@@ -2737,7 +2761,7 @@
       const finalMime = recorder.mimeType || mimeType || (recordingContext.captureMode === 'audio' ? 'audio/webm' : 'video/webm');
       const blob = new Blob(recordingContext.recordedChunks, { type: finalMime });
       if (!blob || blob.size === 0) {
-        alert('Nenhum dado de áudio foi capturado pelo navegador. Verifique se o microfone selecionado está ativo.');
+        uiAlert('Nenhum dado de áudio foi capturado pelo navegador. Verifique se o microfone selecionado está ativo.');
         discardAndRetry();
         return;
       }
@@ -2975,9 +2999,28 @@
     }
   }
 
-  function keepCurrentTake() {
+  // Evita reentrada (duplo clique, Enter + clique) enquanto o diálogo de substituição está aberto.
+  let keepingTake = false;
+  async function keepCurrentTake() {
+    if (keepingTake) return;
+    keepingTake = true;
+    try { await keepCurrentTakeImpl(); } finally { keepingTake = false; }
+  }
+  async function keepCurrentTakeImpl() {
     if (!recordingContext.lastRecordedBlob) return;
-    const track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    let track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
+    if (track && (track.mediaUrl || track.mediaBlob)) {
+      // Faixa já gravada: pergunta antes de sobrescrever. "Salvar como nova faixa" preserva o take antigo.
+      const replace = typeof window.appConfirm === 'function'
+        ? await window.appConfirm(`A faixa "${track.name}" já tem uma gravação. Substituir?`, 'Substituir gravação', { isDanger: true, confirmText: 'Substituir', cancelText: 'Salvar como nova faixa' })
+        : true;
+      if (!replace) {
+        const newTrack = addTrack();
+        if (!newTrack) return;
+        recordingContext.activeTrackId = newTrack.id;
+        track = newTrack;
+      }
+    }
     if (track) {
       if (dom.recTakeNameInput && dom.recTakeNameInput.value.trim()) {
         track.name = dom.recTakeNameInput.value.trim();
@@ -3153,13 +3196,13 @@
     }
     if (state.tracks.length === 0) {
       if (window.appToast) window.appToast('Seu projeto está zerado. Adicione uma faixa ou importe do Pad!', 'warn');
-      else alert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
+      else uiAlert('Seu projeto está zerado. Adicione ao menos uma faixa para começar!');
       return;
     }
     const hasMedia = state.tracks.some(t => t.videoElement);
     if (!hasMedia && !state.metronomeEnabled) {
       if (window.appToast) window.appToast('Grave pelo menos um instrumento ou ative o metrônomo para ouvir!', 'info');
-      else alert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
+      else uiAlert('Grave pelo menos um instrumento com a boca ou ative o metrônomo para ouvir!');
       return;
     }
 
@@ -3386,7 +3429,7 @@
   async function exportMosaicVideo() {
     const recordedTracks = state.tracks.filter(t => t.videoElement);
     if (recordedTracks.length === 0) {
-      alert('Grave ou importe ao menos uma faixa para poder exportar o vídeo mosaico!');
+      uiAlert('Grave ou importe ao menos uma faixa para poder exportar o vídeo mosaico!');
       return;
     }
 
@@ -3550,7 +3593,7 @@
       drawFrame();
     } catch (err) {
       console.error('Erro na exportação de vídeo:', err);
-      alert('Ocorreu um erro durante a renderização do vídeo mosaico: ' + err.message);
+      uiAlert('Ocorreu um erro durante a renderização do vídeo mosaico: ' + err.message);
       dom.exportModal.classList.remove('active');
     }
   }
@@ -3607,7 +3650,7 @@
   async function exportMixedAudio() {
     const recordedTracks = state.tracks.filter(t => t.videoElement);
     if (recordedTracks.length === 0) {
-      alert('Nenhuma gravação encontrada para exportar o áudio!');
+      uiAlert('Nenhuma gravação encontrada para exportar o áudio!');
       return;
     }
 
@@ -3740,7 +3783,7 @@
         };
       }, durationMs);
     } catch (e) {
-      alert('Erro na exportação de áudio: ' + e.message);
+      uiAlert('Erro na exportação de áudio: ' + e.message);
       dom.exportModal.classList.remove('active');
     }
   }
@@ -4300,12 +4343,12 @@
     const endMediaSec = Math.max(curTrimStart + 0.1, rawDur - curTrimEnd);
 
     if (splitMediaSec <= curTrimStart + 0.08 || splitMediaSec >= endMediaSec - 0.08) {
-      alert('Posicione a agulha dentro da área ativa da faixa para dividi-la em 2 partes!');
+      uiAlert('Posicione a agulha dentro da área ativa da faixa para dividi-la em 2 partes!');
       return false;
     }
 
     if (state.tracks.length >= MAX_STUDIO_TRACKS) {
-      alert(`O limite máximo de ${MAX_STUDIO_TRACKS} faixas foi atingido. Remova uma faixa para poder dividir em duas.`);
+      uiAlert(`O limite máximo de ${MAX_STUDIO_TRACKS} faixas foi atingido. Remova uma faixa para poder dividir em duas.`);
       return false;
     }
 
@@ -4346,7 +4389,7 @@
       targetTrack = state.tracks.find(t => t.mediaUrl);
     }
     if (!targetTrack) {
-      alert('Grave ou importe uma faixa primeiro para poder cortá-la!');
+      uiAlert('Grave ou importe uma faixa primeiro para poder cortá-la!');
       return;
     }
 
@@ -4865,7 +4908,8 @@
   function triggerMasterRecord() {
     let targetTrack = state.tracks.find(t => t.armed);
     if (!targetTrack && state.selectedTrackId) {
-      targetTrack = state.tracks.find(t => t.id === state.selectedTrackId);
+      // Só auto-arma a faixa selecionada se ela estiver vazia: evita gravar por cima de um take existente.
+      targetTrack = state.tracks.find(t => t.id === state.selectedTrackId && !t.mediaUrl && !t.mediaBlob);
       if (targetTrack) {
         targetTrack.armed = true;
         const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
@@ -4876,7 +4920,9 @@
       }
     }
     if (!targetTrack && state.tracks.length > 0) {
-      targetTrack = state.tracks[0];
+      targetTrack = state.tracks.find(t => !t.mediaUrl && !t.mediaBlob) || addTrack();
+    }
+    if (targetTrack && !targetTrack.armed) {
       targetTrack.armed = true;
       const armBtn = dom.reaperTracksStack?.querySelector(`.btn-rec-arm[data-id="${targetTrack.id}"]`);
       if (armBtn) {
@@ -5572,10 +5618,10 @@
               switchViewMode(state.viewMode);
               renderStudioViews();
               saveCurrentSession();
-              alert('Projeto carregado com sucesso!');
+              uiAlert('Projeto carregado com sucesso!');
             }
           } catch (err) {
-            alert('Arquivo de projeto inválido: ' + err.message);
+            uiAlert('Arquivo de projeto inválido: ' + err.message);
           } finally {
             dom.projectFileInput.value = '';
           }
@@ -5588,7 +5634,7 @@
     restoreSession();
   }
 
-  // Importa um arranjo/breque ou instrumento renderizado pelo Sequenciador diretamente como pista no Studio Multitrack
+  // Importa um arranjo/breque ou instrumento renderizado pelo Sequenciador diretamente como pista no Estúdio
   async function importSequencerBounce(wavBlob, durationSec, bpm, meter, measures, customTrackName) {
     stopStudioPlayback();
     sessionEpoch++;
@@ -5705,6 +5751,7 @@
   // Exporta init para ser chamado pelo orquestrador
   window.BeatboxStudio = {
     init,
+    setSyncBadge,
     startStudioPlayback,
     pauseStudioPlayback,
     stopStudioPlayback,
@@ -5730,7 +5777,9 @@
     closeStudioMenus,
     openLatencyCalibrationModal,
     closeLatencyCalibrationModal,
-    updateTrackOffsetInPlace
+    updateTrackOffsetInPlace,
+    // Gancho somente para testes automatizados.
+    __test: { recordingContext, keepCurrentTake, getTracks: () => state.tracks }
   };
 
 })();

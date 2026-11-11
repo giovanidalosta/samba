@@ -316,7 +316,7 @@
 
 .lcd-cell-label {
   font-family: var(--font-ui);
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.8px;
   color: #686970;
@@ -527,7 +527,7 @@
 
 .btn-dock-item .dock-label {
   font-family: var(--font-ui);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.2px;
   color: var(--text-muted);
@@ -660,7 +660,7 @@
 }
 
 .btn-popover-trigger .caret {
-  font-size: 10px;
+  font-size: 11px;
   opacity: 0.7;
 }
 
@@ -706,7 +706,7 @@
 
 .popover-section-title {
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -798,7 +798,7 @@
   border: 1px solid var(--border-color);
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-muted);
 }
@@ -905,7 +905,7 @@
 
 .corner-label {
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   color: var(--text-muted);
@@ -936,7 +936,7 @@
   align-items: center;
   padding-left: 8px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -962,7 +962,7 @@
 }
 
 .ruler-sub-label {
-  font-size: 9px;
+  font-size: 11px;
   color: #5C5D66;
   margin-left: 3px;
   font-weight: normal;
@@ -1085,7 +1085,7 @@
 
 .tcp-track-number {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
   background: #0A090C;
@@ -1250,7 +1250,7 @@
   justify-content: center;
   gap: 3px;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
   cursor: pointer;
@@ -1279,7 +1279,7 @@
   background: #0A090C;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -1348,7 +1348,7 @@
 
 .fader-icon {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: #686970;
   flex-shrink: 0;
   display: inline-flex;
@@ -1387,7 +1387,7 @@
 
 .tcp-vol-db {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   min-width: 30px;
   text-align: right;
@@ -1402,7 +1402,7 @@
   border-radius: 10px;
   padding: 1px 3px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   color: var(--text-silver);
   user-select: none;
   flex-shrink: 0;
@@ -1433,7 +1433,7 @@
 .tcp-sync-val {
   min-width: 32px;
   text-align: center;
-  font-size: 9px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -1516,7 +1516,7 @@
   justify-content: space-between;
   gap: 6px;
   font-family: var(--font-ui);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text-silver);
   font-weight: 600;
   user-select: none;
@@ -1558,7 +1558,7 @@
 
 .item-meta-tag {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   color: var(--naum-gold);
   background: rgba(232, 195, 27, 0.12);
   padding: 1px 5px;
@@ -1764,7 +1764,7 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -1973,7 +1973,7 @@
 
 .volume-val-badge {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text-muted);
   width: 36px;
   text-align: right;
@@ -1994,7 +1994,7 @@
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 11px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2084,7 +2084,7 @@
   padding: 2px 5px;
   border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.12s ease;
 }
@@ -2096,7 +2096,7 @@
 
 .nudge-val-display {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-silver);
   min-width: 42px;
@@ -2174,7 +2174,7 @@
 
 .track-audio-stage-card .stage-audio-badge {
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--naum-gold);
   background: var(--naum-gold-muted);
@@ -2999,7 +2999,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   .studio-top-bar .view-switch-btn {
     padding: 4px 5px !important;
     min-height: 28px !important;
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     gap: 2px !important;
   }
 
@@ -3012,14 +3012,14 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .studio-top-actions .btn-studio-add {
     padding: 4px 5px !important;
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     min-height: 28px !important;
     gap: 2px !important;
   }
 
   .studio-top-actions .btn-studio-top-action {
     padding: 4px 5px !important;
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     min-height: 28px !important;
     gap: 2px !important;
   }
@@ -3044,7 +3044,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .btn-dock-item .dock-label {
-    font-size: 9px !important;
+    font-size: 11px !important;
   }
 
   .btn-dock-item .dock-icon {
@@ -3294,7 +3294,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     height: 28px !important;
     min-height: 28px !important;
     padding: 0 7px !important;
-    font-size: 10px !important;
+    font-size: 11px !important;
   }
 
   .tcp-btn-mute,
@@ -3302,7 +3302,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     width: 28px !important;
     height: 28px !important;
     min-height: 28px !important;
-    font-size: 10.5px !important;
+    font-size: 11px !important;
   }
 
   .btn-empty-action,
@@ -3375,7 +3375,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
     height: 26px !important;
     min-width: 24px !important;
     padding: 0 !important;
-    font-size: 10px !important;
+    font-size: 11px !important;
     position: relative;
     border-radius: 4px !important;
   }
@@ -3399,7 +3399,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .art-brush-pill {
     padding: 3px 7px !important;
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     min-height: 26px !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -3414,7 +3414,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   .inst-groove-select {
     flex: 1 1 auto !important;
     min-width: 0 !important;
-    font-size: 10px !important;
+    font-size: 11px !important;
     padding: 3px 4px !important;
     height: 28px !important;
   }
@@ -3449,7 +3449,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   .step-node {
     width: 24px !important;
     height: 24px !important;
-    font-size: 9px !important;
+    font-size: 11px !important;
   }
 
   /* -------------------------------------------------------------
@@ -3557,7 +3557,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .mob-label {
     font-family: var(--font-ui);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.3px;
     text-transform: uppercase;
@@ -3678,7 +3678,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   }
 
   .record-workspace .audio-viewfinder-sub {
-    font-size: 10px;
+    font-size: 11px;
     padding: 2px 7px;
   }
 
@@ -4068,7 +4068,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   color: #0A090C;
   background: transparent;
   flex-shrink: 0;
@@ -4433,7 +4433,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 
   .home-badge-tag {
     align-self: flex-start;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.5px;
   }
 
@@ -4783,7 +4783,7 @@ button, input, select, .step-cell, .mob-bar-btn, .mob-bar-play {
 }
 
 .modal-choice-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   padding: 2px 7px;
@@ -5239,7 +5239,7 @@ header#appMainHeader.project-open .brand .brand-subtitle {
   border: 1px solid rgba(232, 195, 27, 0.4);
   color: var(--naum-gold);
   font-family: var(--font-ui);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -5311,7 +5311,7 @@ header#appMainHeader.project-open .brand .brand-subtitle {
   border: 1px solid rgba(255, 255, 255, 0.16);
   color: var(--text-silver);
   font-family: var(--font-ui);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 0 5px;
   height: 15px;
@@ -5435,7 +5435,7 @@ header#appMainHeader.project-open .brand .brand-subtitle {
   border: 1px solid var(--naum-gold);
   color: var(--naum-gold);
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 3px;
@@ -5491,7 +5491,7 @@ header#appMainHeader.project-open .brand .brand-subtitle {
 }
 
 .cut-stat-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -5644,7 +5644,7 @@ header#appMainHeader.project-open .brand .brand-subtitle {
 }
 
 .calib-ping-dot .ping-label {
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   color: #8C8E96;
   font-weight: 700;
@@ -5743,3 +5743,71 @@ header#appMainHeader.project-open .brand .brand-subtitle {
   accent-color: #E8C31B;
   cursor: pointer;
 }
+
+/* =========================================================================
+   Revisão 2026-11-10 — acessibilidade global
+   ========================================================================= */
+:focus-visible {
+  outline: 2px solid var(--naum-gold, #E8C31B) !important;
+  outline-offset: 2px !important;
+}
+
+.item-sync-badge.is-zero {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== Pad mobile compacto (≤600px): cabeçalho enxuto + bottom sheet por naipe ===== */
+.track-header-extra { display: contents; }
+.track-header-extra .sheet-close, .track-header-extra .sheet-clear, #padSheetBackdrop { display: none; }
+
+#gridContainer, #tracksWrapper .steps-container {
+  scrollbar-width: thin;
+  scrollbar-color: #3A3946 transparent;
+}
+main { scrollbar-width: thin; scrollbar-color: #3A3946 transparent; }
+
+@media (max-width: 600px) {
+  #tab-sequencer .track-header { width: 112px !important; min-width: 112px !important; transform: none !important; }
+  #tab-sequencer .ruler-row { margin-left: 112px !important; }
+  #tab-sequencer .track-header .btn-clear-track { display: none !important; }
+  #tab-sequencer .track-header .track-header-extra { display: none !important; }
+
+  #tab-sequencer .track-header.sheet-open .track-header-extra {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 1100;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    background: #121117;
+    border-top: 2px solid var(--instrument-color, var(--naum-gold));
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.85);
+  }
+  #tab-sequencer .track-header.sheet-open .track-header-extra .sheet-close {
+    display: inline-flex; align-self: flex-end; min-width: 44px; min-height: 36px; justify-content: center; align-items: center;
+  }
+  #tab-sequencer .track-header.sheet-open .track-header-extra .sheet-clear { display: inline-flex; align-self: flex-start; min-height: 36px; align-items: center; }
+  #tab-sequencer .track-header.sheet-open .track-art-palette { flex-wrap: wrap !important; }
+  #tab-sequencer .track-header.sheet-open .btn-save-groove { display: inline-flex !important; }
+  #tab-sequencer .track-header.sheet-open .inst-vol-box { width: 96px !important; }
+  body.pad-sheet-open #padSheetBackdrop {
+    display: block; position: fixed; inset: 0; z-index: 1090; background: rgba(0, 0, 0, 0.55);
+  }
+}
+
+@media (hover: none) { .kbd-hint { display: none; } }
+
+.home-backup-actions { display: inline-flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }

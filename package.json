@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js",
-    "test:browser": "node tests/browser-verify.js"
+    "test:browser": "node tests/browser-verify.js",
+    "build:sw": "node scripts/build-sw.js",
+    "test:quick": "node --test --test-concurrency=1 tests/review_*.test.js"
   },
   "keywords": [
     "samba",
