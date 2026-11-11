@@ -2292,7 +2292,7 @@
   </footer>
 
   <!-- Soundbank embutido para compatibilidade total offline e file:/// sem CORS -->
-  <script src="assets/soundbank.js"></script>
+  <script src="assets/soundbank.js" defer></script>
   <script>
     /* =========================================================================
        0. DIÁLOGOS E TOASTS ESTILIZADOS NA IDENTIDADE NAUMTERIA (SEM TRAVAMENTO)
@@ -3695,7 +3695,8 @@
        3. ESTADO DA APLICAÇÃO E SEQUENCIADOR
        ========================================================================= */
     const audio = new SambaAudioEngine();
-    audio.preloadSamples();
+    // O soundbank é carregado com defer (executa antes do DOMContentLoaded), então o pré-carregamento espera por ele.
+    window.addEventListener('DOMContentLoaded', () => audio.preloadSamples());
 
     const state = {
       bpm: 120,
