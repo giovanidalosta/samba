@@ -1,6 +1,6 @@
 // Naumteria Studio - Service Worker
 // <generated>
-const CACHE_NAME = 'naumteria-studio-b9fd19f452';
+const CACHE_NAME = 'naumteria-studio-3b42ed9a8c';
 const AUDIO_ASSETS = [
   'assets/audio/ag_2e.mp3',
   'assets/audio/ag_61.mp3',
@@ -159,9 +159,12 @@ const CORE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([...CORE_ASSETS, ...AUDIO_ASSETS]).catch((err) => {
+      // O shell entra em um addAll; cada áudio é tentado à parte, para uma falha isolada não descartar o resto.
+      return cache.addAll(CORE_ASSETS).catch((err) => {
         console.warn('Falha parcial ao pré-armazenar assets:', err);
-      });
+      }).then(() => Promise.all(AUDIO_ASSETS.map((url) =>
+        cache.add(url).catch((err) => console.warn('Áudio não pré-armazenado:', url, err))
+      )));
     }).then(() => self.skipWaiting())
   );
 });

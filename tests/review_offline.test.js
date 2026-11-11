@@ -14,7 +14,7 @@ describe('Revisão 2026-11-10: offline real (B2, B3)', () => {
     assert.ok(files.length > 100);
     const missing = files.filter(f => !sw.includes(`'assets/audio/${f}'`));
     assert.deepEqual(missing, []);
-    assert.match(sw, /cache\.addAll\(\[\.\.\.CORE_ASSETS, \.\.\.AUDIO_ASSETS\]\)/);
+    assert.ok(sw.includes('AUDIO_ASSETS.map((url) =>') && sw.includes('cache.add(url).catch'), 'cada áudio deve ser pré-cacheado individualmente');
   });
 
   it('TR17.2: CACHE_NAME vem do hash dos assets (sw.js em dia com "npm run build:sw")', () => {

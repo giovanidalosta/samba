@@ -574,9 +574,11 @@
     document.addEventListener('keydown', (e) => {
       if (currentActiveTab !== 'tab-sequencer' || !(e.ctrlKey || e.metaKey)) return;
       const tag = (e.target && e.target.tagName) || '';
-      if (/^(INPUT|SELECT|TEXTAREA)$/.test(tag)) return;
+      if (/^(INPUT|SELECT|TEXTAREA)$/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      const dlg = document.getElementById('appDialogModal');
+      if (dlg && dlg.style.display !== 'none' && dlg.style.display !== '') return;
       const k = e.key.toLowerCase();
-      if (k === 'z' && !e.shiftKey) { e.preventDefault(); padUndo(); }
+      if (k === 'z' && !e.shiftKey) { if (padUndoIdx > 0 || padUndoTimer) { e.preventDefault(); padUndo(); } }
       else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); padRedo(); }
     });
 

@@ -705,7 +705,9 @@
       let raw = null;
       try {
         raw = localStorage.getItem(CUSTOM_BATERIA_PRESETS_KEY);
-        return raw ? JSON.parse(raw) : {};
+        const parsed = raw ? JSON.parse(raw) : {};
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('presets não é um objeto');
+        return parsed;
       } catch (e) {
         // JSON corrompido: guarda uma cópia antes que o próximo save sobrescreva os dados.
         try {
@@ -757,7 +759,8 @@
       let added = 0;
       let updated = 0;
       for (const [id, p] of Object.entries(data.presets)) {
-        if (!p || typeof p !== 'object') continue;
+        if (!p || typeof p !== 'object' || Array.isArray(p) || typeof p.name !== 'string'
+          || (p.gridData !== undefined && (!p.gridData || typeof p.gridData !== 'object'))) continue;
         if (!current[id]) { current[id] = p; added++; }
         else if ((p.updatedAt || 0) > (current[id].updatedAt || 0)) { current[id] = p; updated++; }
       }

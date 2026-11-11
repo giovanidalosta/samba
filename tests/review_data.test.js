@@ -73,6 +73,21 @@ describe('Revisão 2026-11-10: dados e backup (Task 18)', () => {
     assert.equal(r.same, true);
   });
 
+  it('TR18.7: valor não-objeto no storage vira {} e preset sem nome é recusado na importação', async () => {
+    const r = await session.evaluate((pk) => {
+      localStorage.setItem(pk, 'null');
+      const a = window.loadCustomBateriaPresets();
+      localStorage.setItem(pk, '[]');
+      const b = window.loadCustomBateriaPresets();
+      localStorage.removeItem(pk);
+      window.importBackupData({ schema: 1, presets: { ok: { name: 'Ok', gridData: {} }, ruim: { bpm: 1 }, ruim2: { name: 'X', gridData: 5 } }, grooves: {} });
+      return { a, b, saved: Object.keys(JSON.parse(localStorage.getItem(pk))) };
+    }, PRESETS_KEY);
+    assert.deepEqual(r.a, {});
+    assert.deepEqual(r.b, {});
+    assert.deepEqual(r.saved, ['ok']);
+  });
+
   it('TR18.6: botões "Exportar tudo" e "Importar backup" existem na Home', async () => {
     const r = await session.evaluate(() => ({ exp: !!document.getElementById('btnExportAllBreques'), imp: !!document.getElementById('btnImportBackup') }));
     assert.deepEqual(r, { exp: true, imp: true });

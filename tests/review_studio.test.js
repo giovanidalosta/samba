@@ -79,6 +79,22 @@ describe('Revisão 2026-11-10: gravação de takes no Estúdio (U4)', () => {
     assert.notEqual(r.url, 'blob:antigo');
   });
 
+  it('TR9.5: duas chamadas simultâneas de salvar take perguntam uma vez só', async () => {
+    const recordedId = await setupRecordedTrack();
+    const r = await session.evaluate(async (id) => {
+      let calls = 0;
+      window.appConfirm = async () => { calls++; await new Promise(r => setTimeout(r, 80)); return false; };
+      const ctx = window.BeatboxStudio.__test.recordingContext;
+      ctx.activeTrackId = id; ctx.lastRecordedBlob = new Blob(['n']); ctx.captureMode = 'audio';
+      const k = window.BeatboxStudio.__test.keepCurrentTake;
+      const before = window.BeatboxStudio.__test.getTracks().length;
+      await Promise.all([k(), k()]);
+      return { calls, added: window.BeatboxStudio.__test.getTracks().length - before };
+    }, recordedId);
+    assert.equal(r.calls, 1);
+    assert.equal(r.added, 1);
+  });
+
   it('TR9.4: faixa vazia recebe o take sem perguntar', async () => {
     await setupRecordedTrack();
     const emptyId = await session.evaluate(() => window.BeatboxStudio.addTrack('Vazia').id);

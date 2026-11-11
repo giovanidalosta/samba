@@ -2999,7 +2999,14 @@
     }
   }
 
+  // Evita reentrada (duplo clique, Enter + clique) enquanto o diálogo de substituição está aberto.
+  let keepingTake = false;
   async function keepCurrentTake() {
+    if (keepingTake) return;
+    keepingTake = true;
+    try { await keepCurrentTakeImpl(); } finally { keepingTake = false; }
+  }
+  async function keepCurrentTakeImpl() {
     if (!recordingContext.lastRecordedBlob) return;
     let track = state.tracks.find(t => t.id === recordingContext.activeTrackId);
     if (track && (track.mediaUrl || track.mediaBlob)) {

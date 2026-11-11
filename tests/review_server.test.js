@@ -31,6 +31,17 @@ describe('Revisão 2026-11-10: servidor estático', () => {
     }
   });
 
+  it('TR6.6: arquivos de extensão não pública dentro de assets/ não são servidos', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const tmp = path.join(__dirname, '..', 'assets', 'tmp_review.bak');
+    fs.writeFileSync(tmp, 'segredo');
+    try {
+      const res = await fetch(BASE + '/assets/tmp_review.bak');
+      assert.equal(res.status, 404);
+    } finally { fs.unlinkSync(tmp); }
+  });
+
   it('TR6.5: escape % malformado retorna 400 e o servidor continua de pé', async () => {
     const http = require('http');
     const status = await new Promise((resolve, reject) => {

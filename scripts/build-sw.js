@@ -14,7 +14,10 @@ function buildBlock() {
   const audio = fs.readdirSync(path.join(root, 'assets', 'audio'))
     .filter(f => f.endsWith('.mp3')).sort().map(f => 'assets/audio/' + f);
   // index.html/css/js são network-first no SW; só assets estáticos entram no hash (evita reconstruir a cada edição).
-  const shell = ['assets/soundbank.js', 'manifest.json'];
+  const staticDirs = ['assets/fonts'];
+  const staticFiles = fs.readdirSync(path.join(root, 'assets')).filter(f => fs.statSync(path.join(root, 'assets', f)).isFile()).map(f => 'assets/' + f);
+  const fonts = staticDirs.flatMap(d => fs.readdirSync(path.join(root, d)).sort().map(f => d + '/' + f));
+  const shell = ['manifest.json', ...staticFiles.sort(), ...fonts];
   const h = crypto.createHash('sha1');
   [...shell, ...audio].forEach(f => { h.update(f); h.update(fs.readFileSync(path.join(root, f))); });
   const name = 'naumteria-studio-' + h.digest('hex').slice(0, 10);

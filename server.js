@@ -56,7 +56,8 @@ const server = http.createServer((req, res) => {
   const relativeSegments = path.relative(PUBLIC_DIR, safePath).split(path.sep);
   const relPath = relativeSegments.join('/');
   const isPublic = PUBLIC_ROOT_FILES.has(relPath) ||
-    ((relativeSegments[0] === 'assets' || relativeSegments[0] === 'js') && relativeSegments.length > 1);
+    ((relativeSegments[0] === 'assets' || relativeSegments[0] === 'js') && relativeSegments.length > 1
+      && Object.prototype.hasOwnProperty.call(MIME_TYPES, path.extname(safePath).toLowerCase()));
   if (!isPublic || relativeSegments.some(seg => seg.startsWith('.') || seg.includes('~'))) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('404 Not Found');
