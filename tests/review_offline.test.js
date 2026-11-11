@@ -39,4 +39,25 @@ describe('Revisão 2026-11-10: offline real (B2, B3)', () => {
       assert.ok(ok.bank >= 40, "soundbank carregou: " + ok.bank);
     });
   });
+
+  it('TR20.1: index.html não carrega mais o JS inline e todos os js/*.js estão no SW', () => {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const inlineSizes = [];
+    let pos = 0;
+    while ((pos = html.indexOf('<script', pos)) !== -1) {
+      const tagEnd = html.indexOf('>', pos);
+      const tag = html.slice(pos, tagEnd);
+      const close = html.indexOf('</script>', tagEnd);
+      if (!tag.includes(' src=')) inlineSizes.push(html.slice(tagEnd, close).split('\n').length);
+      pos = close;
+    }
+    assert.ok(inlineSizes.every(n => n < 40), 'script inline grande: ' + inlineSizes);
+    const files = fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js'));
+    assert.ok(files.length >= 8);
+    const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+    for (const f of files) {
+      assert.ok(html.includes('src="js/' + f + '"'), f + ' sem <script> no index.html');
+      assert.ok(sw.includes("'js/" + f + "'"), f + ' fora do SW');
+    }
+  });
 });
