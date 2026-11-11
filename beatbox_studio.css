@@ -5809,3 +5809,5 @@ main { scrollbar-width: thin; scrollbar-color: #3A3946 transparent; }
 }
 
 @media (hover: none) { .kbd-hint { display: none; } }
+
+.home-backup-actions { display: inline-flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }

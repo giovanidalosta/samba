@@ -51,8 +51,8 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 | 14 | Diálogos nativos → appDialog | U11 | [EXECUTADO] alert/prompt/confirm nativos → appAlert/appPrompt/appConfirm (offset usa appPrompt, não stepper inline: Ruling) |
 | 15 | Grade acessível por teclado | V2 | [EXECUTADO] role=grid, gridcell, tabindex roving, setas + Enter/Espaço |
 | 16 | Sistema visual: tamanhos, paleta, emojis, marca | V4, V7, V11, V6 marca | [EXECUTADO, parcial] piso 11px, sem emoji em seletores, "Estúdio" no lugar de "Studio Multitrack"; cores de transporte e CTA único NÃO feitos (decisão visual) |
-| 17 | Offline real: pré-cache de áudio, soundbank adiado | B2, B3 | [AGUARDA APROVAÇÃO] |
-| 18 | Dados: backup geral, storage.persist, esquema versionado | F, FE3 | [AGUARDA APROVAÇÃO] |
+| 17 | Offline real: pré-cache de áudio, soundbank adiado | B2, B3 | [EXECUTADO] SW pré-cacheia áudios, CACHE_NAME por hash (`npm run build:sw`), soundbank com defer |
+| 18 | Dados: backup geral, storage.persist, esquema versionado | F, FE3 | [EXECUTADO] exportar/importar backup, persist(), esquema v1, cópia _bak (gravações do Estúdio não entram no backup) |
 | 19 | Desfazer/refazer no Pad | F | [AGUARDA APROVAÇÃO] |
 | 20 | Extrair JS inline de `index.html` | FE1 | [AGUARDA APROVAÇÃO] |
 | 21 | Testes: cobertura do Pad/Home, deduplicação | FE4 | [AGUARDA APROVAÇÃO] |

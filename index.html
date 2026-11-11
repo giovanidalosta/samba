@@ -1293,6 +1293,11 @@
           <span>🥁</span> Meus Breques & Repertório
         </h3>
         <span id="homeBrequesCount" class="home-section-count">0 breques</span>
+        <span class="home-backup-actions">
+          <button type="button" id="btnExportAllBreques" class="btn btn-sm" title="Baixar todos os seus breques e levadas num único arquivo .json">Exportar tudo</button>
+          <button type="button" id="btnImportBackup" class="btn btn-sm" title="Restaurar breques e levadas de um arquivo de backup">Importar backup</button>
+          <input type="file" id="inputImportBackup" accept="application/json,.json" style="display:none;">
+        </span>
       </div>
 
       <div class="home-library-controls">
@@ -4391,22 +4396,108 @@
 
     const CUSTOM_BATERIA_PRESETS_KEY = 'naumteria_custom_bateria_presets_v1';
 
+    const SCHEMA_VERSION = 1;
+    const SCHEMA_KEY = 'naumteria_schema_v';
+
     function loadCustomBateriaPresets() {
+      let raw = null;
       try {
-        const raw = localStorage.getItem(CUSTOM_BATERIA_PRESETS_KEY);
+        raw = localStorage.getItem(CUSTOM_BATERIA_PRESETS_KEY);
         return raw ? JSON.parse(raw) : {};
       } catch (e) {
+        // JSON corrompido: guarda uma cópia antes que o próximo save sobrescreva os dados.
+        try {
+          if (raw && !localStorage.getItem(CUSTOM_BATERIA_PRESETS_KEY + '_bak')) {
+            localStorage.setItem(CUSTOM_BATERIA_PRESETS_KEY + '_bak', raw);
+          }
+        } catch (e2) { /* sem espaço: nada a fazer */ }
         return {};
       }
     }
+    window.loadCustomBateriaPresets = loadCustomBateriaPresets;
 
+    let persistRequested = false;
     function saveCustomBateriaPresetsToStorage(obj) {
       try {
         localStorage.setItem(CUSTOM_BATERIA_PRESETS_KEY, JSON.stringify(obj));
+        localStorage.setItem(SCHEMA_KEY, String(SCHEMA_VERSION));
+        // Pede ao navegador que não apague os breques por falta de espaço (uma vez por sessão).
+        if (!persistRequested && navigator.storage && typeof navigator.storage.persist === 'function') {
+          persistRequested = true;
+          navigator.storage.persist().catch(() => {});
+        }
       } catch (e) {
         console.warn('Erro ao salvar presets de bateria:', e);
       }
     }
+    window.saveCustomBateriaPresetsToStorage = saveCustomBateriaPresetsToStorage;
+
+    function readRawGrooves() {
+      try { return JSON.parse(localStorage.getItem(CUSTOM_GROOVES_STORAGE_KEY) || '{}') || {}; } catch (e) { return {}; }
+    }
+
+    // Backup geral: breques + levadas do usuário (as gravações do Estúdio ficam no navegador e não entram neste arquivo).
+    function buildBackupData() {
+      return {
+        app: 'naumteria-studio',
+        schema: SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        presets: loadCustomBateriaPresets(),
+        grooves: readRawGrooves(),
+      };
+    }
+    function importBackupData(data) {
+      if (!data || typeof data !== 'object' || data.schema !== SCHEMA_VERSION
+        || !data.presets || typeof data.presets !== 'object' || Array.isArray(data.presets)) {
+        return { ok: false, error: 'Arquivo de backup inválido ou de uma versão não suportada.' };
+      }
+      const current = loadCustomBateriaPresets();
+      let added = 0;
+      let updated = 0;
+      for (const [id, p] of Object.entries(data.presets)) {
+        if (!p || typeof p !== 'object') continue;
+        if (!current[id]) { current[id] = p; added++; }
+        else if ((p.updatedAt || 0) > (current[id].updatedAt || 0)) { current[id] = p; updated++; }
+      }
+      saveCustomBateriaPresetsToStorage(current);
+      if (data.grooves && typeof data.grooves === 'object' && !Array.isArray(data.grooves)) {
+        const g = readRawGrooves();
+        for (const [instId, list] of Object.entries(data.grooves)) {
+          if (!Array.isArray(list)) continue;
+          g[instId] = g[instId] || [];
+          list.forEach(item => { if (item && item.id && !g[instId].some(x => x.id === item.id)) g[instId].push(item); });
+        }
+        try { localStorage.setItem(CUSTOM_GROOVES_STORAGE_KEY, JSON.stringify(g)); } catch (e) { /* sem espaço */ }
+      }
+      customBateriaPresets = loadCustomBateriaPresets();
+      try { const fresh = loadCustomGroovesFromStorage(); Object.keys(customGrooves).forEach(k => delete customGrooves[k]); Object.assign(customGrooves, fresh); } catch (e) { /* recarregado no próximo uso */ }
+      return { ok: true, added, updated };
+    }
+    window.buildBackupData = buildBackupData;
+    window.importBackupData = importBackupData;
+
+    document.getElementById('btnExportAllBreques')?.addEventListener('click', () => {
+      const data = buildBackupData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'naumteria-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      window.appToast(Object.keys(data.presets).length + ' breque(s) exportado(s).', 'info');
+    });
+    const inputImportBackup = document.getElementById('inputImportBackup');
+    document.getElementById('btnImportBackup')?.addEventListener('click', () => inputImportBackup && inputImportBackup.click());
+    inputImportBackup?.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      let res;
+      try { res = importBackupData(JSON.parse(await file.text())); } catch (err) { res = { ok: false, error: 'O arquivo não é um JSON válido.' }; }
+      if (!res.ok) { window.appAlert(res.error, 'Importar backup'); return; }
+      if (typeof renderHomeBrequesList === 'function') renderHomeBrequesList();
+      window.appToast(res.added + ' novo(s), ' + res.updated + ' atualizado(s).', 'info');
+    });
 
     let customBateriaPresets = loadCustomBateriaPresets();
 
