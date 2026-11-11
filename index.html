@@ -332,6 +332,8 @@
     .pad-help-bar { display: flex; align-items: center; gap: 12px; padding: 8px 24px 0; }
     .pad-help-strip { flex: 1; margin: 0; padding: 6px 12px; font-size: 12px; color: var(--text-muted);
       border: 1px dashed rgba(232, 195, 27, 0.4); border-radius: 8px; }
+    .pad-history-btns { display: inline-flex; gap: 6px; margin-left: auto; }
+    .pad-history-btns + .pad-legend-wrap { margin-left: 0; }
     .pad-help-strip.is-hidden { display: none; }
     .pad-legend-wrap { position: relative; margin-left: auto; }
     .pad-legend-popover { display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
@@ -1901,6 +1903,10 @@
     <!-- Main Canvas/Sequencer -->
     <div class="pad-help-bar" id="padHelpBar">
       <p class="pad-help-strip" id="padHelpStrip">Toque numa célula para marcar; toque de novo para trocar a articulação.</p>
+      <div class="pad-history-btns">
+        <button type="button" id="btnPadUndo" class="btn-step" disabled title="Desfazer [Ctrl+Z]" aria-label="Desfazer">↶</button>
+        <button type="button" id="btnPadRedo" class="btn-step" disabled title="Refazer [Ctrl+Shift+Z]" aria-label="Refazer">↷</button>
+      </div>
       <div class="pad-legend-wrap">
         <button type="button" id="btnPadLegend" class="btn btn-icon-only" aria-expanded="false" aria-controls="padLegendPopover"
           title="Legenda: o que significa cada sigla">?</button>
@@ -6348,6 +6354,72 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       updateHeaderBrequeTitle();
     }
 
+    // Desfazer/refazer do Pad: pilha de snapshots da grade (máx. 50). Cada interação "assenta" (debounce) e, se a grade
+    // mudou em relação ao topo da pilha, vira um novo estado. Trocar de breque zera o histórico.
+    const PAD_UNDO_CAP = 50;
+    let padUndoStack = [];
+    let padUndoIdx = -1;
+    let padUndoBreque = null;
+    let padUndoTimer = null;
+    const padUndoSnapshot = () => JSON.stringify({
+      g: state.gridData, m: state.stepMeta, l: state.loopGridData, s: state.selectedGroove, t: state.beatTuplets, c: state.measures,
+    });
+    function updatePadUndoButtons() {
+      const u = document.getElementById('btnPadUndo');
+      const r = document.getElementById('btnPadRedo');
+      if (u) u.disabled = padUndoIdx <= 0;
+      if (r) r.disabled = padUndoIdx >= padUndoStack.length - 1;
+    }
+    function padUndoCommit() {
+      clearTimeout(padUndoTimer);
+      if (!state.activeBrequeId || currentActiveTab !== 'tab-sequencer') return;
+      const snap = padUndoSnapshot();
+      if (padUndoBreque !== state.activeBrequeId) {
+        padUndoBreque = state.activeBrequeId;
+        padUndoStack = [snap];
+        padUndoIdx = 0;
+      } else if (snap !== padUndoStack[padUndoIdx]) {
+        padUndoStack = padUndoStack.slice(0, padUndoIdx + 1);
+        padUndoStack.push(snap);
+        if (padUndoStack.length > PAD_UNDO_CAP + 1) padUndoStack.shift();
+        padUndoIdx = padUndoStack.length - 1;
+      }
+      updatePadUndoButtons();
+    }
+    function padUndoRestore(idx) {
+      if (idx < 0 || idx >= padUndoStack.length) return;
+      padUndoCommit(); // assenta qualquer edição pendente antes de navegar na pilha
+      if (idx > padUndoStack.length - 1) return;
+      padUndoIdx = idx;
+      const d = JSON.parse(padUndoStack[idx]);
+      state.gridData = d.g; state.stepMeta = d.m; state.loopGridData = d.l; state.selectedGroove = d.s; state.beatTuplets = d.t;
+      state.measures = d.c;
+      const mc = document.getElementById('measureCountDisplay');
+      if (mc) mc.textContent = state.measures + ' Compassos';
+      renderStudio();
+      updatePadUndoButtons();
+      scheduleBrequeAutosave();
+    }
+    const padUndo = () => { padUndoCommit(); padUndoRestore(padUndoIdx - 1); };
+    const padRedo = () => padUndoRestore(padUndoIdx + 1);
+    window.padUndo = padUndo;
+    window.padRedo = padRedo;
+    window.padUndoDepth = () => padUndoStack.length;
+    document.getElementById('btnPadUndo')?.addEventListener('click', padUndo);
+    document.getElementById('btnPadRedo')?.addEventListener('click', padRedo);
+    ['pointerup', 'change', 'input', 'keyup'].forEach(evt => document.addEventListener(evt, () => {
+      clearTimeout(padUndoTimer);
+      padUndoTimer = setTimeout(padUndoCommit, 120);
+    }));
+    document.addEventListener('keydown', (e) => {
+      if (currentActiveTab !== 'tab-sequencer' || !(e.ctrlKey || e.metaKey)) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (/^(INPUT|SELECT|TEXTAREA)$/.test(tag)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); padUndo(); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); padRedo(); }
+    });
+
     // Faixa de ajuda (some após a 1ª nota) e legenda "?" com sigla → nome → som (toque para ouvir).
     const padHelpStrip = document.getElementById('padHelpStrip');
     const btnPadLegend = document.getElementById('btnPadLegend');
@@ -6446,6 +6518,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
       closeSeqPopovers();
       updatePadHelp();
       if (typeof setPadSheet === 'function') setPadSheet(null);
+      if (target === 'tab-sequencer') setTimeout(padUndoCommit, 0);
       if (window.BeatboxStudio && typeof window.BeatboxStudio.closeStudioMenus === 'function') {
         window.BeatboxStudio.closeStudioMenus();
       }

@@ -53,7 +53,7 @@ as melhorias maiores de UX/arquitetura para decisão do dono do produto.
 | 16 | Sistema visual: tamanhos, paleta, emojis, marca | V4, V7, V11, V6 marca | [EXECUTADO, parcial] piso 11px, sem emoji em seletores, "Estúdio" no lugar de "Studio Multitrack"; cores de transporte e CTA único NÃO feitos (decisão visual) |
 | 17 | Offline real: pré-cache de áudio, soundbank adiado | B2, B3 | [EXECUTADO] SW pré-cacheia áudios, CACHE_NAME por hash (`npm run build:sw`), soundbank com defer |
 | 18 | Dados: backup geral, storage.persist, esquema versionado | F, FE3 | [EXECUTADO] exportar/importar backup, persist(), esquema v1, cópia _bak (gravações do Estúdio não entram no backup) |
-| 19 | Desfazer/refazer no Pad | F | [AGUARDA APROVAÇÃO] |
+| 19 | Desfazer/refazer no Pad | F | [EXECUTADO] pilha de 50 snapshots, Ctrl+Z/Ctrl+Shift+Z e botões ↶ ↷ na barra de ajuda do Pad |
 | 20 | Extrair JS inline de `index.html` | FE1 | [AGUARDA APROVAÇÃO] |
 | 21 | Testes: cobertura do Pad/Home, deduplicação | FE4 | [AGUARDA APROVAÇÃO] |
 | 22 | Decisão de produto: back-end para repertório oficial | B4 | [AGUARDA APROVAÇÃO] |
