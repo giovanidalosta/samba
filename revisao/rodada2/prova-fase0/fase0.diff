@@ -1,0 +1,771 @@
+diff --git a/beatbox_studio.js b/beatbox_studio.js
+index 95b5e92..be41d8d 100644
+--- a/beatbox_studio.js
++++ b/beatbox_studio.js
+@@ -187,6 +187,53 @@
+   }
+ 
+   // --- Objeto da Faixa (Track) ---
++  // 0.1 — Sanitização de projeto/faixa vindos de .json importado ou do IndexedDB
++  const STUDIO_LIMITS = Object.freeze({ BPM_MIN: 30, BPM_MAX: 300, MEAS_MIN: 1, MEAS_MAX: 32, VOL_MAX: 1.5, OFFSET_MIN: -5000, OFFSET_MAX: 3600000, MAX_PEAKS: 20000 });
++  const SAFE_TRACK_ID = /^[A-Za-z0-9_-]{1,64}$/;
++  const ZOOM_LEVELS = [100, 125, 150, 200];
++
++  function clampNum(value, min, max, fallback, integer = false) {
++    if (value === null || value === undefined || value === '' || typeof value === 'boolean') return fallback;
++    let n = Number(value);
++    if (!Number.isFinite(n)) return fallback;
++    if (integer) n = Math.round(n);
++    return Math.min(max, Math.max(min, n));
++  }
++
++  function sanitizeStudioSettings(src) {
++    const L = STUDIO_LIMITS;
++    const o = (src && typeof src === 'object') ? src : {};
++    return {
++      bpm: clampNum(o.bpm, L.BPM_MIN, L.BPM_MAX, 120, true),
++      meter: o.meter === '4/4' ? '4/4' : '2/4',
++      mode: o.mode === 'fixed' ? 'fixed' : 'free',
++      measures: clampNum(o.measures, L.MEAS_MIN, L.MEAS_MAX, 4, true),
++      looping: !!o.looping,
++      metronomeEnabled: o.metronomeEnabled !== undefined ? !!o.metronomeEnabled : true,
++      viewMode: o.viewMode === 'mosaic' ? 'mosaic' : 'timeline',
++      zoomLevel: ZOOM_LEVELS.includes(Number(o.zoomLevel)) ? Number(o.zoomLevel) : 100
++    };
++  }
++
++  // Copia para `tr` (vindo de createTrack) só campos com tipo e faixa válidos.
++  function applySanitizedTrackFields(tr, src, usedIds) {
++    const L = STUDIO_LIMITS;
++    const t = (src && typeof src === 'object') ? src : {};
++    if (typeof t.id === 'string' && SAFE_TRACK_ID.test(t.id) && !usedIds.has(t.id)) tr.id = t.id;
++    usedIds.add(tr.id);
++    tr.volume = clampNum(t.volume, 0, L.VOL_MAX, 1.0);
++    tr.muted = t.muted === true;
++    tr.solo = t.solo === true;
++    tr.offsetMs = clampNum(t.offsetMs, L.OFFSET_MIN, L.OFFSET_MAX, 0, true);
++    tr.duration = clampNum(t.duration, 0, 86400, 0);
++    tr.trimStart = clampNum(t.trimStart, 0, tr.duration || 86400, 0);
++    tr.trimEnd = clampNum(t.trimEnd, 0, tr.duration || 86400, 0);
++    tr.waveformPeaks = (Array.isArray(t.waveformPeaks) && t.waveformPeaks.length <= L.MAX_PEAKS && t.waveformPeaks.every(Number.isFinite))
++      ? t.waveformPeaks : null;
++    tr.mediaType = t.mediaType === 'audio' ? 'audio' : 'video';
++    return tr;
++  }
++
+   function createTrack(name, initialIndex) {
+     const safeName = (typeof name === 'string' && name.trim() && !name.startsWith('[object'))
+       ? name.trim()
+@@ -762,8 +809,8 @@
+         <div class="mixer-row-primary">
+           <div class="volume-control-box">
+             <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);" title="Volume">VOL</span>
+-            <input type="range" class="volume-slider" min="0" max="1.5" step="0.05" value="${track.volume}" data-id="${track.id}" title="Volume: ${volPercent}%">
+-            <span class="volume-val-badge">${volPercent}%</span>
++            <input type="range" class="volume-slider" min="0" max="1.5" step="0.05" value="${escapeHtml(track.volume)}" data-id="${escapeHtml(track.id)}" title="Volume: ${escapeHtml(volPercent)}%">
++            <span class="volume-val-badge">${escapeHtml(volPercent)}%</span>
+           </div>
+           <div class="mute-solo-group">
+             <button class="btn-mute ${track.muted ? 'active' : ''}" data-id="${track.id}" title="Silenciar instrumento (Mute)">M</button>
+@@ -774,7 +821,7 @@
+         <div class="mixer-row-secondary">
+           <div class="nudge-controls mosaic-sync-pill" title="Ajuste fino de sincronismo temporal (Shift: ±50ms)">
+             <button type="button" class="mosaic-sync-step" data-id="${track.id}" data-step="-10" title="Adiantar 10ms (Shift: 50ms)">‹</button>
+-            <span class="nudge-val-display" data-id="${track.id}" title="Clique para zerar offset (0ms)">${track.offsetMs >= 0 ? '+' : ''}${track.offsetMs}ms</span>
++            <span class="nudge-val-display" data-id="${escapeHtml(track.id)}" title="Clique para zerar offset (0ms)">${track.offsetMs >= 0 ? '+' : ''}${escapeHtml(track.offsetMs)}ms</span>
+             <button type="button" class="mosaic-sync-step" data-id="${track.id}" data-step="10" title="Atrasar 10ms (Shift: 50ms)">›</button>
+           </div>
+ 
+@@ -816,7 +863,7 @@
+ 
+   function escapeHtml(str) {
+     if (str === null || str === undefined || typeof str === 'object') return '';
+-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
++    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+   }
+ 
+   // --- Eventos das Faixas ---
+@@ -1134,7 +1181,7 @@
+         <!-- Linha 1: Número, Nome e Menu Mais Opções (Kebab) -->
+         <div class="tcp-header-row">
+           <span class="tcp-track-number">${String(index + 1).padStart(2, '0')}</span>
+-          <input type="text" class="tcp-name-input" value="${escapeHtml(track.name)}" data-id="${track.id}" placeholder="Ex: Guia, Voz, Caixa..." title="Clique para dar um nome personalizado à faixa">
++          <input type="text" class="tcp-name-input" value="${escapeHtml(track.name)}" data-id="${escapeHtml(track.id)}" placeholder="Ex: Guia, Voz, Caixa..." title="Clique para dar um nome personalizado à faixa">
+           <div class="tcp-kebab-wrap">
+             <button type="button" class="tcp-btn-more" data-id="${track.id}" title="Mais opções da faixa (Carregar, Duplicar, Limpar, Excluir)" aria-label="Mais opções">⋯</button>
+             <div class="tcp-menu-dropdown" id="tcp_menu_${track.id}" style="display: none;">
+@@ -3075,7 +3122,7 @@
+     stopMetronomeClock();
+     const ctx = getAudioContext();
+     const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+-    const secondsPerBeat = 60 / state.bpm;
++    const secondsPerBeat = 60 / clampNum(state.bpm, STUDIO_LIMITS.BPM_MIN, STUDIO_LIMITS.BPM_MAX, 120);
+ 
+     metroClock.beatCount = 0;
+     const baseTime = (customStartAudioTime !== null && isFinite(customStartAudioTime))
+@@ -3088,7 +3135,9 @@
+     const scheduleBeats = () => {
+       const scheduleAheadSec = 0.12;
+       const now = ctx.currentTime;
+-      while (metroClock.nextBeatAudioTime < now + scheduleAheadSec) {
++      if (metroClock.nextBeatAudioTime < now - 1) metroClock.nextBeatAudioTime = now + 0.005; // volta de segundo plano
++      let guard = 0;
++      while (metroClock.nextBeatAudioTime < now + scheduleAheadSec && guard++ < 32) {
+         const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
+         const isAccent = beatInMeasure === 1;
+ 
+@@ -3117,9 +3166,10 @@
+       metroClock.activeTimeouts = [];
+     }
+     const beatsPerMeasure = state.meter === '2/4' ? 2 : 4;
+-    const secondsPerBeat = 60 / state.bpm;
++    const secondsPerBeat = 60 / clampNum(state.bpm, STUDIO_LIMITS.BPM_MIN, STUDIO_LIMITS.BPM_MAX, 120);
+     const now = ctx.currentTime;
+-    while (metroClock.nextBeatAudioTime < now + 0.12) {
++    let guard = 0;
++    while (metroClock.nextBeatAudioTime < now + 0.12 && guard++ < 32) {
+       const beatInMeasure = (metroClock.beatCount % beatsPerMeasure) + 1;
+       const isAccent = beatInMeasure === 1;
+       if (state.metronomeEnabled) {
+@@ -3815,6 +3865,7 @@
+ 
+   async function restoreSession(projectIdOverride, fallbackBpm) {
+     const isExplicitLoad = Boolean(projectIdOverride);
++    fallbackBpm = clampNum(fallbackBpm, STUDIO_LIMITS.BPM_MIN, STUDIO_LIMITS.BPM_MAX, undefined, true);
+     if (projectIdOverride) {
+       state.projectId = projectIdOverride;
+     }
+@@ -3845,34 +3896,20 @@
+         if (!userAlreadyInRecord) state.tracks = [];
+         if (fallbackBpm) state.bpm = fallbackBpm;
+       } else {
+-        state.bpm = saved.bpm || fallbackBpm || 120;
+-        state.meter = saved.meter || '2/4';
+-        state.mode = saved.mode || 'free';
+-        state.measures = saved.measures || 4;
+-        state.looping = !!saved.looping;
+-        state.metronomeEnabled = saved.metronomeEnabled !== undefined ? saved.metronomeEnabled : true;
+-        if (!userAlreadyInRecord) {
+-          state.viewMode = (saved.viewMode === 'mosaic') ? 'mosaic' : 'timeline';
+-        }
+-        state.zoomLevel = saved.zoomLevel || 100;
+-
+-        const restoredTracks = saved.tracks.map((st, i) => {
+-          const tr = createTrack(st.name, i);
+-          tr.id = st.id || tr.id;
+-          tr.volume = st.volume !== undefined ? st.volume : 1.0;
+-          tr.muted = !!st.muted;
+-          tr.solo = !!st.solo;
+-          tr.offsetMs = st.offsetMs || 0;
+-          tr.trimStart = st.trimStart || 0;
+-          tr.trimEnd = st.trimEnd || 0;
+-          tr.duration = st.duration || 0;
+-          tr.waveformPeaks = st.waveformPeaks || null;
+-          if (st.mediaBlob) {
++        const cleanSettings = sanitizeStudioSettings({ ...saved, bpm: saved.bpm || fallbackBpm || 120 });
++        const keepView = state.viewMode;
++        Object.assign(state, cleanSettings);
++        if (userAlreadyInRecord) state.viewMode = keepView;
++
++        const usedIds = new Set();
++        const restoredTracks = saved.tracks.slice(0, MAX_STUDIO_TRACKS).map((st, i) => {
++          const tr = applySanitizedTrackFields(createTrack(st && st.name, i), st, usedIds);
++          if (st && st.mediaBlob instanceof Blob) {
+             tr.mediaBlob = st.mediaBlob;
+             tr.mediaUrl = URL.createObjectURL(st.mediaBlob);
+-            tr.mediaType = st.mediaType || (st.mediaBlob.type && st.mediaBlob.type.startsWith('audio') ? 'audio' : 'video');
+-          } else {
+-            tr.mediaType = st.mediaType || 'video';
++            if (st.mediaType !== 'audio' && st.mediaType !== 'video') {
++              tr.mediaType = (st.mediaBlob.type && st.mediaBlob.type.startsWith('audio')) ? 'audio' : 'video';
++            }
+           }
+           return tr;
+         });
+@@ -5527,14 +5564,8 @@
+             const data = JSON.parse(evt.target.result);
+             if (data && data.tracks) {
+               stopStudioPlayback();
+-              state.bpm = data.bpm || 120;
+-              state.meter = data.meter || '2/4';
+-              state.mode = data.mode || 'free';
+-              state.measures = data.measures || 4;
+-              state.looping = !!data.looping;
+-              state.metronomeEnabled = data.metronomeEnabled !== undefined ? data.metronomeEnabled : true;
+-              state.viewMode = data.viewMode || 'timeline';
+-              state.zoomLevel = data.zoomLevel || 100;
++              Object.assign(state, sanitizeStudioSettings(data));
++              const usedIds = new Set();
+ 
+               state.tracks.forEach(oldTrack => {
+                 if (oldTrack.mediaUrl) URL.revokeObjectURL(oldTrack.mediaUrl);
+@@ -5542,26 +5573,15 @@
+ 
+               state.tracks = await Promise.all(
+                 data.tracks.map(async (t, idx) => {
+-                  const tr = createTrack(t.name, idx);
+-                  tr.id = t.id || tr.id;
+-                  tr.volume = t.volume !== undefined ? t.volume : 1.0;
+-                  tr.muted = !!t.muted;
+-                  tr.solo = !!t.solo;
+-                  tr.offsetMs = t.offsetMs || 0;
+-                  tr.trimStart = t.trimStart || 0;
+-                  tr.trimEnd = t.trimEnd || 0;
+-                  tr.duration = t.duration || 0;
+-                  tr.waveformPeaks = t.waveformPeaks || null;
+-
+-                  if (t.mediaDataUrl) {
++                  const tr = applySanitizedTrackFields(createTrack(t.name, idx), t, usedIds);
++
++                  if (typeof t.mediaDataUrl === 'string' && t.mediaDataUrl.startsWith('data:')) {
+                     const blob = await dataURLToBlob(t.mediaDataUrl);
+                     if (blob) {
+                       tr.mediaBlob = blob;
+                       tr.mediaUrl = URL.createObjectURL(blob);
+-                      tr.mediaType = t.mediaType || (blob.type && blob.type.startsWith('audio') ? 'audio' : 'video');
++                      tr.mediaType = (t.mediaType === 'audio' || t.mediaType === 'video') ? t.mediaType : (blob.type && blob.type.startsWith('audio') ? 'audio' : 'video');
+                     }
+-                  } else {
+-                    tr.mediaType = t.mediaType || 'video';
+                   }
+                   return tr;
+                 })
+diff --git a/index.html b/index.html
+index 8175e75..3bbbcbd 100644
+--- a/index.html
++++ b/index.html
+@@ -2282,7 +2282,14 @@
+         toast.className = 'share-toast';
+         document.body.appendChild(toast);
+       }
+-      toast.innerHTML = `<span style="font-size: 16px;">${icon}</span><span>${msg}</span>`;
++      // 0.2 — msg pode conter nome de faixa/breque digitado ou importado: sempre texto, nunca HTML
++      toast.replaceChildren();
++      const iconSpan = document.createElement('span');
++      iconSpan.style.fontSize = '16px';
++      iconSpan.textContent = icon;
++      const msgSpan = document.createElement('span');
++      msgSpan.textContent = String(msg);
++      toast.append(iconSpan, msgSpan);
+       toast.style.display = 'flex';
+       clearTimeout(toast._timer);
+       toast._timer = setTimeout(() => {
+@@ -4436,6 +4443,10 @@
+     function applyBateriaPresetObject(preset) {
+       if (!preset) return;
+       audio.init();
++      {
++        const clean = sanitizeBreque({ bpm: preset.bpm, meter: preset.meter || state.meter, subdivision: preset.subdivision || state.subdivision, measures: preset.measures || state.measures, volumes: preset.volumes, beatTuplets: preset.beatTuplets });
++        preset = { ...preset, bpm: preset.bpm ? clean.bpm : undefined, meter: preset.meter ? clean.meter : undefined, subdivision: preset.subdivision ? clean.subdivision : undefined, measures: preset.measures ? clean.measures : undefined, volumes: clean.volumes, beatTuplets: clean.beatTuplets };
++      }
+ 
+       if (preset.bpm) {
+         state.bpm = preset.bpm;
+@@ -5204,6 +5215,85 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+       }, 4000);
+     }
+ 
++    /* 0.1 — Sanitização única de tudo que vem de link #breque=, JSON importado ou preset salvo */
++    const BREQUE_LIMITS = Object.freeze({ BPM_MIN: 30, BPM_MAX: 300, MEAS_MIN: 1, MEAS_MAX: 32, VOL_MIN: 0, VOL_MAX: 1.5 });
++    const ALLOWED_METERS = ['2/4', '4/4'];
++    const ALLOWED_SUBDIVS = ['semicolcheia', 'fusa'];
++
++    function clampNumber(value, min, max, fallback, integer = false) {
++      if (value === null || value === undefined || value === '' || typeof value === 'boolean') return fallback;
++      let n = Number(value);
++      if (!Number.isFinite(n)) return fallback;
++      if (integer) n = Math.round(n);
++      return Math.min(max, Math.max(min, n));
++    }
++
++    // Devolve { bpm, meter, subdivision, measures, volumes, beatTuplets, gridData, stepMeta, warnings }
++    // sem nunca lançar. `raw` aceita os formatos do link (b/m/s/c/vol/t/g) e do JSON (settings + gridData).
++    function sanitizeBreque(raw) {
++      const src = (raw && typeof raw === 'object') ? raw : {};
++      const warnings = [];
++      const pick = (...vals) => vals.find(v => v !== undefined);
++      const rawBpm = pick(src.b, src.bpm);
++      const rawMeas = pick(src.c, src.measures);
++      const L = BREQUE_LIMITS;
++
++      const bpm = clampNumber(rawBpm, L.BPM_MIN, L.BPM_MAX, 120, true);
++      if (rawBpm !== undefined && Number(rawBpm) !== bpm) warnings.push('bpm');
++      const measures = clampNumber(rawMeas, L.MEAS_MIN, L.MEAS_MAX, 4, true);
++      if (rawMeas !== undefined && Number(rawMeas) !== measures) warnings.push('measures');
++      const rawMeter = pick(src.m, src.meter);
++      const meter = ALLOWED_METERS.includes(rawMeter) ? rawMeter : '2/4';
++      if (rawMeter !== undefined && rawMeter !== meter) warnings.push('meter');
++      const rawSub = pick(src.s, src.subdivision);
++      const subdivision = ALLOWED_SUBDIVS.includes(rawSub) ? rawSub : 'semicolcheia';
++      if (rawSub !== undefined && rawSub !== subdivision) warnings.push('subdivision');
++
++      const beats = meter === '2/4' ? 2 : 4;
++      const stepsPerMeasure = subdivision === 'fusa' ? beats * 8 : beats * 4;
++      const totalSteps = measures * stepsPerMeasure;
++      const totalBeats = measures * beats;
++
++      const volumes = {};
++      const rawVol = pick(src.vol, src.volumes);
++      const beatTuplets = {};
++      const rawTup = pick(src.t, src.beatTuplets);
++      if (rawTup && typeof rawTup === 'object') {
++        Object.keys(rawTup).forEach(k => {
++          const idx = Number(k);
++          const v = Number(rawTup[k]);
++          if (Number.isInteger(idx) && idx >= 0 && idx < totalBeats && (v === 3 || v === 6)) beatTuplets[idx] = v;
++        });
++      }
++
++      const gridData = {};
++      const stepMeta = {};
++      const rawGrid = pick(src.g, src.gridData, src.tracks);
++      const rawMeta = pick(src.stepMeta, src.tracksMeta);
++      INSTRUMENTS.forEach(inst => {
++        if (rawVol && typeof rawVol === 'object' && rawVol[inst.id] !== undefined) {
++          volumes[inst.id] = clampNumber(rawVol[inst.id], L.VOL_MIN, L.VOL_MAX, 1.0);
++        }
++        const validIds = new Set(inst.articulations.map(a => a.id));
++        const row = rawGrid && Array.isArray(rawGrid[inst.id]) ? rawGrid[inst.id] : [];
++        gridData[inst.id] = Array.from({ length: totalSteps }, (_, i) => {
++          const id = typeof row[i] === 'string' ? normalizeArticulationId(inst.id, row[i]) : null;
++          return id && validIds.has(id) ? id : null;
++        });
++        const metaRow = rawMeta && Array.isArray(rawMeta[inst.id]) ? rawMeta[inst.id] : [];
++        stepMeta[inst.id] = Array.from({ length: totalSteps }, (_, i) => {
++          const m = metaRow[i];
++          if (!m || typeof m !== 'object') return null;
++          const tipo = ['acento', 'medio'].includes(m.tipo) ? m.tipo : undefined;
++          const vel = clampNumber(m.vel, 0, 127, undefined, true);
++          return (tipo || vel !== undefined) ? { ...(tipo ? { tipo } : {}), ...(vel !== undefined ? { vel } : {}) } : null;
++        });
++      });
++
++      return { bpm, meter, subdivision, measures, volumes, beatTuplets, gridData, stepMeta, warnings };
++    }
++    window.sanitizeBreque = sanitizeBreque;
++
+     function checkSharedBrequeUrl() {
+       const hash = window.location.hash;
+       if (!hash || !hash.startsWith('#breque=')) return;
+@@ -5213,13 +5303,17 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+         const data = JSON.parse(jsonStr);
+         if (!data || !data.g) return;
+ 
+-        state.bpm = data.b || 120;
+-        state.meter = data.m || '2/4';
+-        state.subdivision = data.s || 'semicolcheia';
+-        state.measures = data.c || 4;
+-        if (data.vol) state.volumes = { ...state.volumes, ...data.vol };
+-        state.beatTuplets = data.t && typeof data.t === 'object' ? { ...data.t } : {};
+-        state.gridData = data.g;
++        const clean = sanitizeBreque(data);
++        state.bpm = clean.bpm;
++        state.meter = clean.meter;
++        state.subdivision = clean.subdivision;
++        state.measures = clean.measures;
++        state.volumes = { ...state.volumes, ...clean.volumes };
++        state.beatTuplets = clean.beatTuplets;
++        state.gridData = clean.gridData;
++        if (clean.warnings.length) {
++          window.appToast('Alguns valores do link estavam fora do limite e foram ajustados.', 'warn');
++        }
+ 
+         const slider = document.getElementById('bpmSlider');
+         const disp = document.getElementById('bpmDisplay');
+@@ -5315,6 +5409,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+       return { nextStep: nextBeatStart, wrapped: false };
+     }
+ 
++    const MAX_STEPS_PER_TICK = 64;      // 64 passos de fusa a 300 BPM ≈ 1,6 s de atraso
++    const MIN_STEP_DUR_SEC = 0.005;     // menor passo legítimo: 300 BPM em fusa = 25 ms; abaixo de 5 ms é estado inválido
++
+     function startPlayback() {
+       audio.init();
+       requestScreenWakeLock();
+@@ -5336,10 +5433,21 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+         if (!state.isPlaying || !audio.ctx) return;
+         const now = audio.ctx.currentTime;
+         const totalSteps = getTotalSteps();
++        let guard = 0;
+ 
+         while (state.nextNoteTime <= now + 0.035) {
++          if (++guard > MAX_STEPS_PER_TICK) {
++            // Atrasado demais (aba em segundo plano) ou estado inválido: ressincroniza em vez de travar.
++            state.nextNoteTime = now + 0.02;
++            break;
++          }
+           const stepToPlay = state.currentStep;
+           const stepDur = getStepDurationSec(stepToPlay);
++          if (!Number.isFinite(stepDur) || stepDur < MIN_STEP_DUR_SEC) {
++            console.warn('Duração de passo inválida, parando reprodução:', stepDur);
++            stopPlayback();
++            return;
++          }
+           playStep(stepToPlay, state.nextNoteTime);
+           updateCursor(stepToPlay);
+           const { nextStep, wrapped } = getNextPlayableStep(stepToPlay, totalSteps);
+@@ -5474,14 +5582,13 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+           }
+ 
+           stopPlayback();
+-          state.bpm = data.settings.bpm || 120;
+-          state.meter = data.settings.meter || '2/4';
+-          state.subdivision = data.settings.subdivision || 'semicolcheia';
+-          state.measures = data.settings.measures || 4;
+-          if (data.settings.volumes) {
+-            state.volumes = { ...state.volumes, ...data.settings.volumes };
+-          }
+-          state.beatTuplets = data.settings.beatTuplets ? { ...data.settings.beatTuplets } : {};
++          const clean = sanitizeBreque({ ...data.settings, gridData: data.gridData });
++          state.bpm = clean.bpm;
++          state.meter = clean.meter;
++          state.subdivision = clean.subdivision;
++          state.measures = clean.measures;
++          state.volumes = { ...state.volumes, ...clean.volumes };
++          state.beatTuplets = clean.beatTuplets;
+           if (data.customGrooves && typeof data.customGrooves === 'object') {
+             Object.assign(customGrooves, data.customGrooves);
+             saveCustomGroovesToStorage(customGrooves);
+@@ -5491,7 +5598,7 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+             saveCustomBateriaPresetsToStorage(customBateriaPresets);
+             updateBateriaPresetSelect();
+           }
+-          state.gridData = data.gridData;
++          state.gridData = clean.gridData;
+ 
+           document.getElementById('bpmSlider').value = state.bpm;
+           document.getElementById('bpmDisplay').textContent = state.bpm;
+@@ -6494,9 +6601,9 @@ O arquivo JSON foi baixado e também copiado para a Área de Transferência para
+               <span class="home-open-hint">${lastMode === 'studio' ? '🎛️ Estúdio →' : '🥁 Pad →'}</span>
+             </div>
+             <div class="home-breque-badges">
+-              <span class="home-badge-pill">${bpm} BPM</span>
+-              ${hasPad ? `<span class="home-badge-pill">🥁 Pad (${measures} Comp)</span>` : ''}
+-              ${studioTracks > 0 ? `<span class="home-badge-pill" style="background:rgba(218,54,51,0.16); color:#ff7b72; border-color:rgba(218,54,51,0.35);">🎙️ ${studioRecorded}/${studioTracks} Faixas</span>` : ''}
++              <span class="home-badge-pill">${escapeHtml(String(bpm))} BPM</span>
++              ${hasPad ? `<span class="home-badge-pill">🥁 Pad (${escapeHtml(String(measures))} Comp)</span>` : ''}
++              ${studioTracks > 0 ? `<span class="home-badge-pill" style="background:rgba(218,54,51,0.16); color:#ff7b72; border-color:rgba(218,54,51,0.35);">🎙️ ${Number(studioRecorded) | 0}/${Number(studioTracks) | 0} Faixas</span>` : ''}
+               <span class="home-badge-pill ${isCustom ? '' : 'pill-native'}">
+                 ${isCustom ? '⭐ Meu Breque' : '🏛️ Repertório Naumteria'}
+               </span>
+diff --git a/server.js b/server.js
+index 1021a94..997c06b 100644
+--- a/server.js
++++ b/server.js
+@@ -2,7 +2,8 @@ const http = require('http');
+ const fs = require('fs');
+ const path = require('path');
+ 
+-const PORT = 3125;
++const PORT = Number(process.env.PORT) || 3125;
++const HOST = process.env.HOST || '0.0.0.0';
+ const PUBLIC_DIR = __dirname;
+ 
+ const MIME_TYPES = {
+@@ -23,25 +24,45 @@ const MIME_TYPES = {
+   '.woff2': 'font/woff2'
+ };
+ 
++// 0.4 — Só o que o app precisa no navegador. Nada de .git, server.js, tests/, *.md, package.json.
++const ALLOWED_FILES = new Set(['/index.html', '/beatbox_studio.js', '/beatbox_studio.css', '/sw.js', '/manifest.json']);
++const ALLOWED_DIRS = ['/assets/'];
++
++function isAllowed(pathname) {
++  if (pathname.split('/').some(seg => seg.startsWith('.'))) return false; // .git, .env, ..
++  return ALLOWED_FILES.has(pathname) || ALLOWED_DIRS.some(dir => pathname.startsWith(dir));
++}
++
++function send(res, status, text) {
++  res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
++  res.end(text);
++}
++
+ const server = http.createServer((req, res) => {
+-  const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+-  let pathname = decodeURIComponent(reqUrl.pathname);
++  let pathname;
++  try {
++    pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
++  } catch (e) {
++    return send(res, 400, '400 Bad Request');
++  }
++  if (pathname.includes('\0')) return send(res, 400, '400 Bad Request');
+ 
+   if (pathname === '/' || pathname === '') {
+     pathname = '/index.html';
+   }
+ 
+   const safePath = path.normalize(path.join(PUBLIC_DIR, pathname));
+-
+-  if (!safePath.startsWith(PUBLIC_DIR)) {
+-    res.writeHead(403, { 'Content-Type': 'text/plain' });
+-    return res.end('403 Forbidden');
++  if (!safePath.startsWith(PUBLIC_DIR + path.sep)) {
++    return send(res, 403, '403 Forbidden');
++  }
++  const relUrl = '/' + path.relative(PUBLIC_DIR, safePath).split(path.sep).join('/');
++  if (!isAllowed(relUrl)) {
++    return send(res, 404, '404 Not Found');
+   }
+ 
+   fs.stat(safePath, (err, stats) => {
+     if (err || !stats.isFile()) {
+-      res.writeHead(404, { 'Content-Type': 'text/plain' });
+-      return res.end('404 Not Found');
++      return send(res, 404, '404 Not Found');
+     }
+ 
+     const ext = path.extname(safePath).toLowerCase();
+@@ -49,15 +70,20 @@ const server = http.createServer((req, res) => {
+ 
+     res.writeHead(200, {
+       'Content-Type': contentType,
+-      'Cache-Control': 'no-cache'
++      'Cache-Control': 'no-cache',
++      'X-Content-Type-Options': 'nosniff'
+     });
+ 
+     const stream = fs.createReadStream(safePath);
++    stream.on('error', () => res.destroy());
+     stream.pipe(res);
+   });
+ });
+ 
+-server.listen(PORT, '0.0.0.0', () => {
+-  console.log(`Server running at http://localhost:${PORT}/`);
+-});
++if (require.main === module) {
++  server.listen(PORT, HOST, () => {
++    console.log(`Server running at http://localhost:${PORT}/`);
++  });
++}
+ 
++module.exports = { server, isAllowed };
+diff --git a/tests/tier5_fase0_seguranca.test.js b/tests/tier5_fase0_seguranca.test.js
+new file mode 100644
+index 0000000..bf2a20a
+--- /dev/null
++++ b/tests/tier5_fase0_seguranca.test.js
+@@ -0,0 +1,222 @@
++const { describe, it, before, after } = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('fs');
++const http = require('http');
++const path = require('path');
++const { launchBrowser, ensureServerRunning, stopSpawnedServer } = require('./harness.js');
++
++const PORT = 3125;
++const BASE = `http://localhost:${PORT}/`;
++const toHash = (obj) => '#breque=' + Buffer.from(JSON.stringify(obj), 'utf8').toString('base64');
++
++function rawGet(rawPath) {
++  return new Promise((resolve) => {
++    const req = http.request({ host: '127.0.0.1', port: PORT, path: rawPath, method: 'GET' }, (res) => {
++      res.resume();
++      res.on('end', () => resolve(res.statusCode));
++    });
++    req.on('error', () => resolve(-1));
++    req.setTimeout(2000, () => { req.destroy(); resolve(-1); });
++    req.end();
++  });
++}
++
++async function withDeadline(promise, ms) {
++  let timer;
++  const deadline = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`aba não respondeu em ${ms} ms`)), ms); });
++  try { return await Promise.race([promise, deadline]); } finally { clearTimeout(timer); }
++}
++
++describe('Tier 5: Fase 0 — entrada hostil, XSS, travamento e servidor', () => {
++  let session;
++  const dialogs = [];
++
++  before(async () => {
++    session = await launchBrowser();
++    session.ws.addEventListener('message', (evt) => {
++      try {
++        const d = JSON.parse(evt.data);
++        if (d.method === 'Page.javascriptDialogOpening') dialogs.push(d.params.message);
++      } catch (e) {}
++    });
++  });
++
++  after(async () => {
++    if (session) await session.close();
++    stopSpawnedServer();
++  });
++
++  async function openUrl(url) {
++    await session.send('Page.navigate', { url });
++    await session.waitFor(() => document.readyState === 'complete' && typeof window.BeatboxStudio === 'object', 10000);
++  }
++
++  it('T0.1a: sanitizeBreque limita BPM/compassos e aplica whitelist de meter, subdivisão e articulações', async () => {
++    const r = await session.evaluate(() => {
++      const a = window.sanitizeBreque({ b: -120, c: 1e9, m: '7/8', s: '<img>', vol: { caixa: '9', surdo1: 'abc' }, t: { 0: 3, 1: 5, 9999: 6, x: 3 }, g: { caixa: ['<img>', 'rufado', 42, { a: 1 }] } });
++      const b = window.sanitizeBreque({ b: '<img src=x onerror=alert(7)>', c: 2.6 });
++      const c = window.sanitizeBreque({ b: 1e9, c: -3 });
++      const d = window.sanitizeBreque(null);
++      return {
++        a: { bpm: a.bpm, measures: a.measures, meter: a.meter, sub: a.subdivision, vol: a.volumes, tup: a.beatTuplets, caixa0to3: a.gridData.caixa.slice(0, 4), caixaLen: a.gridData.caixa.length, warnings: a.warnings },
++        b: { bpm: b.bpm, measures: b.measures }, c: { bpm: c.bpm, measures: c.measures }, d: { bpm: d.bpm, measures: d.measures, meter: d.meter }
++      };
++    });
++    assert.equal(r.a.bpm, 30);
++    assert.equal(r.a.measures, 32);
++    assert.equal(r.a.meter, '2/4');
++    assert.equal(r.a.sub, 'semicolcheia');
++    assert.deepEqual(r.a.vol, { caixa: 1.5, surdo1: 1.0 });
++    assert.deepEqual(r.a.tup, { 0: 3 });
++    assert.deepEqual(r.a.caixa0to3, [null, 'rufado', null, null]);
++    assert.equal(r.a.caixaLen, 32 * 8, 'grade normalizada para compassos × passos');
++    assert.ok(r.a.warnings.includes('bpm') && r.a.warnings.includes('measures'));
++    assert.deepEqual(r.b, { bpm: 120, measures: 3 });
++    assert.deepEqual(r.c, { bpm: 300, measures: 1 });
++    assert.deepEqual(r.d, { bpm: 120, measures: 4, meter: '2/4' });
++  });
++
++  it('T0.1b: presets nativos passam pela sanitização sem perder notas', async () => {
++    const diffs = await session.evaluate(() => {
++      const out = [];
++      Object.keys(BATERIA_PRESETS).forEach(k => {
++        applyBateriaPreset(k);
++        const clean = window.sanitizeBreque({ bpm: state.bpm, meter: state.meter, subdivision: state.subdivision, measures: state.measures, gridData: state.gridData });
++        INSTRUMENTS.forEach(inst => {
++          const before = (state.gridData[inst.id] || []).filter(Boolean).length;
++          const after = clean.gridData[inst.id].filter(Boolean).length;
++          if (before !== after) out.push(`${k}/${inst.id}: ${before}→${after}`);
++        });
++        if (clean.warnings.length) out.push(`${k}: warnings ${clean.warnings}`);
++      });
++      return out;
++    });
++    assert.deepEqual(diffs, []);
++  });
++
++  it('T0.2a: XSS armazenado via link #breque= não executa após salvar e recarregar', async () => {
++    dialogs.length = 0;
++    await openUrl(BASE + toHash({ v: '2', b: '<img src=x onerror=alert(7)>', m: '2/4', s: 'semicolcheia', c: 4, g: {} }));
++    await session.waitFor(() => document.getElementById('bpmDisplay').textContent === '120', 3000);
++    await session.evaluate(async () => {
++      window.appPrompt = async () => 'Breque Hostil';
++      document.getElementById('btnSaveToMyBreques').click();
++      await new Promise(r => setTimeout(r, 300));
++      return true;
++    });
++    await openUrl(BASE);
++    const home = await session.evaluate(async () => {
++      window.switchTab('tab-home');
++      await new Promise(r => setTimeout(r, 300));
++      const card = Array.from(document.querySelectorAll('#homeBrequeList .home-breque-card')).find(c => c.textContent.includes('Breque Hostil'));
++      return { found: !!card, injected: document.querySelectorAll('#homeBrequeList img').length, pill: card && card.querySelector('.home-badge-pill').textContent.trim() };
++    });
++    assert.ok(home.found, 'o breque salvo aparece na Home');
++    assert.equal(home.injected, 0, 'nenhum <img> injetado na lista');
++    assert.equal(home.pill, '120 BPM');
++    assert.equal(dialogs.filter(m => m === '7').length, 0, 'alert(7) não pode disparar');
++  });
++
++  it('T0.2b: dado legado no localStorage com BPM hostil é exibido como texto, não como HTML', async () => {
++    const r = await session.evaluate(async () => {
++      const key = 'naumteria_custom_bateria_presets_v1';
++      const all = JSON.parse(localStorage.getItem(key) || '{}');
++      all.legado = { name: 'Legado', bpm: '<img src=x onerror="window.__xss=1">', measures: '<b>9</b>', gridData: {} };
++      localStorage.setItem(key, JSON.stringify(all));
++      window.renderHomeBrequesList();
++      await new Promise(r => setTimeout(r, 200));
++      return { injected: document.querySelectorAll('#homeBrequeList img, #homeBrequeList b').length, xss: window.__xss === 1 };
++    });
++    assert.deepEqual(r, { injected: 0, xss: false });
++  });
++
++  it('T0.2c: projeto .json do Estúdio com volume/offset/id hostis não injeta HTML', async () => {
++    await session.resetStudioState();
++    const evil = '1"><img src=x onerror="window.__xss2=1">';
++    const r = await session.evaluate(async (evilStr) => {
++      const json = JSON.stringify({ bpm: -5, tracks: [{ name: 'A', id: evilStr, volume: evilStr, offsetMs: evilStr, mediaType: evilStr }, { name: 'B', id: 'dup', volume: 0.5 }, { name: 'C', id: 'dup', mediaDataUrl: 'https://example.invalid/x.webm' }] });
++      const input = document.getElementById('projectFileInput');
++      const dt = new DataTransfer();
++      dt.items.add(new File([json], 'p.json', { type: 'application/json' }));
++      input.files = dt.files;
++      input.dispatchEvent(new Event('change'));
++      await new Promise(r => setTimeout(r, 600));
++      window.BeatboxStudio.switchViewMode('mosaic');
++      window.BeatboxStudio.renderStudioViews();
++      window.BeatboxStudio.switchViewMode('timeline');
++      const ids = Array.from(document.querySelectorAll('.tcp-name-input')).map(i => i.dataset.id);
++      return { injected: document.querySelectorAll('#tab-beatbox img[src="x"]').length, xss: window.__xss2 === 1, rows: ids.length, uniqueIds: new Set(ids).size, bpm: document.getElementById('studioBpm').value };
++    }, evil);
++    assert.equal(r.injected, 0);
++    assert.equal(r.xss, false);
++    assert.equal(r.rows, 3);
++    assert.equal(r.uniqueIds, 3, 'ids duplicados ou inválidos são regenerados');
++  });
++
++  it('T0.2d: nome de faixa com HTML não executa no toast de duplicar/limpar', async () => {
++    await session.resetStudioState();
++    const r = await session.evaluate(async () => {
++      window.BeatboxStudio.addTrack('<img src=x onerror="window.__toast=1">');
++      window.BeatboxStudio.renderStudioViews();
++      document.querySelector('.tcp-menu-duplicate').click();
++      await new Promise(r => setTimeout(r, 300));
++      const toast = document.getElementById('globalAppToast');
++      return { xss: window.__toast === 1, imgs: toast ? toast.querySelectorAll('img').length : -1, text: toast ? toast.textContent : '' };
++    });
++    assert.equal(r.xss, false);
++    assert.equal(r.imgs, 0);
++    assert.ok(r.text.includes('<img'), 'o nome aparece literalmente como texto');
++  });
++
++  it('T0.3a: BPM -120 ou 1e9 no link não trava a aba ao tocar', async () => {
++    for (const b of [-120, 1e9, 'abc']) {
++      await openUrl(BASE + toHash({ v: '2', b, m: '2/4', s: 'semicolcheia', c: 4, g: {} }));
++      const r = await withDeadline(session.evaluate(async () => {
++        document.getElementById('btnPlay').click();
++        await new Promise(r => setTimeout(r, 400));
++        const out = { bpm: state.bpm, playing: state.isPlaying };
++        stopPlayback();
++        return out;
++      }), 4000);
++      assert.ok(r.bpm >= 30 && r.bpm <= 300, `BPM ${b} deve virar valor válido (veio ${r.bpm})`);
++      assert.equal(r.playing, true);
++    }
++  });
++
++  it('T0.3b: o agendador não entra em laço infinito mesmo com state.bpm corrompido em tempo de execução', async () => {
++    for (const bad of [-120, 1e9, 0, NaN]) {
++      const r = await withDeadline(session.evaluate(async (v) => {
++        state.bpm = v === null ? NaN : v;
++        startPlayback();
++        await new Promise(r => setTimeout(r, 200));
++        const out = { playing: state.isPlaying };
++        stopPlayback();
++        state.bpm = 120;
++        return out;
++      }, Number.isNaN(bad) ? null : bad), 3000);
++      assert.equal(r.playing, false, `bpm=${bad} deve parar a reprodução, não travar`);
++    }
++  });
++
++  it('T0.4: servidor serve só os arquivos do app, aguenta URL malformada e não sai da pasta', async () => {
++    await ensureServerRunning();
++    const sibling = path.resolve(__dirname, '..') + '-secret';
++    fs.mkdirSync(sibling, { recursive: true });
++    fs.writeFileSync(path.join(sibling, 'x.txt'), 'segredo');
++    try {
++      assert.equal(await rawGet('/'), 200);
++      assert.equal(await rawGet('/index.html'), 200);
++      assert.equal(await rawGet('/assets/soundbank.js'), 200);
++      assert.equal(await rawGet('/sw.js'), 200);
++      for (const p of ['/.git/config', '/server.js', '/tests/harness.js', '/PROJECT.md', '/package.json', '/assets/.hidden']) {
++        assert.equal(await rawGet(p), 404, `${p} não pode ser servido`);
++      }
++      assert.equal(await rawGet('/%E0%A4%A'), 400);
++      assert.equal(await rawGet('/index.html'), 200, 'servidor continua vivo após URL malformada');
++      const escape = await rawGet('/..%2f' + path.basename(sibling) + '%2fx.txt');
++      assert.ok(escape === 403 || escape === 404, `pasta vizinha não pode vazar (veio ${escape})`);
++    } finally {
++      fs.rmSync(sibling, { recursive: true, force: true });
++    }
++  });
++});
