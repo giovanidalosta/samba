@@ -1,4 +1,4 @@
-# Plano de Revisão — Naumteria[EXECUTADO] faixa de ajuda `#padHelpStrip` + legenda `?` com[EXECUTADO] ≤600px: cabeçalho de 112px, pílulas/levada/limpar num bottom sheet, scrollbars[EXECUTADO, parcial] ver nota abaixofinasaudiçãoStudio
+# Plano de Revisão — Naumteria[EXECUTADO] faixa de ajuda `#padHelpStrip` + legenda `?` com[EXECUTADO] ≤600px: cabeçalho de 112px, pílulas/levada/limpar num bottom sheet, scrollbars[EXECUTADO, parcial] ver nota[EXECUTADO] JS inline → `js/*.js` (8 arquivos por seção, 1 commit; Ruling: não 4 arquivos, pois Home/share estão misturados nas[EXECUTADO, parcial] `review_home.test.js`, `npm run test:quick`, retry no `launchBrowser`; `challenger_*` NÃO fundidos (são suítes diferentes, não[DECISÃO] recomendado `repertorio.json` estático versionado no repositório; sem back-end por ora (nenhum código)duplicatas)seções)abaixofinasaudiçãoStudio
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

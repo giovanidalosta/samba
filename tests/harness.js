@@ -285,7 +285,7 @@ class BrowserSession {
   }
 }
 
-async function launchBrowser() {
+async function launchBrowserOnce() {
   await ensureServerRunning();
 
   const browserPath = CHROME_PATHS.find(p => fs.existsSync(p));
@@ -348,6 +348,15 @@ async function launchBrowser() {
   await session.resetStudioState();
 
   return session;
+}
+
+// A subida do Chrome é a maior fonte de intermitência da suíte: tenta de novo antes de falhar.
+async function launchBrowser() {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await launchBrowserOnce(); } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
 }
 
 module.exports = {
